@@ -24,7 +24,7 @@ async def send_tcp_message(writer: asyncio.StreamWriter, msg: str):
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
     msg_type = json_msg['action']
     if msg_type == 'stockL1-update':
-        order = trader.process_stockl1_message(json_msg)
+        order = trader.process_stock_l1_message(json_msg)
         await send_tcp_message(
             writer,
             json.dumps(order)
