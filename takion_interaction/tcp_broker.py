@@ -3,6 +3,7 @@ import json
 import os
 import socket
 import emulator.messages as messages  # get rid in future
+from analytics.trader import Trader
 
 # TAKION_MIDDLEWARE_IP = os.environ.get('TAKION_IP')
 # TAKION_MIDDLEWARE_PORT = int(os.environ.get('TAKION_PORT'))
@@ -12,6 +13,8 @@ SEND_DELAY = int(os.environ.get('SEND_DELAY', '5000'))
 SEND_FREQUENCY = int(os.environ.get('SEND_FREQUENCY', '1000'))
 TIMEOUT_GRACE_PERIOD = 300
 
+trader = Trader()
+
 
 async def send_tcp_message(writer: asyncio.StreamWriter, msg: str):
     writer.write(f'{msg}\n'.encode('utf8'))
@@ -19,14 +22,15 @@ async def send_tcp_message(writer: asyncio.StreamWriter, msg: str):
 
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
-    action = json_msg['action']
-    if action == 'l1':
+    msg_type = json_msg['action']
+    if msg_type == 'stockL1-update':
+        order = trader.process_stockl1_message(json_msg)
         await send_tcp_message(
             writer,
-            json.dumps(messages.order_request())
+            json.dumps(order)
         )
         print('Order sent')
-    elif action == 'orderSetSuccessfully':
+    elif msg_type == 'order-complete':
         print('Order placed')
 
 
@@ -41,13 +45,7 @@ async def handle_message(writer: asyncio.StreamWriter, msg: str):
 
 
 async def send_handshake(writer: asyncio.StreamWriter):
-    handshake = {
-        'action': 'handshake',
-        'version': VERSION_OF_APP,
-        'ip': PUBLIC_APP_IP,
-        'sendDelay': SEND_DELAY,
-        'sendFrequency': SEND_FREQUENCY,
-    }
+    handshake = messages.handshake_request()
     await send_tcp_message(writer, json.dumps(handshake))
     print('Handshake sent')
 

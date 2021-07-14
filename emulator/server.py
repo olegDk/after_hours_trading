@@ -3,9 +3,10 @@ import socket
 import messages
 import json
 import random
-
+from market_data_generator import MarketDataGenerator
 
 handshake_received = False
+mdg = MarketDataGenerator()
 
 
 async def send_to_analytics_server(writer: asyncio.StreamWriter, msg: str):
@@ -15,14 +16,14 @@ async def send_to_analytics_server(writer: asyncio.StreamWriter, msg: str):
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
     global handshake_received
-    action = json_msg['action']
-    if action == 'handshake':
+    msg_type = json_msg['action']
+    if msg_type == 'handshake':
         await send_to_analytics_server(
             writer,
             json.dumps(messages.handshake_response())
         )
         handshake_received = True
-    elif action == 'setOrder':
+    elif msg_type == 'order-request':
         await send_to_analytics_server(
             writer,
             json.dumps(messages.order_response())
@@ -43,11 +44,11 @@ async def handle_message(writer: asyncio.StreamWriter, msg: str):
 
 async def emulate_market_data(writer: asyncio.StreamWriter):
     if handshake_received:
-        msg = json.dumps(messages.market_data())
-        for i in range(1000000):
+        while True:
+            msg = json.dumps(mdg.sample_l1_update())
             await send_to_analytics_server(writer, msg)
-            print("Sent l1")
-            sleeping_time = random.randint(1, 10) * 0.1
+            print('Sent l1')
+            sleeping_time = random.randint(1, 10) * 0.01
             await asyncio.sleep(sleeping_time)
 
 
@@ -58,7 +59,7 @@ async def handle_client_messages(reader: asyncio.StreamReader,
         received_byte = await reader.read(1)
         character = str(received_byte, 'UTF-8')
         if character == '\n':
-            print(f"Received: {msg}")
+            print(f'Received: {msg}')
             await handle_message(writer, msg)
             msg = ''
         else:

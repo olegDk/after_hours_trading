@@ -1,43 +1,84 @@
+def handshake_request() -> dict:
+    return {
+        'action': 'handshake', 
+        'version': '1.0.0.1', 
+        'ip': '3.211.228.129',
+        'sendDelay': 5000, 
+        'sendFrequency': 1000}
+
+
 def handshake_response() -> dict:
     return {
-        'action':'handshake-response',
+        'action': 'handshake-response',
         'version': '1.2.3.5',
-        'MarketSorterConnected': True,
-        'ExecutorConnected': True,
+        'marketSorterConnected': True,
+        'executorConnected': True,
     }
 
 
 def market_data() -> dict:
     return {
-        'action': 'l1',
-        'ticker': 'SPY',
-        '%BidNet': 0,
-        '%AskNet': 0
+        'action': 'stockL1-update',
+        'symbol': 'Symbol',
+        'trd': 'T',
+        '%bidNet': 0,
+        '%askNet': 0,
+        'bidL1': 0,
+        'askL1': 0,
+        'last': 0,
+        'closePrice': 0,
+        'premarketVolume': 0
+    }
+
+def subscribe_request() -> dict:
+    return {
+        'action': 'stockL1',
+        'username': 'TDXX',
+        'symbols': ['MSFT', 'AAPL']
+    }
+
+
+def subscribe_response() -> dict:
+    return {
+        'action': 'stockL1-response'
+    }
+
+
+def order_request() -> dict:
+    return {
+        'action': 'order-request',
+        'TIF': 'Extended',
+        'id': 'id',
+        'limit': 0,
+        'side': 'B',
+        'size': 100,
+        'symbol': 'Symbol',
+        'username': 'GCXX',
+        'venue': 'NSDQ'
+    }
+
+
+def empty_market_data_response() -> dict:
+    return {
+        'action': 'gotIt'
+    }
+
+
+def order_complete() -> dict:
+    return {
+        'action': 'order-complete',
+        'username': 'GCXX',
+        'id': 'id'
     }
 
 
 def order_response() -> dict:
     return {
         'action': 'orderSetSuccessfully',
-        'ticker': 'SQ',
+        'ticker': 'ticker',
         'TIF': 'Extended',
         'ordertype': 'Limit',
-        'side': 'Sell',
-        'price': 235.90,
-        'size': 200,
-        'target': 230.00,
-        'destination': 'ARCA',
-        'listing': 'NYSE'
-    }
-
-
-def order_request() -> dict:
-    return {
-        'action': 'setOrder',
-        'ticker': 'SQ',
-        'TIF': 'Extended',
-        'ordertype': 'Limit',
-        'side': 'Sell',
+        'side': 'side',
         'price': 235.90,
         'size': 200,
         'target': 230.00,

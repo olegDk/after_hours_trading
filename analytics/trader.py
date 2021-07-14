@@ -1,4 +1,5 @@
 from analytics.inference_module import InferenceModule
+import emulator.messages as messages
 
 class Trader:
     def __init__(self):
@@ -6,10 +7,11 @@ class Trader:
         self.__positions = {}
         self.__indicators = {}
         self.__factors = {}
-        pass
 
-    def process_message(self, msg: dict) -> dict:
-        pass
+    def process_stockl1_message(self, msg: dict) -> dict:
+        order = messages.order_request()
+        order['symbol'] = msg['symbol']
+        return order
 
     def __make_decision(self, msg: dict) -> dict:
         pass
