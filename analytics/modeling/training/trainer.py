@@ -52,7 +52,8 @@ def train_all_models():
     sectors_dirs = \
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
-    for sector_dir in tqdm(sectors_dirs):
+    # for sector_dir in tqdm(sectors_dirs):
+    for sector_dir in tqdm(['analytics/modeling/sectors/ApplicationSoftware']):
         sector = sector_dir.split('/')[-1]
         if 'tickers' not in os.listdir(sector_dir):
             print(f'tickers dir missing '
@@ -102,69 +103,118 @@ def train_all_models():
                              if ticker not in intersection]
 
         try:
-            df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
-                                                f'datasets/'
-                                                f'data_{sector}.csv')
+            run_sector_regression(sector_dir=sector_dir,
+                                  sector=sector,
+                                  traidable_tickers=traidable_tickers,
+                                  indicators=indicators)
         except Exception as e:
             print(e)
-            print(f'Failed to load dataset for sector: {sector}')
+            print(f'Failed regression analysis for sector: {sector}')
+
+
+def run_sector_regression(sector_dir: str,
+                          sector: str,
+                          traidable_tickers: list,
+                          indicators: list):
+    df = None
+    try:
+        df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
+                                            f'datasets/'
+                                            f'data_{sector}.csv')
+    except Exception as e:
+        print(e)
+        print(f'Failed to load dataset for sector: {sector}')
+
+    if df.empty:
+        print(f'Empty dataset for sector: {sector}')
+
+    # Shuffle df and make train/test split
+    test_size = 40
+    train_df = df[:-test_size]
+    test_df = df.tail(40)
+    train_df = train_df.sample(frac=1)
+
+    # For future refit
+    df = df.sample(frac=1)
+
+    tickers_indicators = {}
+    tickers_indicators_filtered = {}
+    tickers_models = {}
+    tickers_models_filtered = {}
+
+    for ticker in traidable_tickers:
+        ticker_model_dict = {}
+        tickers_indicators[ticker] = indicators
+        indicators_names = [f'%Gap_{indicator}'
+                            for indicator in indicators]
+        target_name = f'%Gap_{ticker}'
+
+        try:
+            # For future refit
+            df_filtered = df[indicators_names + [target_name]]
+            df_filtered = \
+                remove_outliers(data_df=df_filtered,
+                                target_column=target_name)
+            ticker_features = df_filtered[indicators_names]
+            ticker_target = df_filtered[target_name]
+
+            # For filtering stocks with high test mae
+            train_df_filtered = train_df[indicators_names + [target_name]]
+            train_df_filtered = \
+                remove_outliers(data_df=train_df_filtered,
+                                target_column=target_name)
+            ticker_features_train = train_df_filtered[indicators_names]
+            ticker_target_train = train_df_filtered[target_name]
+            ticker_features_test = test_df[indicators_names]
+            ticker_target_test = test_df[target_name]
+        except Exception as e:
+            print(e)
+            print(f'Failed to select features for ticker: {ticker}, '
+                  f'sector: {sector}')
+            print(traidable_tickers)
+            print(indicators)
             continue
 
-        if df.empty:
-            print(f'Empty dataset for sector: {sector}')
-            continue
+        # Train on train_data
+        lr = RidgeCV(fit_intercept=False,
+                     scoring=mae)
+        lr.fit(X=ticker_features_train,
+               y=ticker_target_train)
 
-        # Shuffle df and make train/test split
-        test_size = 40
-        train_df = df[:-test_size]
-        test_df = df.tail(40)
-        train_df = train_df.sample(frac=1)
+        preds = lr.predict(X=ticker_features_test)
+        test_mae = mean_ae(y_true=ticker_target_test, y_pred=preds)
 
-        # For future refit
-        df = df.sample(frac=1)
+        print(f'Test MAE for ticker {ticker} is '
+              f'{test_mae}')
 
-        tickers_indicators = {}
-        tickers_indicators_filtered = {}
-        tickers_models = {}
-        tickers_models_filtered = {}
+        ticker_model_dict['model'] = lr
+        ticker_model_dict['mae'] = test_mae
+        tickers_models[ticker] = ticker_model_dict
 
-        for ticker in traidable_tickers:
-            tickers_indicators[ticker] = indicators
-            indicators_names = [f'%Gap_{indicator}'
-                                for indicator in indicators]
-            target_name = f'%Gap_{ticker}'
+        if test_mae <= 1.5:
+            # Refit and save filtered
+            lr.fit(X=ticker_features, y=ticker_target)
+            ticker_model_dict['model'] = lr
+            tickers_indicators_filtered[ticker] = indicators
+            tickers_models_filtered[ticker] = ticker_model_dict
 
-            try:
-                ticker_features = df[indicators_names]
-                ticker_target = df[target_name]
-                ticker_features_train = train_df[indicators_names]
-                ticker_target_train = train_df[target_name]
-                train_df_filtered = train_df[indicators_names + [target_name]]
-                train_df_filtered =\
-                    remove_outliers(data_df=train_df_filtered,
-                                    target_column=target_name)
-                ticker_features_test = test_df[indicators_names]
-                ticker_target_test = test_df[target_name]
-            except Exception as e:
-                print(e)
-                print(f'Failed to select features for ticker: {ticker}, '
-                      f'sector: {sector}')
-                continue
-
-            lr = RidgeCV(fit_intercept=False,
-                         store_cv_values=True,
-                         scoring=mae)
-            lr.fit(X=ticker_features_train,
-                   y=ticker_target_train)
-
-            preds = lr.predict(X=ticker_features_test)
-
-            tickers_models[ticker] = lr
-
-            print(f'Test MAE for ticker {ticker} is '
-                  f'{mean_ae(y_true=ticker_target_test, y_pred=preds)}')
-
-            # Filter tickers with test mae greater than 0.5 and then refit
-
+    # Saving dicts into models directory for given sector
+    try:
+        with open(f'analytics/modeling/sectors/'
+                  f'{sector}/models/tickers_indicators.pkl', 'wb') as o:
+            pickle.dump(tickers_indicators, o)
+        with open(f'analytics/modeling/sectors/'
+                  f'{sector}/models/tickers_models.pkl', 'wb') as o:
+            pickle.dump(tickers_models, o)
+        with open(f'analytics/modeling/sectors/'
+                  f'{sector}/models/tickers_indicators_filtered.pkl',
+                  'wb') as o:
+            pickle.dump(tickers_indicators_filtered, o)
+        with open(f'analytics/modeling/sectors/'
+                  f'{sector}/models/tickers_models_filtered.pkl', 'wb') as o:
+            pickle.dump(tickers_models_filtered, o)
+    except Exception as e:
+        print(e)
+        print(f'Failed saving data for sector: {sector}')
 
 train_all_models()
