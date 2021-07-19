@@ -21,8 +21,8 @@ def market_data() -> dict:
         'action': 'stockL1-update',
         'symbol': 'Symbol',
         'trd': 'T',
-        '%bidNet': 0,
-        '%askNet': 0,
+        'pctBidNet': 0,
+        'pctAskNet': 0,
         'bidL1': 0,
         'askL1': 0,
         'last': 0,
@@ -75,7 +75,7 @@ def order_complete() -> dict:
 def order_response() -> dict:
     return {
         'action': 'orderSetSuccessfully',
-        'ticker': 'ticker',
+        'symbol': 'symbol',
         'TIF': 'Extended',
         'ordertype': 'Limit',
         'side': 'side',

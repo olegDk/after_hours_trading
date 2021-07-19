@@ -1,8 +1,24 @@
+import numpy as np
 import pickle
 import os
 import emulator.messages as messages
 
 GOT_IT_RESPONSE = {'action': 'gotIt'}
+INIT_PCT = -1e3
+
+def current_percentage(l1_dict: dict) -> float:
+    try:
+        pctBidNet = l1_dict['pctBidNet']
+        pctAskNet = l1_dict['pctAskNet']
+        if pctBidNet >= 0:
+            return pctBidNet
+        elif pctAskNet <= 0:
+            return pctAskNet
+        else:
+            return 0
+    except TypeError:
+        pass
+
 
 class Trader:
     def __init__(self):
@@ -13,12 +29,13 @@ class Trader:
 
     def __init_indicators(self) -> dict:
         print('Inializing indicators...')
-        with open(f'analytics/modeling/sectors/'
+        with open(f'analytics/modeling/'
                   f'all_indicators.pkl', 'rb') as i:
             indicators_list = pickle.load(i)
 
         # Update to get from subscription response or request directly
-        indicators_dict = {indicator: {'%bidNet': 0, '%askNet': 0}
+        indicators_dict = {indicator: {'pctBidNet': INIT_PCT,
+                                       'pctAskNet': INIT_PCT}
                            for indicator in indicators_list}
 
         return indicators_dict
@@ -76,34 +93,74 @@ class Trader:
     def process_stock_l1_message(self, msg: dict) -> dict:
         # Update stock's l1
         symbol = msg['symbol']
-        bid_net = msg['%bidNet']
-        ask_net = msg['%askNet']
+        pct_bid_net = msg['pctBidNet']
+        pct_ask_net = msg['pctAskNet']
+        bid_l1 = msg['bidL1']
+        ask_l1 = msg['askL1']
 
-        self.__stocks_l1[symbol]['%bidNet'] = bid_net
-        self.__stocks_l1[symbol]['%askNet'] = ask_net
+        # Error
+        l1_dict = self.__stocks_l1.get(symbol)
+        if not l1_dict:
+            self.__stocks_l1[symbol] = {
+                'pctBidNet': pct_bid_net,
+                'pctAskNet': pct_ask_net
+            }
+        else:
+            self.__stocks_l1[symbol]['pctBidNet'] = pct_bid_net
+            self.__stocks_l1[symbol]['pctAskNet'] = pct_ask_net
 
         # Make trade decision
         try:
-
-            model_dict = self.__models.get(symbol)
+            print()
+            model_dict = self.__models[symbol]
+            # print(self.__models)
             model = model_dict['model']
             # Get indicators
-            indicators = self.__factors.get(symbol)
+            indicators = self.__factors[symbol]
             # Get indicators l1
-            factors_l1 = list(map(self.__stocks_l1.get, indicators))
-            # factors_array = get_factors_array()
-        except Exception as e:
+            factors_l1 = list(
+                map(lambda x: current_percentage(
+                    self.__stocks_l1.get(x)), indicators))
+            if not INIT_PCT in factors_l1:
+                pred_array = np.array(factors_l1).reshape(1, -1)
+                prediction = model.predict(pred_array)
+                print(f'Symbol Prediction: {prediction}')
+                return self.__make_response(msg=msg,
+                                            std_err=model_dict['mae'],
+                                            pct_bid_net=pct_bid_net,
+                                            pct_ask_net=pct_ask_net,
+                                            bid_l1=bid_l1,
+                                            ask_l1=ask_l1,
+                                            prediction=prediction)
+            else:
+                raise TypeError('One of indicators is not populated yet')
+        except KeyError as e:
             print(e)
-            print(f"Failed to make inference on message: {msg}")
+            print(f'Failed to make inference on message: {msg}')
             return GOT_IT_RESPONSE
+        except TypeError as e:
+            print(e)
 
-        response_dict = self.__make_order(msg=msg)
-        return response_dict
+        return GOT_IT_RESPONSE
 
-    def __make_order(self, msg: dict) -> dict:
-        order = messages.order_request()
-        order['symbol'] = msg['symbol']
-        return order
+    def __make_response(self, msg: dict,
+                        std_err: float,
+                        pct_bid_net: float,
+                        pct_ask_net: float,
+                        bid_l1: float,
+                        ask_l1: float,
+                        prediction: float) -> dict:
+        if (prediction - pct_ask_net) >= std_err:
+            order = messages.order_request()
+            order['symbol'] = msg['symbol']
+            order['price'] = ask_l1
+            order['side'] = 'B'
+            return order
+        elif (prediction - pct_bid_net) <= -std_err:
+            order = messages.order_request()
+            order['symbol'] = msg['symbol']
+            order['price'] = bid_l1
+            order['side'] = 'S'
+            return order
 
-
-trader = Trader()
+        return GOT_IT_RESPONSE

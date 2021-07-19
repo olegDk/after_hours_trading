@@ -18,6 +18,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
     global handshake_received
     msg_type = json_msg['action']
     if msg_type == 'handshake':
+        print('Received handshake')
         await send_to_analytics_server(
             writer,
             json.dumps(messages.handshake_response())
@@ -39,6 +40,7 @@ async def handle_message(writer: asyncio.StreamWriter, msg: str):
     except json.JSONDecodeError:
         print('Received a msg with incorrect format')
     except Exception as e:
+        print("Handle message in server")
         print(e)
 
 
@@ -72,6 +74,7 @@ async def handle_client(reader: asyncio.StreamReader,
         await asyncio.gather(handle_client_messages(reader, writer),
                              emulate_market_data(writer))
     except Exception as e:
+        print("Handle client in server")
         print(e)
     finally:
         writer.close()

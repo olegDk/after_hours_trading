@@ -4,19 +4,20 @@ import messages
 from random import choices, uniform
 
 
-def get_tickers(path: str) -> dict:
+def get_tickers() -> dict:
+    path = 'analytics/modeling'
     list_subfolders_with_paths =\
-        [f.path for f in os.scandir(path) if f.is_dir()]
+        [f.path for f in os.scandir(f'{path}/sectors') if f.is_dir()]
 
     tickers = []
 
-    with open(f'{path}/all_etfs.pkl', "rb") as input:
+    with open(f'{path}/all_indicators.pkl', "rb") as input:
         f_list = pickle.load(input)
         tickers = tickers + f_list
 
     for sector_dir in list_subfolders_with_paths:
-        for f in os.listdir(sector_dir):
-            with open(f'{sector_dir}/{f}', "rb") as input:
+        for f in os.listdir(f'{sector_dir}/tickers'):
+            with open(f'{sector_dir}/tickers/{f}', "rb") as input:
                 if f.startswith('traidable_tickers'):
                     f_list = pickle.load(input)
                     tickers = tickers + f_list
@@ -48,12 +49,12 @@ def get_tickers(path: str) -> dict:
 
 class MarketDataGenerator:
     def __init__(self):
-        self.__tickers_dict = get_tickers(path='modeling/tickers')
+        self.__tickers_dict = get_tickers()
 
     def sample_l1_update(self) -> dict:
         sample_dict = messages.market_data()
 
-        # Sample ticker, %BidNet and %AskNet
+        # Sample ticker, pctBidNet and pctAskNet
         tickers = list(self.__tickers_dict.keys())
         probs = list(self.__tickers_dict.values())
 
@@ -62,7 +63,7 @@ class MarketDataGenerator:
         ask_net = uniform(bid_net, 1)
 
         sample_dict['symbol'] = ticker
-        sample_dict['%bidNet'] = bid_net
-        sample_dict['%askNet'] = ask_net
+        sample_dict['pctBidNet'] = bid_net
+        sample_dict['pctAskNet'] = ask_net
 
         return sample_dict

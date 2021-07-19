@@ -29,9 +29,13 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
             writer,
             json.dumps(order)
         )
-        print('Order sent')
     elif msg_type == 'order-complete':
         print('Order placed')
+
+
+async def testing_handle_message(writer: asyncio.StreamWriter, msg: str):
+    json_msg = json.loads(msg)
+    await reply(writer, json_msg)
 
 
 async def handle_message(writer: asyncio.StreamWriter, msg: str):
@@ -59,7 +63,8 @@ async def handle_server(reader: asyncio.StreamReader,
             character = str(received_byte, 'UTF-8')
             if character == '\n':
                 print(f'Received: {msg}')
-                await handle_message(writer, msg)
+                # await handle_message(writer, msg)
+                await testing_handle_message(writer, msg)
                 msg = ''
             else:
                 msg += character
