@@ -1,87 +1,120 @@
-def handshake_request() -> dict:
+def logon() -> dict:
     return {
-        'action': 'handshake', 
-        'version': '1.0.0.1', 
-        'ip': '3.211.228.129',
-        'sendDelay': 5000, 
-        'sendFrequency': 1000}
-
-
-def handshake_response() -> dict:
-    return {
-        'action': 'handshake-response',
-        'version': '1.2.3.5',
-        'marketSorterConnected': True,
-        'executorConnected': True,
+        'messageId': 'logon',
+        'seqNo': None,
+        'clientName': '',
+        'clientVersion': ''
     }
 
 
-def market_data() -> dict:
+def logon_response() -> dict:
     return {
-        'action': 'stockL1-update',
-        'symbol': 'Symbol',
-        'trd': 'T',
-        'pctBidNet': 0,
-        'pctAskNet': 0,
-        'bidL1': 0,
-        'askL1': 0,
-        'last': 0,
-        'closePrice': 0,
-        'premarketVolume': 0
+        'messageId': 'logon',
+        'refNo': None,
+        'sessionKey': ''
     }
 
-def subscribe_request() -> dict:
+
+def keep_alive() -> dict:
     return {
-        'action': 'stockL1',
-        'username': 'TDXX',
-        'symbols': ['MSFT', 'AAPL']
+        'messageId': 'keepAlive',
+        'sessionKey': ''
+    }
+
+
+def keep_alive_acknowledgement() -> dict:
+    return {
+        'messageId': 'keepAlive',
+        'status': ''
+    }
+
+
+def logon_error_response() -> dict:
+    return {
+        'messageId': 'logon',
+        'refNo': None,
+        'error': ''
+    }
+
+
+def subscribe() -> dict:
+    return {
+        'messageId': 'subscribe',
+        'seqNo': None,
+        'sessionKey': '',
+        'symbols': None
     }
 
 
 def subscribe_response() -> dict:
     return {
-        'action': 'stockL1-response'
+        'messageId': 'marketData',
+        'refNo': None,
+        'data': []
+    }
+
+
+def market_data() -> dict:
+    return {
+        'messageId': 'marketData',
+        'data': []
     }
 
 
 def order_request() -> dict:
     return {
-        'action': 'order-request',
-        'TIF': 'Extended',
-        'id': 'id',
-        'limit': 0,
-        'side': 'B',
-        'size': 100,
-        'symbol': 'Symbol',
-        'username': 'GCXX',
-        'venue': 'NSDQ'
-    }
-
-
-def empty_market_data_response() -> dict:
-    return {
-        'action': 'gotIt'
-    }
-
-
-def order_complete() -> dict:
-    return {
-        'action': 'order-complete',
-        'username': 'GCXX',
-        'id': 'id'
+        'messageId': 'orderRequest',
+        'seqNo': None,
+        'sessionKey': '',
+        'order': {
+            'cid': '',
+            'data': {
+                'TIF': 'Extended',
+                'limit': None,
+                'side': '',
+                'size': None,
+                'symbol': '',
+                'username': '',
+                'venue': '',
+                'target': None
+            }
+        }
     }
 
 
 def order_response() -> dict:
     return {
-        'action': 'orderSetSuccessfully',
-        'symbol': 'symbol',
-        'TIF': 'Extended',
-        'ordertype': 'Limit',
-        'side': 'side',
-        'price': 235.90,
-        'size': 200,
-        'target': 230.00,
-        'destination': 'ARCA',
-        'listing': 'NYSE'
+        'messageId': 'orderResponse',
+        'refNo': None,
+        'order': {
+            'cid': '',
+            'response': '',
+            'data': {
+                'symbol': '',
+                'username': '',
+                'orderId': '',
+                'clientId': '',
+                'time': None,
+                'side': '',
+                'limit': None,
+                'size': None,
+                'venue': '',
+                'mnemonic': '',
+                'TIF': '',
+                'pendingSize': None,
+                'BPU': None,
+                'CPNL': None
+            }
+        }
+    }
+
+
+def order_complete() -> dict:
+    return {
+        'messageId': 'orderStatus',
+        'order': {
+            'cid': '',
+            'id': '',
+            'status': ''
+        }
     }

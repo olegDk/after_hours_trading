@@ -1,7 +1,8 @@
 import pickle
 import os
 import messages
-from random import choices, uniform
+from random import uniform, randint
+import numpy as np
 
 
 def get_tickers() -> dict:
@@ -58,12 +59,30 @@ class MarketDataGenerator:
         tickers = list(self.__tickers_dict.keys())
         probs = list(self.__tickers_dict.values())
 
-        ticker = choices(tickers, probs)[0]
+        n_tickers = randint(1, 6)
+        sampled_tickers = np.random.choice(tickers,
+                                           size=n_tickers,
+                                           replace=False,
+                                           p=probs)
+
+        sampled_l1_dicts = list(map(self.__sample_stock_l1, sampled_tickers))
+        sample_dict['data'] = sampled_l1_dicts
+
+        return sample_dict
+
+    def __sample_stock_l1(self,
+                          ticker: str) -> dict:
+
+        sample_dict = {}
+        sample_dict['symbol'] = ticker
+
         bid_net = uniform(-1, 1)
         ask_net = uniform(bid_net, 1)
-
-        sample_dict['symbol'] = ticker
         sample_dict['pctBidNet'] = bid_net
         sample_dict['pctAskNet'] = ask_net
+        sample_dict['bid'] = 0
+        sample_dict['ask'] = 0
+        sample_dict['bidVenue'] = 'NSDQ'
+        sample_dict['askVenue'] = 'NSDQ'
 
         return sample_dict

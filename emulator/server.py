@@ -5,7 +5,8 @@ import json
 import random
 from market_data_generator import MarketDataGenerator
 
-handshake_received = False
+logon = False
+subscribe = False
 mdg = MarketDataGenerator()
 
 
@@ -15,22 +16,29 @@ async def send_to_analytics_server(writer: asyncio.StreamWriter, msg: str):
 
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
-    global handshake_received
-    msg_type = json_msg['action']
-    if msg_type == 'handshake':
-        print('Received handshake')
+    global logon, subscribe
+    msg_type = json_msg['messageId']
+    if msg_type == 'logon':
+        print('Received logon\n\n')
         await send_to_analytics_server(
             writer,
-            json.dumps(messages.handshake_response())
+            json.dumps(messages.logon_response())
         )
-        handshake_received = True
-    elif msg_type == 'order-request':
+        logon = True
+    elif msg_type == 'orderRequest':
         await send_to_analytics_server(
             writer,
             json.dumps(messages.order_response())
         )
         sleeping_time = random.randint(1, 10) * 0.1
         await asyncio.sleep(sleeping_time)
+    elif msg_type == 'subscribe':
+        print('Received subscribe\n\n')
+        await send_to_analytics_server(
+            writer,
+            json.dumps(messages.subscribe_response())
+        )
+        subscribe = True
 
 
 async def handle_message(writer: asyncio.StreamWriter, msg: str):
@@ -45,12 +53,14 @@ async def handle_message(writer: asyncio.StreamWriter, msg: str):
 
 
 async def emulate_market_data(writer: asyncio.StreamWriter):
-    if handshake_received:
+    await asyncio.sleep(3)
+    if logon and subscribe:
         while True:
             msg = json.dumps(mdg.sample_l1_update())
             await send_to_analytics_server(writer, msg)
-            print('Sent l1')
-            sleeping_time = random.randint(1, 10) * 0.01
+            print('Sent l1:')
+            print(f'{msg}\n\n')
+            sleeping_time = random.randint(1, 10) * 0.1
             await asyncio.sleep(sleeping_time)
 
 
@@ -61,7 +71,7 @@ async def handle_client_messages(reader: asyncio.StreamReader,
         received_byte = await reader.read(1)
         character = str(received_byte, 'UTF-8')
         if character == '\n':
-            print(f'Received: {msg}')
+            print(f'\n\nReceived: {msg}\n\n')
             await handle_message(writer, msg)
             msg = ''
         else:
