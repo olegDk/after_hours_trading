@@ -2,6 +2,8 @@ import numpy as np
 import pickle
 import os
 from typing import Tuple
+import uuid
+import yfinance
 import emulator.messages as messages
 
 INIT_PCT = -1e3
@@ -16,7 +18,17 @@ BID_VENUE = 'bidVenue'
 ASK_VENUE = 'askVenue'
 PRICE = 'limit'
 SIDE = 'side'
+SIZE = 'size'
 VENUE = 'venue'
+REF = 'refNo'
+MODEL = 'model'
+CID = 'cid'
+
+
+def generate_id() -> str:
+    id = uuid.uuid4().__str__().strip()
+    id = id.replace('-', '')
+    return id
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -35,12 +47,17 @@ def current_percentage(l1_dict: dict) -> float:
 
 class Trader:
     def __init__(self):
+        self.__tickers = self.__get_tickers()
         self.__stocks_l1, self.__all_indicators = self.__init_indicators()
         self.__factors = self.__init_factors()
         self.__models = self.__init_models()
+        # self.__closes = self.__init_closes()
         self.__positions = {}
 
     def get_subscription_list(self) -> list:
+        return self.__tickers
+
+    def __get_tickers(self) -> list:
         sectors_path = 'analytics/modeling/sectors'
         sectors_dirs = \
             [f.path for f in os.scandir(sectors_path) if f.is_dir()]
@@ -134,6 +151,23 @@ class Trader:
 
         return models_dict
 
+    def __init_closes(self) -> dict:
+        print('Initializing closes...')
+        closes = {}
+        tickers = yfinance.Tickers(self.__tickers)
+        print(tickers.tickers['ADBE'].info)
+        for ticker in tickers.tickers.keys():
+            try:
+                close = tickers.tickers[ticker].info['previousClose']
+                print(f"{ticker}'s close is "
+                      f"{tickers.tickers[ticker].info['previousClose']}")
+                closes[ticker] = close
+            except Exception as e:
+                print(e)
+                print(f'Failed loading prev close price for ticker: {ticker}')
+
+        return closes
+
     def process_l1_message(self, msg: dict) -> list:
         # Update stock's l1
         data = msg[DATA]
@@ -177,7 +211,7 @@ class Trader:
         # Make trade decision
         try:
             model_dict = self.__models[symbol]
-            model = model_dict['model']
+            model = model_dict[MODEL]
             # Get indicators
             indicators = self.__factors[symbol]
             # Get indicators l1
@@ -202,7 +236,9 @@ class Trader:
                     order[ORDER][DATA][SYMBOL] = symbol
                     order[ORDER][DATA][PRICE] = ask_l1
                     order[ORDER][DATA][SIDE] = 'B'
+                    order[ORDER][DATA][SIZE] = 100
                     order[ORDER][DATA][VENUE] = ask_venue
+                    order[ORDER][CID] = generate_id()
                     print(f'Stock: {symbol}, LONG {ask_l1},\n'
                           f'Current ask: {pct_ask_net}, '
                           f'prediction: {prediction}')
@@ -214,7 +250,9 @@ class Trader:
                     order[ORDER][DATA][SYMBOL] = symbol
                     order[ORDER][DATA][PRICE] = bid_l1
                     order[ORDER][DATA][SIDE] = 'S'
+                    order[ORDER][DATA][SIZE] = 100
                     order[ORDER][DATA][VENUE] = bid_venue
+                    order[ORDER][CID] = generate_id()
                     print(f'Stock: {symbol}, SHORT {bid_l1},\n'
                           f'Current bid: {pct_bid_net}, '
                           f'prediction: {prediction}')
