@@ -23,6 +23,7 @@ VENUE = 'venue'
 REF = 'refNo'
 MODEL = 'model'
 CID = 'cid'
+TARGET = 'target'
 
 
 def generate_id() -> str:
@@ -51,7 +52,7 @@ class Trader:
         self.__stocks_l1, self.__all_indicators = self.__init_indicators()
         self.__factors = self.__init_factors()
         self.__models = self.__init_models()
-        # self.__closes = self.__init_closes()
+        self.__closes = self.__init_closes()
         self.__positions = {}
 
     def get_subscription_list(self) -> list:
@@ -151,20 +152,24 @@ class Trader:
 
         return models_dict
 
+    def get_closes(self) -> dict:
+        return self.__closes
+
     def __init_closes(self) -> dict:
         print('Initializing closes...')
-        closes = {}
-        tickers = yfinance.Tickers(self.__tickers)
-        print(tickers.tickers['ADBE'].info)
-        for ticker in tickers.tickers.keys():
-            try:
-                close = tickers.tickers[ticker].info['previousClose']
-                print(f"{ticker}'s close is "
-                      f"{tickers.tickers[ticker].info['previousClose']}")
-                closes[ticker] = close
-            except Exception as e:
-                print(e)
-                print(f'Failed loading prev close price for ticker: {ticker}')
+        # tickers = yfinance.Tickers(self.__tickers)
+        # for ticker in tickers.tickers.keys():
+        #     try:
+        #         close = tickers.tickers[ticker].info['previousClose']
+        #         print(f"{ticker}'s close is "
+        #               f"{tickers.tickers[ticker].info['previousClose']}")
+        #         closes[ticker] = close
+        #     except Exception as e:
+        #         print(e)
+        #         print(f'Failed loading prev close price for ticker: {ticker}')
+
+        with open('analytics/modeling/temp_closes_session_23072021.pkl', 'rb') as f:
+            closes = pickle.load(f)
 
         return closes
 
@@ -232,30 +237,38 @@ class Trader:
 
                 # Check for long opportunity
                 if (prediction - pct_ask_net) >= std_err:
+                    close = self.__closes[symbol]
+                    target = float(close + float(prediction/100) * close)
                     order = messages.order_request()
                     order[ORDER][DATA][SYMBOL] = symbol
                     order[ORDER][DATA][PRICE] = ask_l1
                     order[ORDER][DATA][SIDE] = 'B'
                     order[ORDER][DATA][SIZE] = 100
                     order[ORDER][DATA][VENUE] = ask_venue
+                    order[ORDER][DATA][TARGET] = target
                     order[ORDER][CID] = generate_id()
                     print(f'Stock: {symbol}, LONG {ask_l1},\n'
                           f'Current ask: {pct_ask_net}, '
-                          f'prediction: {prediction}')
+                          f'prediction: {prediction}, '
+                          f'target: {target}')
                     return order
 
                 # Check for short opportunity
                 elif (prediction - pct_bid_net) <= -std_err:
+                    close = self.__closes[symbol]
+                    target = float(close + float(prediction/100) * close)
                     order = messages.order_request()
                     order[ORDER][DATA][SYMBOL] = symbol
                     order[ORDER][DATA][PRICE] = bid_l1
                     order[ORDER][DATA][SIDE] = 'S'
                     order[ORDER][DATA][SIZE] = 100
                     order[ORDER][DATA][VENUE] = bid_venue
+                    order[ORDER][DATA][TARGET] = target
                     order[ORDER][CID] = generate_id()
                     print(f'Stock: {symbol}, SHORT {bid_l1},\n'
                           f'Current bid: {pct_bid_net}, '
-                          f'prediction: {prediction}')
+                          f'prediction: {prediction}, '
+                          f'target: {target}')
                     return order
             else:
                 raise TypeError('One of indicators is not populated yet')
