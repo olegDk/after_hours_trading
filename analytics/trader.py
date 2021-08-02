@@ -3,33 +3,29 @@ import pickle
 import os
 from typing import Tuple
 import uuid
+from datetime import datetime
 import yfinance
 import emulator.messages as messages
+from config.constants import *
+from messaging.rabbit_sender import RabbitSender
 
-INIT_PCT = -1e3
-SYMBOL = 'symbol'
-ORDER = 'order'
-DATA = 'data'
-PCT_BID_NET = 'pctBidNet'
-PCT_ASK_NET = 'pctAskNet'
-BID = 'bid'
-ASK = 'ask'
-BID_VENUE = 'bidVenue'
-ASK_VENUE = 'askVenue'
-PRICE = 'limit'
-SIDE = 'side'
-SIZE = 'size'
-VENUE = 'venue'
-REF = 'refNo'
-MODEL = 'model'
-CID = 'cid'
-TARGET = 'target'
+sum_update_l1_speed = 0
+sum_predict_speed = 0
+sum_process_speed = 0
+
+count_update_l1_speed = 0
+count_predict_speed = 0
+count_process_speed = 0
+
+average_update_l1_speed = 0
+average_predict_speed = 0
+average_process_speed = 0
 
 
 def generate_id() -> str:
-    id = uuid.uuid4().__str__().strip()
-    id = id.replace('-', '')
-    return id
+    unique_id = uuid.uuid4().__str__().strip()
+    unique_id = unique_id.replace('-', '')
+    return unique_id
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -48,6 +44,7 @@ def current_percentage(l1_dict: dict) -> float:
 
 class Trader:
     def __init__(self):
+        self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
         self.__tickers = self.__get_tickers()
         self.__stocks_l1, self.__all_indicators = self.__init_indicators()
         self.__factors = self.__init_factors()
@@ -158,6 +155,7 @@ class Trader:
     def __init_closes(self) -> dict:
         print('Initializing closes...')
         # tickers = yfinance.Tickers(self.__tickers)
+        # closes = {}
         # for ticker in tickers.tickers.keys():
         #     try:
         #         close = tickers.tickers[ticker].info['previousClose']
@@ -167,26 +165,57 @@ class Trader:
         #     except Exception as e:
         #         print(e)
         #         print(f'Failed loading prev close price for ticker: {ticker}')
-
-        with open('analytics/modeling/temp_closes_session_23072021.pkl', 'rb') as f:
+        #
+        # with open('analytics/modeling/temp_closes_session_01082021.pkl',
+        #           'wb') as f:
+        #     pickle.dump(closes, f)
+        with open('analytics/modeling/temp_closes_session_01082021.pkl',
+                  'rb') as f:
             closes = pickle.load(f)
 
         return closes
 
     def process_l1_message(self, msg: dict) -> list:
+        global average_update_l1_speed, average_predict_speed,\
+            average_process_speed, sum_update_l1_speed, sum_predict_speed, \
+            sum_process_speed, count_update_l1_speed, count_predict_speed,\
+            count_process_speed
         # Update stock's l1
         data = msg[DATA]
         orders = []
+        start = datetime.now()
         for symbol_dict in data:
             self.__update_l1(symbol_dict)
             if symbol_dict[SYMBOL] in self.__all_indicators:
                 data.remove(symbol_dict)
+        finish_update = datetime.now()
+        delta_update = (finish_update - start).microseconds
+        sum_update_l1_speed = sum_update_l1_speed + delta_update
+        count_update_l1_speed = count_update_l1_speed + 1
+        average_update_l1_speed = sum_update_l1_speed / count_update_l1_speed
+        print(f'Update l1 time: {delta_update} microseconds')
 
+        start_predict = datetime.now()
         if data:
             for symbol_dict in data:
-                order = self.__make_trade_decision(symbol_dict)
+                order = self.__process_symbol_dict(symbol_dict)
                 if order:
                     orders.append(order)
+        finish = datetime.now()
+        delta_predict = (finish - start_predict).microseconds
+        delta = (finish - start).microseconds
+        sum_predict_speed = sum_predict_speed + delta_predict
+        count_predict_speed = count_predict_speed + 1
+        average_predict_speed = sum_predict_speed / count_predict_speed
+        sum_process_speed = sum_process_speed + delta
+        count_process_speed = count_process_speed + 1
+        average_process_speed = sum_process_speed / count_process_speed
+        print(f'Predict time: {delta_predict} microseconds')
+        print(f'Process time: {delta} microseconds')
+
+        print(f'Average update l1 time: {average_update_l1_speed} microseconds')
+        print(f'Average predict time: {average_predict_speed} microseconds')
+        print(f'Average process time: {average_process_speed} microseconds')
 
         return orders
 
@@ -204,14 +233,20 @@ class Trader:
             self.__stocks_l1[symbol][PCT_BID_NET] = pct_bid_net
             self.__stocks_l1[symbol][PCT_ASK_NET] = pct_ask_net
 
-    def __make_trade_decision(self, symbol_dict: dict) -> dict:
+    def send_order_log_to_mq(self, log: list):
+        self.__rabbit_sender.send_message(message=log,
+                                          routing_key=ORDER_RELATED_DATA)
+
+    def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
         pct_bid_net = symbol_dict[PCT_BID_NET]
         pct_ask_net = symbol_dict[PCT_ASK_NET]
         bid_l1 = symbol_dict[BID]
         ask_l1 = symbol_dict[ASK]
         bid_venue = symbol_dict[BID_VENUE]
+        # bid_venue = 'NSDQ'
         ask_venue = symbol_dict[ASK_VENUE]
+        # ask_venue = 'NSDQ'
 
         # Make trade decision
         try:
@@ -227,7 +262,7 @@ class Trader:
             print(f'{symbol} current factors:')
             print(factors_l1)
 
-            if not INIT_PCT in factors_l1:
+            if INIT_PCT not in factors_l1:
                 pred_array = np.array(factors_l1).reshape(1, -1)
                 prediction = model.predict(pred_array)
                 print(f'{symbol} prediction: {prediction}\n'
@@ -237,6 +272,9 @@ class Trader:
 
                 # Check for long opportunity
                 if (prediction - pct_ask_net) >= std_err:
+                    order_data = {}
+                    order_related_data_dict = dict(zip(indicators, factors_l1))
+                    order_data[ORDER_RELATED_DATA] = order_related_data_dict
                     close = self.__closes[symbol]
                     target = float(close + float(prediction/100) * close)
                     order = messages.order_request()
@@ -247,14 +285,18 @@ class Trader:
                     order[ORDER][DATA][VENUE] = ask_venue
                     order[ORDER][DATA][TARGET] = target
                     order[ORDER][CID] = generate_id()
+                    order_data[ORDER_DATA] = order
                     print(f'Stock: {symbol}, LONG {ask_l1},\n'
                           f'Current ask: {pct_ask_net}, '
                           f'prediction: {prediction}, '
                           f'target: {target}')
-                    return order
+                    return order_data
 
                 # Check for short opportunity
                 elif (prediction - pct_bid_net) <= -std_err:
+                    order_data = {}
+                    order_related_data_dict = dict(zip(indicators, factors_l1))
+                    order_data[ORDER_RELATED_DATA] = order_related_data_dict
                     close = self.__closes[symbol]
                     target = float(close + float(prediction/100) * close)
                     order = messages.order_request()
@@ -265,18 +307,18 @@ class Trader:
                     order[ORDER][DATA][VENUE] = bid_venue
                     order[ORDER][DATA][TARGET] = target
                     order[ORDER][CID] = generate_id()
+                    order_data[ORDER_DATA] = order
                     print(f'Stock: {symbol}, SHORT {bid_l1},\n'
                           f'Current bid: {pct_bid_net}, '
                           f'prediction: {prediction}, '
                           f'target: {target}')
-                    return order
+                    return order_data
             else:
                 raise TypeError('One of indicators is not populated yet')
 
         except KeyError as e:
             print(e)
             print(f'Failed to make inference on symbol message: {symbol_dict}')
-            return {}
 
         except TypeError as e:
             print(e)

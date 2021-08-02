@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  rabbit:
+    image: rabbitmq:3-management
+    ports:
+      - 15672:15672
+      - 5672:5672
+    networks:
+      - elasticsearch_network
+#    healthcheck:
+#      test: [ "CMD", "curl", "-f", "http://localhost:15672" ]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+
+
+  elasticsearch:
+    image: elasticsearch:7.13.4
+    depends_on:
+      - rabbit
+    networks:
+      - elasticsearch_network
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      - discovery.type=single-node
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.13.4
+    depends_on:
+      - elasticsearch
+    networks:
+      - elasticsearch_network
+    ports:
+      - 5601:5601
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+
+  redis:
+    image: redis
+    volumes:
+      - ./redis_data:/data
+
+  receive_order_related_data:
+    build:
+      context: ./messaging
+    depends_on:
+      - rabbit
+      - elasticsearch
+      - kibana
+    networks:
+      - elasticsearch_network
+
+networks:
+  elasticsearch_network:

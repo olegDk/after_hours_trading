@@ -19,4 +19,4 @@ ADD . $PROJECT_DIR/
 
 WORKDIR $PROJECT_DIR
 
-CMD ["python", "main.py"]
+CMD ["python", "receive_order_related_data.py"]

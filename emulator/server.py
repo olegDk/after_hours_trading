@@ -79,7 +79,7 @@ async def emulate_market_data(writer: asyncio.StreamWriter):
                 await send_to_analytics_server(writer, msg)
                 print('Sent l1:')
                 print(f'{msg}\n\n')
-                sleeping_time = random.randint(1, 10) * 0.1
+                sleeping_time = random.randint(1, 10) * 0.01
                 await asyncio.sleep(sleeping_time)
         else:
             await asyncio.sleep(1)
@@ -116,7 +116,7 @@ async def handle_client(reader: asyncio.StreamReader,
 
 async def main():
     host = socket.gethostname()
-    port = 1234
+    port = 11111
     server = await asyncio.start_server(handle_client, host, port)
 
     address = server.sockets[0].getsockname()

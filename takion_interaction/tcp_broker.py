@@ -3,29 +3,7 @@ import json
 import socket
 import emulator.messages as messages
 from analytics.trader import Trader
-
-CLIENT_NAME = 'WBTE'
-VERSION_OF_APP = '1.2.3.4'
-TIMEOUT_GRACE_PERIOD = 180
-RECONNECTION_FREQUENCY = 5
-N_ATTEMPTS = 10
-ERROR = 'error'
-SESSION_KEY = 'sessionKey'
-CLIENT_NAME_KEY = 'clientName'
-USER_NAME = 'username'
-VERSION_OF_APP_KEY = 'clientVersion'
-SEQ = 'seqNo'
-LOGON_TYPE = 'logon'
-MARKET_DATA_TYPE = 'marketData'
-ORDER_STATUS = 'orderStatus'
-ORDER_RESPONSE = 'orderResponse'
-MESSAGE_ID = 'messageId'
-SYMBOLS = 'symbols'
-ORDER = 'order'
-DATA = 'data'
-CID = 'cid'
-TID = 'orderId'
-STATUS = 'status'
+from config.constants import *
 
 trader = Trader()
 seq_counter = 0
@@ -46,32 +24,46 @@ async def send_tcp_message(writer: asyncio.StreamWriter, msg: dict):
 
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
-    global session_key
     msg_type = json_msg['messageId']
     if msg_type == LOGON_TYPE:
-        if 'error' in json_msg.keys():
-            print(f'Error on logon: {json_msg[ERROR]}')
-        else:
-            session_key = json_msg[SESSION_KEY]
-            print(f'Received successfull logon response, '
-                  f'session_key: {session_key}')
+        handle_logon(json_msg)
     elif msg_type == MARKET_DATA_TYPE:
-        orders = trader.process_l1_message(json_msg)
-        if orders:
-            for order in orders:
-                order[SESSION_KEY] = session_key
-                order[ORDER][DATA][USER_NAME] = CLIENT_NAME
-                await send_tcp_message(
-                    writer,
-                    order
-                )
-            print(orders)
+        await handle_market_data(writer, json_msg)
     elif msg_type == ORDER_STATUS:
-        client_order_id = json_msg[ORDER][CID]
-        takion_order_id = json_msg[ORDER][TID]
-        status = json_msg[ORDER][STATUS]
-        print(f'Status of order with cid: {client_order_id} '
-              f'and tid: {takion_order_id}: {status}')
+        handle_order_status(json_msg)
+
+
+async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
+    orders_data = trader.process_l1_message(msg)
+    if orders_data:
+        for order_data in orders_data:
+            order = order_data[ORDER_DATA]
+            order[SESSION_KEY] = session_key
+            order[ORDER][DATA][USER_NAME] = CLIENT_NAME
+            await send_tcp_message(
+                writer,
+                order
+            )
+        print(orders_data)
+        trader.send_order_log_to_mq(log=orders_data)
+
+
+def handle_logon(msg: dict):
+    global session_key
+    if 'error' in msg.keys():
+        print(f'Error on logon: {msg[ERROR]}')
+    else:
+        session_key = msg[SESSION_KEY]
+        print(f'Received successfull logon response, '
+              f'session_key: {session_key}')
+
+
+def handle_order_status(msg: dict):
+    client_order_id = msg[ORDER][CID]
+    takion_order_id = msg[ORDER][TID]
+    status = msg[ORDER][STATUS]
+    print(f'Status of order with cid: {client_order_id} '
+          f'and tid: {takion_order_id}: {status}')
 
 
 async def handle_message(writer: asyncio.StreamWriter, msg: str):
@@ -155,8 +147,11 @@ async def handle_server(reader: asyncio.StreamReader,
 
 async def start_connection():
     global seq_counter, session_key
-    host = socket.gethostname()
-    port = 1234
+    # host = socket.gethostname()
+    # host = '91.219.61.233'
+    # to run from docker
+    host = '127.0.1.1'
+    port = 11111
     seq_counter = 0
     session_key = ''
 
