@@ -1,13 +1,14 @@
 import numpy as np
 import pickle
 import os
+import copy
 from typing import Tuple
 import uuid
 from datetime import datetime
-import yfinance
 import emulator.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender
+import random
 
 sum_update_l1_speed = 0
 sum_predict_speed = 0
@@ -26,6 +27,10 @@ def generate_id() -> str:
     unique_id = uuid.uuid4().__str__().strip()
     unique_id = unique_id.replace('-', '')
     return unique_id
+
+
+def generate_cid() -> int:
+    return random.getrandbits(64)
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -49,7 +54,6 @@ class Trader:
         self.__stocks_l1, self.__all_indicators = self.__init_indicators()
         self.__factors = self.__init_factors()
         self.__models = self.__init_models()
-        self.__closes = self.__init_closes()
         self.__positions = {}
 
     def get_subscription_list(self) -> list:
@@ -83,6 +87,16 @@ class Trader:
                 continue
 
         all_tickers = list(set(all_tickers))
+
+        # Getting earnings calendar manually every day
+        # https://hosting.briefing.com/cschwab/
+        # Calendars/EarningsCalendar5Weeks.htm
+        with open('analytics/modeling/reports') as i:
+            reports = i.read().splitlines()
+            print(f'Reports: {reports}')
+
+        all_tickers =\
+            [ticker for ticker in all_tickers if ticker not in reports]
 
         return all_tickers
 
@@ -149,38 +163,14 @@ class Trader:
 
         return models_dict
 
-    def get_closes(self) -> dict:
-        return self.__closes
 
-    def __init_closes(self) -> dict:
-        print('Initializing closes...')
-        # tickers = yfinance.Tickers(self.__tickers)
-        # closes = {}
-        # for ticker in tickers.tickers.keys():
-        #     try:
-        #         close = tickers.tickers[ticker].info['previousClose']
-        #         print(f"{ticker}'s close is "
-        #               f"{tickers.tickers[ticker].info['previousClose']}")
-        #         closes[ticker] = close
-        #     except Exception as e:
-        #         print(e)
-        #         print(f'Failed loading prev close price for ticker: {ticker}')
-        #
-        # with open('analytics/modeling/temp_closes_session_01082021.pkl',
-        #           'wb') as f:
-        #     pickle.dump(closes, f)
-        with open('analytics/modeling/temp_closes_session_01082021.pkl',
-                  'rb') as f:
-            closes = pickle.load(f)
-
-        return closes
-
-    def process_l1_message(self, msg: dict) -> list:
+    def process_l1_message(self, msg_dict: dict) -> list:
         global average_update_l1_speed, average_predict_speed,\
             average_process_speed, sum_update_l1_speed, sum_predict_speed, \
             sum_process_speed, count_update_l1_speed, count_predict_speed,\
             count_process_speed
         # Update stock's l1
+        msg = copy.deepcopy(msg_dict)
         data = msg[DATA]
         orders = []
         start = datetime.now()
@@ -221,8 +211,9 @@ class Trader:
 
     def __update_l1(self, symbol_dict: dict):
         symbol = symbol_dict[SYMBOL]
-        pct_bid_net = symbol_dict[PCT_BID_NET]
-        pct_ask_net = symbol_dict[PCT_ASK_NET]
+        l1_dict = symbol_dict[L1]
+        pct_bid_net = l1_dict[PCT_BID_NET]
+        pct_ask_net = l1_dict[PCT_ASK_NET]
         l1_dict = self.__stocks_l1.get(symbol)
         if not l1_dict:
             self.__stocks_l1[symbol] = {
@@ -237,16 +228,22 @@ class Trader:
         self.__rabbit_sender.send_message(message=log,
                                           routing_key=ORDER_RELATED_DATA)
 
+    def send_market_data_to_mq(self, log: list):
+        self.__rabbit_sender.send_message(message=log,
+                                          routing_key=MARKET_DATA_TYPE)
+
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
-        pct_bid_net = symbol_dict[PCT_BID_NET]
-        pct_ask_net = symbol_dict[PCT_ASK_NET]
-        bid_l1 = symbol_dict[BID]
-        ask_l1 = symbol_dict[ASK]
-        bid_venue = symbol_dict[BID_VENUE]
-        # bid_venue = 'NSDQ'
-        ask_venue = symbol_dict[ASK_VENUE]
-        # ask_venue = 'NSDQ'
+        l1_dict = symbol_dict[L1]
+        pct_bid_net = l1_dict[PCT_BID_NET]
+        pct_ask_net = l1_dict[PCT_ASK_NET]
+        bid_l1 = l1_dict[BID]
+        ask_l1 = l1_dict[ASK]
+        bid_venue = l1_dict[BID_VENUE]
+        # bid_venue = 1
+        ask_venue = l1_dict[ASK_VENUE]
+        # ask_venue = 1
+        close = symbol_dict[CLOSE]
 
         # Make trade decision
         try:
@@ -271,20 +268,19 @@ class Trader:
                 std_err = model_dict['mae']
 
                 # Check for long opportunity
-                if (prediction - pct_ask_net) >= std_err:
+                if (prediction - pct_ask_net) >= 0.01: #change to std_err
                     order_data = {}
                     order_related_data_dict = dict(zip(indicators, factors_l1))
                     order_data[ORDER_RELATED_DATA] = order_related_data_dict
-                    close = self.__closes[symbol]
                     target = float(close + float(prediction/100) * close)
                     order = messages.order_request()
                     order[ORDER][DATA][SYMBOL] = symbol
                     order[ORDER][DATA][PRICE] = ask_l1
                     order[ORDER][DATA][SIDE] = 'B'
-                    order[ORDER][DATA][SIZE] = 100
+                    order[ORDER][DATA][SIZE] = 1
                     order[ORDER][DATA][VENUE] = ask_venue
                     order[ORDER][DATA][TARGET] = target
-                    order[ORDER][CID] = generate_id()
+                    order[ORDER][CID] = generate_cid()
                     order_data[ORDER_DATA] = order
                     print(f'Stock: {symbol}, LONG {ask_l1},\n'
                           f'Current ask: {pct_ask_net}, '
@@ -293,20 +289,19 @@ class Trader:
                     return order_data
 
                 # Check for short opportunity
-                elif (prediction - pct_bid_net) <= -std_err:
+                elif (prediction - pct_bid_net) <= -0.01: #change to std_err
                     order_data = {}
                     order_related_data_dict = dict(zip(indicators, factors_l1))
                     order_data[ORDER_RELATED_DATA] = order_related_data_dict
-                    close = self.__closes[symbol]
                     target = float(close + float(prediction/100) * close)
                     order = messages.order_request()
                     order[ORDER][DATA][SYMBOL] = symbol
                     order[ORDER][DATA][PRICE] = bid_l1
                     order[ORDER][DATA][SIDE] = 'S'
-                    order[ORDER][DATA][SIZE] = 100
+                    order[ORDER][DATA][SIZE] = 1
                     order[ORDER][DATA][VENUE] = bid_venue
                     order[ORDER][DATA][TARGET] = target
-                    order[ORDER][CID] = generate_id()
+                    order[ORDER][CID] = generate_cid()
                     order_data[ORDER_DATA] = order
                     print(f'Stock: {symbol}, SHORT {bid_l1},\n'
                           f'Current bid: {pct_bid_net}, '

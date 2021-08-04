@@ -1,82 +1,84 @@
+from config.constants import *
+
 def logon() -> dict:
     return {
-        'messageId': 'logon',
-        'seqNo': None,
-        'clientName': '',
-        'clientVersion': ''
+        MESSAGE_ID: LOGON_TYPE,
+        SEQ: None,
+        ACCOUNT_ID_KEY: '',
+        CLIENT_VERSION_KEY: ''
     }
 
 
 def logon_response() -> dict:
     return {
-        'messageId': 'logon',
-        'refNo': None,
-        'sessionKey': ''
+        MESSAGE_ID: LOGON_TYPE,
+        REF: None,
+        SESSION_KEY: ''
     }
 
 
 def keep_alive() -> dict:
     return {
-        'messageId': 'keepAlive',
-        'sessionKey': ''
+        MESSAGE_ID: KEEP_ALIVE,
+        SESSION_KEY: ''
     }
 
 
 def keep_alive_acknowledgement() -> dict:
     return {
-        'messageId': 'keepAlive',
-        'status': ''
+        MESSAGE_ID: KEEP_ALIVE,
+        STATUS: ''
     }
 
 
 def logon_error_response() -> dict:
     return {
-        'messageId': 'logon',
-        'refNo': None,
-        'error': ''
+        MESSAGE_ID: LOGON_TYPE,
+        REF: None,
+        ERROR: ''
     }
 
 
 def subscribe() -> dict:
     return {
-        'messageId': 'subscribe',
-        'seqNo': None,
-        'sessionKey': '',
-        'symbols': None
+        MESSAGE_ID: SUBSCRIBE,
+        SEQ: None,
+        SESSION_KEY: '',
+        SYMBOLS: None
     }
 
 
 def subscribe_response() -> dict:
     return {
-        'messageId': 'marketData',
-        'refNo': None,
-        'data': []
+        MESSAGE_ID: MARKET_DATA_TYPE,
+        REF: None,
+        DATA: []
     }
 
 
 def market_data() -> dict:
     return {
-        'messageId': 'marketData',
-        'data': []
+        MESSAGE_ID: MARKET_DATA_TYPE,
+        DATA: []
     }
 
 
 def order_request() -> dict:
     return {
-        'messageId': 'orderRequest',
-        'seqNo': None,
-        'sessionKey': '',
-        'order': {
-            'cid': '',
-            'data': {
-                'TIF': 'Extended',
-                'limit': None,
-                'side': '',
-                'size': None,
-                'symbol': '',
-                'username': '',
-                'venue': '',
-                'target': None
+        MESSAGE_ID: ORDER_REQUEST,
+        SEQ: None,
+        SESSION_KEY: '',
+        ORDER: {
+            CID: '',
+            DATA: {
+                TIF: EXTENDED,
+                LIMIT: None,
+                SIDE: '',
+                SIZE: None,
+                SYMBOL: '',
+                ACCOUNT_ID: '',
+                VENUE: None,
+                TARGET: None
             }
         }
     }
@@ -84,26 +86,26 @@ def order_request() -> dict:
 
 def order_response() -> dict:
     return {
-        'messageId': 'orderResponse',
-        'refNo': None,
-        'order': {
-            'cid': '',
-            'response': '',
-            'data': {
-                'symbol': '',
-                'username': '',
-                'orderId': '',
-                'clientId': '',
-                'time': None,
-                'side': '',
-                'limit': None,
-                'size': None,
-                'venue': '',
-                'mnemonic': '',
-                'TIF': '',
-                'pendingSize': None,
-                'BPU': None,
-                'CPNL': None
+        MESSAGE_ID: ORDER_RESPONSE,
+        REF: None,
+        ORDER: {
+            CID: '',
+            RESPONSE: '',
+            DATA: {
+                SYMBOL: '',
+                ACCOUNT_ID: '',
+                ORDER_ID: '',
+                CLIENT_ID: '',
+                TIME: None,
+                SIDE: '',
+                LIMIT: None,
+                SIZE: None,
+                VENUE: '',
+                MNEMONIC: '',
+                TIF: '',
+                PENDING_SIZE: None,
+                BPU: None,
+                CPNL: None
             }
         }
     }
@@ -111,10 +113,10 @@ def order_response() -> dict:
 
 def order_complete() -> dict:
     return {
-        'messageId': 'orderStatus',
-        'order': {
-            'cid': '',
-            'id': '',
-            'status': ''
+        MESSAGE_ID: ORDER_STATUS,
+        ORDER: {
+            CID: '',
+            ID: '',
+            STATUS: ''
         }
     }

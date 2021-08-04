@@ -1,67 +1,82 @@
 import pika
 from pika.exceptions import AMQPConnectionError
+import socket
 import sys
 import os
+import copy
 import json
 import time
-import socket
-from typing import Tuple
 from pytz import timezone
 from datetime import datetime, timedelta
-# from pymongo import MongoClient
-from elasticsearch import Elasticsearch, ConnectionError
+from typing import Tuple
+import redis
 
 
 # For testing
+# REDIS_HOST = 'localhost'
 # RABBIT_MQ_HOST = 'localhost'
-# ES_HOST = 'localhost'
 
 EST = timezone('EST')
 DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-# For testing
+REDIS_HOST = 'redis'
+REDIS_PORT = 6379
 RABBIT_MQ_HOST = 'rabbit'
 RABBIT_MQ_PORT = 5672
-ORDER_RELATED_DATA = 'orderRelatedData'
-ES_HOST = 'elasticsearch'
-ES_PORT = 9200
-ORDERS_INDEX = 'orders'
-ORDERS_SENT_DOC_TYPE = 'ordersSent'
+MARKET_DATA_TYPE = 'marketData'
+L1 = 'l1'
+CLOSES = 'closes'
+CLOSE = 'close'
+SYMBOL = 'symbol'
+PCT_BID_NET = 'pctBidNet'
+PCT_ASK_NET = 'pctAskNet'
+BID = 'bid'
+ASK = 'ask'
+BID_VENUE = 'bidVenue'
+ASK_VENUE = 'askVenue'
+L1_KEYS = [PCT_BID_NET, PCT_ASK_NET, BID, ASK,
+           BID_VENUE, ASK_VENUE]
 
 
-# To save logs in MongoDB Atlas
-# client = MongoClient(f"mongodb+srv://olegDk"
-#                      f":fy51gl38@cluster0.17cyv.mongodb.net/"
-#                      f"myFirstDatabase?retryWrites=true&w=majority")
-# db = client.test
-# docs = db.docs
+def insert_market_data(market_data_list: list, r: redis.Redis):
+    if market_data_list:
+        l1_dict = r.hgetall(L1)
+        print(f'l1_dict before update:\n')
+        print(l1_dict)
+        if not l1_dict:
+            l1_dict = {}
+        for symbol_dict in market_data_list:
+            l1 = symbol_dict[L1]
+            result_dict = {key: l1[key] for key in L1_KEYS}
+            l1_dict[symbol_dict[SYMBOL]] = json.dumps(result_dict)
+        print(f'l1_dict after update:\n')
+        print(l1_dict)
+        r.hmset(L1, l1_dict)
+        print(f'Market data inserted')
 
-# To save logs in Elasticsearch
 
-def connect_es() -> Elasticsearch:
+def connect_redis() -> redis.Redis:
     while True:
         try:
             print(f"========================================================="
                   f"===================================================")
-            print(f"Connection attempt to elasticsearch from receive "
-                  f"order data...")
-            es = Elasticsearch(hosts=[{"host": ES_HOST, "port": ES_PORT}])
-            if not es.indices.exists(index=ORDERS_INDEX):
-                es.indices.create(index=ORDERS_INDEX)
-            print(f"Connected to elasticsearch from receive "
-                  f"order data successfully")
+            print(f"Connection attempt to redis from receive "
+                  f"market data...")
+            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+            print(f"Connected to redis from receive "
+                  f"market data successfully")
             print(f"========================================================="
                   f"===================================================")
-            return es
+            return r
         except socket.gaierror:
-            print(f"Failed connecting to elasticsearch from receive "
-                  f"order data, maybe it didn't start yet "
+            print(f"Failed connecting to redis from receive "
+                  f"market data, maybe it didn't start yet "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
         except ConnectionError:
-            print(f"Failed connecting to elasticsearch from receive "
-                  f"order data, "
+            print(f"Failed connecting to redis from receive "
+                  f"market data, "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
@@ -75,70 +90,53 @@ def connect_rabbit() -> Tuple[pika.BlockingConnection,
             print(f"========================================================="
                   f"===================================================")
             print(f"Connection attempt to rabbit from receive "
-                  f"order data...")
+                  f"market data...")
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(host=RABBIT_MQ_HOST,
                                           port=RABBIT_MQ_PORT))
             channel = connection.channel()
 
-            channel.queue_declare(queue=ORDER_RELATED_DATA)
+            channel.queue_declare(queue=MARKET_DATA_TYPE)
             print(f"Connected to rabbit from receive "
-                  f"order data successfully")
+                  f"market data successfully")
             print(f"========================================================="
                   f"===================================================")
             return connection, channel
         except socket.gaierror:
             print(f"Failed connecting to rabbit from receive "
-                  f"order data, maybe it didn't start yet "
+                  f"market data, maybe it didn't start yet "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
         except ConnectionError:
             print(f"Failed connecting to rabbit from receive "
-                  f"order data, ConnectionError "
+                  f"market data, ConnectionError "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
         except AMQPConnectionError:
             print(f"Failed connecting to rabbit from receive "
-                  f"order data, AMQPConnectionError "
+                  f"market data, AMQPConnectionError "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
 
 
-def insert_orders(orders_list: list, es: Elasticsearch):
-    current_time = (datetime.now(EST) +
-                    timedelta(hours=1)).strftime(DATE_TIME_FORMAT)
-    for order_dict in orders_list:
-        order_dict.update({'datetime_est': current_time})
-        print(f"\n Received order {order_dict}")
-        # To save logs in MongoDB Atlas
-        # docs.insert_one(order_dict)
-
-        # To save logs in Elasticsearch
-        res = es.index(index=ORDERS_INDEX,
-                       doc_type=ORDERS_SENT_DOC_TYPE,
-                       body=order_dict)
-        print(res)
-
-
 def main():
-    # es = connect_es()
+    r = connect_redis()
     connection, channel = connect_rabbit()
 
     def callback(ch, method, properties, body):
         message = body.decode('UTF-8')
-        orders_list = json.loads(message)
-        print(f"\n\n [x] Received orders list")
-        print(orders_list)
-        # print(orders_list)
-        # insert_orders(orders_list=orders_list, es=es)
+        market_data_list = json.loads(message)
+        print(f"\n\n [x] Received market_data list")
+        # print(market_data_list)
+        insert_market_data(market_data_list=market_data_list, r=r)
 
-    channel.basic_consume(queue=ORDER_RELATED_DATA,
+    channel.basic_consume(queue=MARKET_DATA_TYPE,
                           on_message_callback=callback,
                           auto_ack=True)
 

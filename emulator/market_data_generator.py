@@ -74,15 +74,18 @@ class MarketDataGenerator:
                           ticker: str) -> dict:
 
         sample_dict = {}
+        l1_dict = {}
         sample_dict['symbol'] = ticker
+        sample_dict['close'] = 0
 
         bid_net = uniform(-1, 1)
         ask_net = uniform(bid_net, 1)
-        sample_dict['pctBidNet'] = bid_net
-        sample_dict['pctAskNet'] = ask_net
-        sample_dict['bid'] = 0
-        sample_dict['ask'] = 0
-        sample_dict['bidVenue'] = 'NSDQ'
-        sample_dict['askVenue'] = 'NSDQ'
+        l1_dict['pctBidNet'] = bid_net
+        l1_dict['pctAskNet'] = ask_net
+        l1_dict['bid'] = 0
+        l1_dict['ask'] = 0
+        l1_dict['bidVenue'] = 'NSDQ'
+        l1_dict['askVenue'] = 'NSDQ'
+        sample_dict['l1'] = l1_dict
 
         return sample_dict

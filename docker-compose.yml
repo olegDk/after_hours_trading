@@ -8,6 +8,7 @@ services:
       - 5672:5672
     networks:
       - elasticsearch_network
+      - redis_network
 #    healthcheck:
 #      test: [ "CMD", "curl", "-f", "http://localhost:15672" ]
 #      interval: 30s
@@ -15,43 +16,59 @@ services:
 #      retries: 5
 
 
-  elasticsearch:
-    image: elasticsearch:7.13.4
-    depends_on:
-      - rabbit
-    networks:
-      - elasticsearch_network
-    ports:
-      - 9200:9200
-      - 9300:9300
-    environment:
-      - discovery.type=single-node
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.13.4
-    depends_on:
-      - elasticsearch
-    networks:
-      - elasticsearch_network
-    ports:
-      - 5601:5601
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+#  elasticsearch:
+#    image: elasticsearch:7.13.4
+#    depends_on:
+#      - rabbit
+#    networks:
+#      - elasticsearch_network
+#    ports:
+#      - 9200:9200
+#      - 9300:9300
+#    environment:
+#      - discovery.type=single-node
+#
+#  kibana:
+#    image: docker.elastic.co/kibana/kibana:7.13.4
+#    depends_on:
+#      - elasticsearch
+#    networks:
+#      - elasticsearch_network
+#    ports:
+#      - 5601:5601
+#    environment:
+#      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
 
   redis:
     image: redis
     volumes:
       - ./redis_data:/data
+    ports:
+      - 6379:6379
+    networks:
+      - redis_network
 
   receive_order_related_data:
     build:
       context: ./messaging
+      dockerfile: Dockerfile_order
     depends_on:
       - rabbit
-      - elasticsearch
-      - kibana
+#      - elasticsearch
+#      - kibana
     networks:
       - elasticsearch_network
 
+  receive_market_data:
+    build:
+      context: ./messaging
+      dockerfile: Dockerfile_market_data
+    depends_on:
+      - rabbit
+      - redis
+    networks:
+      - redis_network
+
 networks:
   elasticsearch_network:
+  redis_network:

@@ -6,7 +6,7 @@ from analytics.trader import Trader
 from config.constants import *
 
 trader = Trader()
-seq_counter = 0
+seq_counter = 1
 session_key = ''
 
 
@@ -31,36 +31,46 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         await handle_market_data(writer, json_msg)
     elif msg_type == ORDER_STATUS:
         handle_order_status(json_msg)
+    elif msg_type == ORDER_RESPONSE:
+        print(f'Received order response: '
+              f'{json_msg}\n\n')
+    elif msg_type == SUBSCRIBE:
+        print(f'Received subscribed: '
+              f'{json_msg}\n\n')
 
 
 async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
     orders_data = trader.process_l1_message(msg)
+    market_data = msg[DATA]
     if orders_data:
         for order_data in orders_data:
             order = order_data[ORDER_DATA]
             order[SESSION_KEY] = session_key
-            order[ORDER][DATA][USER_NAME] = CLIENT_NAME
+            order[ORDER][DATA][ACCOUNT_ID_KEY] = ACCOUNT_ID
             await send_tcp_message(
                 writer,
                 order
             )
         print(orders_data)
         trader.send_order_log_to_mq(log=orders_data)
+    trader.send_market_data_to_mq(log=market_data)
 
 
 def handle_logon(msg: dict):
     global session_key
-    if 'error' in msg.keys():
+    if ERROR in msg.keys():
         print(f'Error on logon: {msg[ERROR]}')
-    else:
+    elif SESSION_KEY in msg.keys():
         session_key = msg[SESSION_KEY]
         print(f'Received successfull logon response, '
               f'session_key: {session_key}')
+    else:
+        print(f'Error on logon, full message: {msg}')
 
 
 def handle_order_status(msg: dict):
     client_order_id = msg[ORDER][CID]
-    takion_order_id = msg[ORDER][TID]
+    takion_order_id = msg[ORDER][ORDER_ID]
     status = msg[ORDER][STATUS]
     print(f'Status of order with cid: {client_order_id} '
           f'and tid: {takion_order_id}: {status}')
@@ -76,7 +86,7 @@ async def handle_message(writer: asyncio.StreamWriter, msg: str):
 
 async def send_logon(writer: asyncio.StreamWriter):
     logon = messages.logon()
-    logon[CLIENT_NAME_KEY] = CLIENT_NAME
+    logon[ACCOUNT_ID_KEY] = ACCOUNT_ID
     logon[VERSION_OF_APP_KEY] = VERSION_OF_APP
     await send_tcp_message(writer, logon)
     print('Logon sent')
@@ -105,9 +115,9 @@ async def send_keepalive(writer: asyncio.StreamWriter):
                     keep_alive[SESSION_KEY] = session_key
                     await send_tcp_message(writer, keep_alive)
                     print('Keep alive sent')
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(5)
             else:
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
     except ConnectionError as e:
         print(e)
         print(f'Connection lost in keepalive')
@@ -124,8 +134,9 @@ async def handle_server(reader: asyncio.StreamReader,
         msg = ''
         prev_character = ''
         while True:
-            received_byte = await asyncio.wait_for(reader.read(1),
-                                                   timeout=TIMEOUT_GRACE_PERIOD)
+            received_byte =\
+                await asyncio.wait_for(reader.read(1),
+                                       timeout=TIMEOUT_GRACE_PERIOD)
             character = str(received_byte, 'UTF-8')
             if character == '\n' and prev_character == '\n':
                 print(f'\n\nReceived: {msg}\n\n')
@@ -152,7 +163,7 @@ async def start_connection():
     # to run from docker
     host = '127.0.1.1'
     port = 11111
-    seq_counter = 0
+    seq_counter = 1
     session_key = ''
 
     reader = None
@@ -167,6 +178,7 @@ async def start_connection():
                   f' failed...\n'
                   f'Trying to reconnect again in 5 seconds...')
             await asyncio.sleep(RECONNECTION_FREQUENCY)
+            print(f'Trying connection to host {host}:{port}')
 
         if reader and writer:
             print(f'Connected successfully')
