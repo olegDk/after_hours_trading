@@ -1,14 +1,11 @@
 import asyncio
 import socket
-import messages
+from config import messages
+from config.constants import *
 import json
 import random
 import uuid
 from market_data_generator import MarketDataGenerator
-
-SESSION_KEY = 'sessionKey'
-REF = 'refNo'
-SEQ = 'seqNo'
 
 logon = False
 subscribe = False
@@ -79,7 +76,7 @@ async def emulate_market_data(writer: asyncio.StreamWriter):
                 await send_to_analytics_server(writer, msg)
                 print('Sent l1:')
                 print(f'{msg}\n\n')
-                sleeping_time = random.randint(1, 10) * 0.1
+                sleeping_time = random.randint(1, 10) * 0.01
                 await asyncio.sleep(sleeping_time)
         else:
             await asyncio.sleep(1)

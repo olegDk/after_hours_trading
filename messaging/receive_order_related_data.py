@@ -18,7 +18,6 @@ from elasticsearch import Elasticsearch, ConnectionError
 
 EST = timezone('EST')
 DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-# For testing
 RABBIT_MQ_HOST = 'rabbit'
 RABBIT_MQ_PORT = 5672
 ORDER_RELATED_DATA = 'orderRelatedData'

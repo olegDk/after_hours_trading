@@ -1,7 +1,7 @@
 import asyncio
 import json
 import socket
-import emulator.messages as messages
+import config.messages as messages
 from analytics.trader import Trader
 from config.constants import *
 
@@ -15,6 +15,7 @@ async def send_future(writer: asyncio.StreamWriter, msg: dict):
     msg[SEQ] = seq_counter
     seq_counter += 1
     writer.write(f'{json.dumps(msg)}\n\n'.encode('utf8'))
+    print(f'Sent message: {msg}')
     await writer.drain()
 
 
@@ -173,7 +174,8 @@ async def start_connection():
         try:
             reader, writer = await asyncio.open_connection(
                 host, port)
-        except ConnectionError:
+        except ConnectionError as e:
+            print(e)
             print(f'Connection attempt no {i+1} out of {N_ATTEMPTS}'
                   f' failed...\n'
                   f'Trying to reconnect again in 5 seconds...')

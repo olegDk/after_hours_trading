@@ -5,7 +5,7 @@ import copy
 from typing import Tuple
 import uuid
 from datetime import datetime
-import emulator.messages as messages
+import config.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender
 import random
@@ -49,6 +49,7 @@ def current_percentage(l1_dict: dict) -> float:
 
 class Trader:
     def __init__(self):
+        self.__sent_orders_by_ticker = {}
         self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
         self.__tickers = self.__get_tickers()
         self.__stocks_l1, self.__all_indicators = self.__init_indicators()
@@ -211,9 +212,8 @@ class Trader:
 
     def __update_l1(self, symbol_dict: dict):
         symbol = symbol_dict[SYMBOL]
-        l1_dict = symbol_dict[L1]
-        pct_bid_net = l1_dict[PCT_BID_NET]
-        pct_ask_net = l1_dict[PCT_ASK_NET]
+        pct_bid_net = symbol_dict[PCT_BID_NET]
+        pct_ask_net = symbol_dict[PCT_ASK_NET]
         l1_dict = self.__stocks_l1.get(symbol)
         if not l1_dict:
             self.__stocks_l1[symbol] = {
@@ -234,14 +234,13 @@ class Trader:
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
-        l1_dict = symbol_dict[L1]
-        pct_bid_net = l1_dict[PCT_BID_NET]
-        pct_ask_net = l1_dict[PCT_ASK_NET]
-        bid_l1 = l1_dict[BID]
-        ask_l1 = l1_dict[ASK]
-        bid_venue = l1_dict[BID_VENUE]
+        pct_bid_net = symbol_dict[PCT_BID_NET]
+        pct_ask_net = symbol_dict[PCT_ASK_NET]
+        bid_l1 = symbol_dict[BID]
+        ask_l1 = symbol_dict[ASK]
+        bid_venue = symbol_dict[BID_VENUE]
         # bid_venue = 1
-        ask_venue = l1_dict[ASK_VENUE]
+        ask_venue = symbol_dict[ASK_VENUE]
         # ask_venue = 1
         close = symbol_dict[CLOSE]
 
@@ -259,7 +258,7 @@ class Trader:
             print(f'{symbol} current factors:')
             print(factors_l1)
 
-            if INIT_PCT not in factors_l1:
+            if INIT_PCT not in factors_l1 or INIT_PCT in factors_l1:
                 pred_array = np.array(factors_l1).reshape(1, -1)
                 prediction = model.predict(pred_array)
                 print(f'{symbol} prediction: {prediction}\n'
@@ -267,47 +266,21 @@ class Trader:
                       f'current pctAskNet: {pct_ask_net}')
                 std_err = model_dict['mae']
 
-                # Check for long opportunity
-                if (prediction - pct_ask_net) >= 0.01: #change to std_err
-                    order_data = {}
-                    order_related_data_dict = dict(zip(indicators, factors_l1))
-                    order_data[ORDER_RELATED_DATA] = order_related_data_dict
-                    target = float(close + float(prediction/100) * close)
-                    order = messages.order_request()
-                    order[ORDER][DATA][SYMBOL] = symbol
-                    order[ORDER][DATA][PRICE] = ask_l1
-                    order[ORDER][DATA][SIDE] = 'B'
-                    order[ORDER][DATA][SIZE] = 1
-                    order[ORDER][DATA][VENUE] = ask_venue
-                    order[ORDER][DATA][TARGET] = target
-                    order[ORDER][CID] = generate_cid()
-                    order_data[ORDER_DATA] = order
-                    print(f'Stock: {symbol}, LONG {ask_l1},\n'
-                          f'Current ask: {pct_ask_net}, '
-                          f'prediction: {prediction}, '
-                          f'target: {target}')
-                    return order_data
+                # Check for trade opportunity
+                order_data = self.__get_order(prediction,
+                                              pct_bid_net,
+                                              pct_ask_net,
+                                              indicators,
+                                              factors_l1,
+                                              close,
+                                              symbol,
+                                              bid_l1,
+                                              ask_l1,
+                                              bid_venue,
+                                              ask_venue)
 
-                # Check for short opportunity
-                elif (prediction - pct_bid_net) <= -0.01: #change to std_err
-                    order_data = {}
-                    order_related_data_dict = dict(zip(indicators, factors_l1))
-                    order_data[ORDER_RELATED_DATA] = order_related_data_dict
-                    target = float(close + float(prediction/100) * close)
-                    order = messages.order_request()
-                    order[ORDER][DATA][SYMBOL] = symbol
-                    order[ORDER][DATA][PRICE] = bid_l1
-                    order[ORDER][DATA][SIDE] = 'S'
-                    order[ORDER][DATA][SIZE] = 1
-                    order[ORDER][DATA][VENUE] = bid_venue
-                    order[ORDER][DATA][TARGET] = target
-                    order[ORDER][CID] = generate_cid()
-                    order_data[ORDER_DATA] = order
-                    print(f'Stock: {symbol}, SHORT {bid_l1},\n'
-                          f'Current bid: {pct_bid_net}, '
-                          f'prediction: {prediction}, '
-                          f'target: {target}')
-                    return order_data
+                return order_data
+
             else:
                 raise TypeError('One of indicators is not populated yet')
 
@@ -318,4 +291,64 @@ class Trader:
         except TypeError as e:
             print(e)
 
+        except Exception as e:
+            print(e)
+
         return {}
+
+    def __get_order(self,
+                    prediction,
+                    pct_bid_net,
+                    pct_ask_net,
+                    indicators,
+                    factors_l1,
+                    close,
+                    symbol,
+                    bid_l1,
+                    ask_l1,
+                    bid_venue,
+                    ask_venue) -> dict:
+        side_params = {
+            # Long params
+            BUY: {
+                PRICE: ask_l1,
+                VENUE: ask_venue,
+                PCT_NET: pct_ask_net,
+            },
+            # Short params
+            SELL: {
+                PRICE: bid_l1,
+                VENUE: bid_venue,
+                PCT_NET: pct_bid_net
+            }
+        }
+        order_data = {}
+        delta = prediction - pct_ask_net
+        trade_flag = delta >= 0 or delta <= 0  # change to std_err and -std_err
+        if trade_flag:
+            side = BUY if np.sign(delta) > 0 else SELL
+            order_params = side_params[side]
+            order_related_data_dict = dict(zip(indicators, factors_l1))
+            order_data[ORDER_RELATED_DATA] = order_related_data_dict
+            target = float(close + float(prediction / 100) * close)
+            order = messages.order_request()
+            order[ORDER][DATA][SYMBOL] = symbol
+            order[ORDER][DATA][PRICE] = order_params[PRICE]
+            order[ORDER][DATA][SIDE] = side
+            order[ORDER][DATA][SIZE] = 1
+            order[ORDER][DATA][VENUE] = order_params[VENUE]
+            order[ORDER][DATA][TARGET] = order_params[PRICE] + 0.50  # change to target
+            order[ORDER][CID] = generate_cid()
+            order_data[ORDER_DATA] = order
+            print(f'Stock: {symbol}, {side} '
+                  f'{order_params[PRICE]},\n'
+                  f'Current ask: {order_params[PCT_NET]}, '
+                  f'prediction: {prediction}, '
+                  f'target: {target}')
+
+        # Change in future
+        if self.__sent_orders_by_ticker.get(symbol):
+            return {}
+        else:
+            self.__sent_orders_by_ticker[symbol] = True
+            return order_data

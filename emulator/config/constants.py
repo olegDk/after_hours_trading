@@ -44,7 +44,7 @@ DATETIME = "datetime"
 # Constants related to orderRequest only
 TIF = 'TIF'
 LIMIT = 'limit'
-EXTENDED = 'TIF_GTX'  # or 1 if integer
+EXTENDED = 1  # or 1 if integer
 CID = 'cid'
 
 # Constants related to orderResponse only

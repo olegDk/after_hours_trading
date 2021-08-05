@@ -1,6 +1,6 @@
 import pickle
 import os
-import messages
+from config import messages
 from random import uniform, randint
 import numpy as np
 
@@ -12,15 +12,15 @@ def get_tickers() -> dict:
 
     tickers = []
 
-    with open(f'{path}/all_indicators.pkl', "rb") as input:
-        f_list = pickle.load(input)
+    with open(f'{path}/all_indicators.pkl', "rb") as i:
+        f_list = pickle.load(i)
         tickers = tickers + f_list
 
     for sector_dir in list_subfolders_with_paths:
         for f in os.listdir(f'{sector_dir}/tickers'):
-            with open(f'{sector_dir}/tickers/{f}', "rb") as input:
+            with open(f'{sector_dir}/tickers/{f}', "rb") as i:
                 if f.startswith('traidable_tickers'):
-                    f_list = pickle.load(input)
+                    f_list = pickle.load(i)
                     tickers = tickers + f_list
 
     # Removing duplicates
@@ -80,12 +80,12 @@ class MarketDataGenerator:
 
         bid_net = uniform(-1, 1)
         ask_net = uniform(bid_net, 1)
-        l1_dict['pctBidNet'] = bid_net
-        l1_dict['pctAskNet'] = ask_net
-        l1_dict['bid'] = 0
-        l1_dict['ask'] = 0
-        l1_dict['bidVenue'] = 'NSDQ'
-        l1_dict['askVenue'] = 'NSDQ'
+        sample_dict['pctBidNet'] = bid_net
+        sample_dict['pctAskNet'] = ask_net
+        sample_dict['bid'] = 0
+        sample_dict['ask'] = 0
+        sample_dict['bidVenue'] = 1
+        sample_dict['askVenue'] = 1
         sample_dict['l1'] = l1_dict
 
         return sample_dict

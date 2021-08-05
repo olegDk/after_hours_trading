@@ -40,16 +40,13 @@ L1_KEYS = [PCT_BID_NET, PCT_ASK_NET, BID, ASK,
 def insert_market_data(market_data_list: list, r: redis.Redis):
     if market_data_list:
         l1_dict = r.hgetall(L1)
-        print(f'l1_dict before update:\n')
-        print(l1_dict)
+        print(f'Current num symbols in redis: {len(l1_dict)}')
         if not l1_dict:
             l1_dict = {}
         for symbol_dict in market_data_list:
             l1 = symbol_dict[L1]
             result_dict = {key: l1[key] for key in L1_KEYS}
             l1_dict[symbol_dict[SYMBOL]] = json.dumps(result_dict)
-        print(f'l1_dict after update:\n')
-        print(l1_dict)
         r.hmset(L1, l1_dict)
         print(f'Market data inserted')
 
