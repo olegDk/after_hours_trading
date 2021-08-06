@@ -11,24 +11,24 @@ def connect_redis() -> redis.Redis:
         try:
             print(f"========================================================="
                   f"===================================================")
-            print(f"Connection attempt to redis from receive "
-                  f"market data...")
+            print(f"Connection attempt to redis from inference "
+                  f"scheduler...")
             r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-            print(f"Connected to redis from receive "
-                  f"market data successfully")
+            print(f"Connected to redis from inference "
+                  f"scheduler successfully")
             print(f"========================================================="
                   f"===================================================")
             return r
         except socket.gaierror:
-            print(f"Failed connecting to redis from receive "
-                  f"market data, maybe it didn't start yet "
+            print(f"Failed connecting to redis from inference "
+                  f"scheduler, maybe it didn't start yet "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
         except ConnectionError:
-            print(f"Failed connecting to redis from receive "
-                  f"market data, "
+            print(f"Failed connecting to redis from inference "
+                  f"scheduler, "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")

@@ -160,9 +160,9 @@ async def handle_server(reader: asyncio.StreamReader,
 async def start_connection():
     global seq_counter, session_key
     # host = socket.gethostname()
-    # host = '91.219.61.233'
+    host = '91.219.61.233'
     # to run from docker
-    host = '127.0.1.1'
+    # host = '127.0.1.1'
     port = 11111
     seq_counter = 1
     session_key = ''

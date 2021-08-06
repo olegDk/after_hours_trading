@@ -76,7 +76,7 @@ async def emulate_market_data(writer: asyncio.StreamWriter):
                 await send_to_analytics_server(writer, msg)
                 print('Sent l1:')
                 print(f'{msg}\n\n')
-                sleeping_time = random.randint(1, 10) * 0.01
+                sleeping_time = random.randint(1, 10) * 0.1
                 await asyncio.sleep(sleeping_time)
         else:
             await asyncio.sleep(1)

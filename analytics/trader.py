@@ -335,7 +335,7 @@ class Trader:
             order[ORDER][DATA][SYMBOL] = symbol
             order[ORDER][DATA][PRICE] = order_params[PRICE]
             order[ORDER][DATA][SIDE] = side
-            order[ORDER][DATA][SIZE] = 1
+            order[ORDER][DATA][SIZE] = 100
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = order_params[PRICE] + 0.50  # change to target
             order[ORDER][CID] = generate_cid()
