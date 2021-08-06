@@ -45,7 +45,7 @@ PCT_NET = 'pct_net'
 # Constants related to orderRequest only
 TIF = 'TIF'
 LIMIT = 'limit'
-EXTENDED = 1  # or 1 if integer
+EXTENDED = 5  # or 1 if integer
 CID = 'cid'
 BUY = 'B'
 SELL = 'S'

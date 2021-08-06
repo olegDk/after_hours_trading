@@ -48,6 +48,17 @@ services:
     networks:
       - redis_network
 
+  inference_runner:
+    build:
+      context: ./scheduled_inference
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbit
+      - redis
+    networks:
+      - elasticsearch_network
+      - redis_network
+
   receive_order_related_data:
     build:
       context: ./messaging
