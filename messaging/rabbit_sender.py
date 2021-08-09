@@ -1,4 +1,6 @@
 import json
+import time
+import socket
 from typing import Tuple
 from config.constants import *
 from pika.exceptions import StreamLostError, AMQPConnectionError
@@ -23,6 +25,38 @@ def reload_connection(host: str,
     return connection, channel
 
 
+def connect_rabbit(host: str,
+                   port: int) -> Tuple[BlockingConnection, BlockingChannel]:
+    while True:
+        try:
+            print(f"========================================================="
+                  f"===================================================")
+            print(f"Connection attempt to rabbit...")
+            con, ch = reload_connection(host, port)
+            print(f"Connected to rabbit successfully")
+            print(f"========================================================="
+                  f"===================================================")
+            return con, ch
+        except socket.gaierror:
+            print(f"Failed connecting to rabbit, maybe it didn't start yet, "
+                  f"sleeping for 1 second")
+            print(f"========================================================="
+                  f"===================================================")
+            time.sleep(1)
+        except ConnectionError:
+            print(f"Failed connecting to rabbit, ConnectionError "
+                  f"sleeping for 1 second")
+            print(f"========================================================="
+                  f"===================================================")
+            time.sleep(1)
+        except AMQPConnectionError:
+            print(f"Failed connecting to rabbit, AMQPConnectionError "
+                  f"sleeping for 1 second")
+            print(f"========================================================="
+                  f"===================================================")
+            time.sleep(1)
+
+
 class RabbitSender:
 
     def __init__(self,
@@ -30,8 +64,8 @@ class RabbitSender:
                  port: int):
         self.__host = host
         self.__port = port
-        self.__connection, self.__channel = reload_connection(self.__host,
-                                                              self.__port)
+        self.__connection, self.__channel = connect_rabbit(self.__host,
+                                                           self.__port)
 
     def send_message(self,
                      message: list,
