@@ -134,6 +134,7 @@ def main():
         orders_list = json.loads(message)
         print(f"\n\n [x] Received orders list")
         print(orders_list)
+
         # print(orders_list)
         # insert_orders(orders_list=orders_list, es=es)
 

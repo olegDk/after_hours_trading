@@ -80,7 +80,7 @@ def connect_redis() -> redis.Redis:
 
 
 def connect_rabbit() -> Tuple[pika.BlockingConnection,
-                        pika.adapters.blocking_connection.BlockingChannel]:
+                              pika.adapters.blocking_connection.BlockingChannel]:
     while True:
         try:
             print(f"========================================================="

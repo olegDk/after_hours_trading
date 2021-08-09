@@ -175,10 +175,14 @@ class Trader:
         data = msg[DATA]
         orders = []
         start = datetime.now()
-        for symbol_dict in data:
+        traidable_list = []
+        while data:
+            symbol_dict = data.pop()
             self.__update_l1(symbol_dict)
-            if symbol_dict[SYMBOL] in self.__all_indicators:
-                data.remove(symbol_dict)
+            if symbol_dict[SYMBOL] not in self.__all_indicators:
+                traidable_list = traidable_list + [symbol_dict]
+                print(f'Added {symbol_dict[SYMBOL]} to '
+                      f'further processing')
         finish_update = datetime.now()
         delta_update = (finish_update - start).microseconds
         sum_update_l1_speed = sum_update_l1_speed + delta_update
@@ -187,8 +191,8 @@ class Trader:
         print(f'Update l1 time: {delta_update} microseconds')
 
         start_predict = datetime.now()
-        if data:
-            for symbol_dict in data:
+        if traidable_list:
+            for symbol_dict in traidable_list:
                 order = self.__process_symbol_dict(symbol_dict)
                 if order:
                     orders.append(order)
@@ -258,7 +262,7 @@ class Trader:
             print(f'{symbol} current factors:')
             print(factors_l1)
 
-            if INIT_PCT not in factors_l1 or INIT_PCT in factors_l1:
+            if INIT_PCT not in factors_l1:
                 pred_array = np.array(factors_l1).reshape(1, -1)
                 prediction = model.predict(pred_array)
                 print(f'{symbol} prediction: {prediction}\n'
@@ -277,7 +281,8 @@ class Trader:
                                               bid_l1,
                                               ask_l1,
                                               bid_venue,
-                                              ask_venue)
+                                              ask_venue,
+                                              std_err)
 
                 return order_data
 
@@ -307,7 +312,8 @@ class Trader:
                     bid_l1,
                     ask_l1,
                     bid_venue,
-                    ask_venue) -> dict:
+                    ask_venue,
+                    std_err) -> dict:
         side_params = {
             # Long params
             BUY: {
@@ -323,10 +329,11 @@ class Trader:
             }
         }
         order_data = {}
-        delta = prediction - pct_ask_net
-        trade_flag = delta >= 0 or delta <= 0  # change to std_err and -std_err
+        delta_long = prediction - pct_ask_net
+        delta_short = prediction - pct_bid_net
+        trade_flag = delta_long >= std_err or delta_short <= -std_err
         if trade_flag:
-            side = BUY if np.sign(delta) > 0 else SELL
+            side = BUY if np.sign(delta_long) > 0 else SELL
             order_params = side_params[side]
             order_related_data_dict = dict(zip(indicators, factors_l1))
             order_data[ORDER_RELATED_DATA] = order_related_data_dict
@@ -337,18 +344,23 @@ class Trader:
             order[ORDER][DATA][SIDE] = side
             order[ORDER][DATA][SIZE] = 100
             order[ORDER][DATA][VENUE] = order_params[VENUE]
-            order[ORDER][DATA][TARGET] = order_params[PRICE] + 0.50  # change to target
+            order[ORDER][DATA][TARGET] = target  # change to target
             order[ORDER][CID] = generate_cid()
             order_data[ORDER_DATA] = order
             print(f'Stock: {symbol}, {side} '
                   f'{order_params[PRICE]},\n'
-                  f'Current ask: {order_params[PCT_NET]}, '
+                  f'Current entry: {order_params[PCT_NET]}, '
                   f'prediction: {prediction}, '
                   f'target: {target}')
 
-        # Change in future
-        if self.__sent_orders_by_ticker.get(symbol):
-            return {}
+        # Change in future, logic to avoid order spamming
+        num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
+        if num_orders_sent:
+            if num_orders_sent >= 3:
+                return {}
+            else:
+                self.__sent_orders_by_ticker[symbol] += 1
+                return order_data
         else:
-            self.__sent_orders_by_ticker[symbol] = True
+            self.__sent_orders_by_ticker[symbol] = 1
             return order_data

@@ -19,7 +19,6 @@ class InferenceRunner:
                 print('Run some inference work')
                 print('Pulling data from Redis')
                 l1_dict = self.__redis.get_dict('l1')
-                print(l1_dict)
                 print('Sending test order log')
                 test_message = [{'messageId': 'test',
                                 'data': ['test_data']}]

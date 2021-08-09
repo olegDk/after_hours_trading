@@ -25,7 +25,7 @@ BID_VENUE = 'bidVenue'
 ASK_VENUE = 'askVenue'
 CLOSE = 'close'
 L1 = 'l1'
-INIT_PCT = 0 # change to -1e3 in future
+INIT_PCT = -1e3
 
 # Message types
 MESSAGE_ID = 'messageId'

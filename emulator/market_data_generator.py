@@ -74,7 +74,6 @@ class MarketDataGenerator:
                           ticker: str) -> dict:
 
         sample_dict = {}
-        l1_dict = {}
         sample_dict['symbol'] = ticker
         sample_dict['close'] = 0
 
@@ -86,6 +85,4 @@ class MarketDataGenerator:
         sample_dict['ask'] = 0
         sample_dict['bidVenue'] = 1
         sample_dict['askVenue'] = 1
-        sample_dict['l1'] = l1_dict
-
         return sample_dict
