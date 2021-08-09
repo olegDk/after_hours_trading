@@ -163,8 +163,8 @@ async def start_connection():
     # host = socket.gethostname()
     # host = '91.219.61.233'
     # to run from docker
-    # host = '127.0.1.1'
-    host = '192.168.137.11'
+    host = '127.0.1.1'
+    # host = '192.168.137.11'
     port = 11111
     seq_counter = 1
     session_key = ''
