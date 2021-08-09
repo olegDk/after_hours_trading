@@ -112,6 +112,8 @@ class Trader:
                                        PCT_ASK_NET: INIT_PCT}
                            for indicator in indicators_list}
 
+        print(indicators_dict)
+
         return indicators_dict, indicators_list
 
     def __init_factors(self) -> dict:
@@ -254,6 +256,8 @@ class Trader:
             model = model_dict[MODEL]
             # Get indicators
             indicators = self.__factors[symbol]
+            print(f'{symbol} indicators: ')
+            print(indicators)
             # Get indicators l1
             factors_l1 = list(
                 map(lambda x: current_percentage(
