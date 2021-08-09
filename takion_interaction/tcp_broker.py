@@ -43,6 +43,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
 async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
     orders_data = trader.process_l1_message(msg)
     market_data = msg[DATA]
+    print(orders_data)
     if orders_data:
         for order_data in orders_data:
             order = order_data[ORDER_DATA]

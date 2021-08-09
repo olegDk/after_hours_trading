@@ -9,6 +9,7 @@ import config.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender
 import random
+import traceback
 
 sum_update_l1_speed = 0
 sum_predict_speed = 0
@@ -195,9 +196,18 @@ class Trader:
         start_predict = datetime.now()
         if traidable_list:
             for symbol_dict in traidable_list:
-                order = self.__process_symbol_dict(symbol_dict)
-                if order:
-                    orders.append(order)
+                try:
+                    order = self.__process_symbol_dict(symbol_dict)
+                    if order:
+                        orders.append(order)
+                except Exception as e:
+                    print(f'Inside get_dict process l1 message, '
+                          f'process symbol, '
+                         f'An exception of type {type(e).__name__}. Arguments: '
+                         f'{e.args}')
+                    print(traceback.format_exc())
+                    pass
+
         finish = datetime.now()
         delta_predict = (finish - start_predict).microseconds
         delta = (finish - start).microseconds
