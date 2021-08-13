@@ -71,9 +71,9 @@ def handle_logon(msg: dict):
 
 
 def handle_order_status(msg: dict):
-    client_order_id = msg[ORDER][CID]
-    takion_order_id = msg[ORDER][ORDER_ID]
-    status = msg[ORDER][STATUS]
+    client_order_id = msg[ORDER].get(CID)
+    takion_order_id = msg[ORDER].get(ORDER_ID)
+    status = msg[ORDER].get(STATUS)
     print(f'Status of order with cid: {client_order_id} '
           f'and tid: {takion_order_id}: {status}')
 
