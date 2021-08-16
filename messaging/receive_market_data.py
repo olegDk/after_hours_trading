@@ -24,7 +24,6 @@ RABBIT_MQ_HOST = 'rabbit'
 RABBIT_MQ_PORT = 5672
 MARKET_DATA_TYPE = 'marketData'
 L1 = 'l1'
-CLOSES = 'closes'
 CLOSE = 'close'
 SYMBOL = 'symbol'
 PCT_BID_NET = 'pctBidNet'
@@ -34,7 +33,7 @@ ASK = 'ask'
 BID_VENUE = 'bidVenue'
 ASK_VENUE = 'askVenue'
 L1_KEYS = [PCT_BID_NET, PCT_ASK_NET, BID, ASK,
-           BID_VENUE, ASK_VENUE]
+           BID_VENUE, ASK_VENUE, CLOSE]
 
 
 def insert_market_data(market_data_list: list, r: redis.Redis):

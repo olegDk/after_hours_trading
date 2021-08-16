@@ -1,5 +1,6 @@
 from redis_connector import RedisConnector
 from rabbit_sender import RabbitSender
+from trader import Trader
 import time
 import traceback
 
@@ -12,21 +13,26 @@ class InferenceRunner:
     def __init__(self):
         self.__redis = RedisConnector()
         self.__rabbit = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
+        self.__trader = Trader()
+
 
     def run_scheduler(self):
         try:
             while True:
-                print('Run some inference work')
+                print('Try to run some inference work')
                 print('Pulling data from Redis')
                 l1_dict = self.__redis.get_dict('l1')
-                print('Sending test order log')
-                test_message = [{'messageId': 'test',
-                                'data': ['test_data']}]
-                self.__rabbit.send_message(message=test_message,
-                                           routing_key=ORDER_RELATED_DATA)
+                if l1_dict:
+                    print('l1_dict not empty, running inference')
+                    orders = self.__trader.run_inference(l1_dict)
+                    # Sending orders logic
+                    print('Sending test order log')
+                    test_message = [{'messageId': 'test',
+                                    'data': ['test_data']}]
+                    self.__trader.send_order_log_to_mq(log=test_message)
                 time.sleep(10)
         except Exception as e:
-            print(f'Inside run_scheduler Inference runner'
+            print(f'Inside run_scheduler inference_runner'
                   f'An exception of type {type(e).__name__}. Arguments: '
                   f'{e.args}')
             print(traceback.format_exc())
