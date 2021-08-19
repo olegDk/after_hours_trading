@@ -8,6 +8,7 @@ from config.constants import *
 trader = Trader()
 seq_counter = 1
 session_key = ''
+session_host = ''
 
 
 async def send_future(writer: asyncio.StreamWriter, msg: dict):
@@ -159,12 +160,7 @@ async def handle_server(reader: asyncio.StreamReader,
 
 
 async def start_connection():
-    global seq_counter, session_key
-    # host = socket.gethostname()
-    # host = '91.219.61.233'
-    # to run from docker
-    # host = '127.0.1.1'
-    host = '192.168.137.11'
+    global seq_counter, session_key, session_host
     port = 11111
     seq_counter = 1
     session_key = ''
@@ -175,14 +171,14 @@ async def start_connection():
     for i in range(N_ATTEMPTS):
         try:
             reader, writer = await asyncio.open_connection(
-                host, port)
+                session_host, port)
         except ConnectionError as e:
             print(e)
             print(f'Connection attempt no {i+1} out of {N_ATTEMPTS}'
                   f' failed...\n'
                   f'Trying to reconnect again in 5 seconds...')
             await asyncio.sleep(RECONNECTION_FREQUENCY)
-            print(f'Trying connection to host {host}:{port}')
+            print(f'Trying connection to host {session_host}:{port}')
 
         if reader and writer:
             print(f'Connected successfully')
@@ -195,5 +191,7 @@ async def start_connection():
                          send_keepalive(writer))
 
 
-async def start_interaction():
+async def start_interaction(host: str):
+    global session_host
+    session_host = host
     await start_connection()
