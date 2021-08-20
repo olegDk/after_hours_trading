@@ -1,8 +1,7 @@
-from redis_connector import RedisConnector
-from rabbit_sender import RabbitSender
 from trader import Trader
 import time
 import traceback
+from redis_connector import RedisConnector
 
 RABBIT_MQ_HOST = 'rabbit'
 RABBIT_MQ_PORT = 5672
@@ -12,9 +11,7 @@ ORDER_RELATED_DATA = 'orderRelatedData'
 class InferenceRunner:
     def __init__(self):
         self.__redis = RedisConnector()
-        self.__rabbit = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
         self.__trader = Trader()
-
 
     def run_scheduler(self):
         try:
@@ -37,3 +34,6 @@ class InferenceRunner:
                   f'{e.args}')
             print(traceback.format_exc())
             self.run_scheduler()
+
+
+# runner = InferenceRunner()

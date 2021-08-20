@@ -7,6 +7,7 @@ import time
 import socket
 from typing import Tuple
 from pytz import timezone
+import logging
 from datetime import datetime, timedelta
 # from pymongo import MongoClient
 from elasticsearch import Elasticsearch, ConnectionError
@@ -16,6 +17,9 @@ from elasticsearch import Elasticsearch, ConnectionError
 # RABBIT_MQ_HOST = 'localhost'
 # ES_HOST = 'localhost'
 
+logging.basicConfig(filename=f"order_logs/"
+                             f"{datetime.now().strftime('order_logs_%d_%m_%Y.log')}",
+                    level=logging.INFO)
 EST = timezone('EST')
 DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 RABBIT_MQ_HOST = 'rabbit'
@@ -68,7 +72,7 @@ def connect_es() -> Elasticsearch:
 
 
 def connect_rabbit() -> Tuple[pika.BlockingConnection,
-                        pika.adapters.blocking_connection.BlockingChannel]:
+                              pika.adapters.blocking_connection.BlockingChannel]:
     while True:
         try:
             print(f"========================================================="
@@ -114,7 +118,7 @@ def insert_orders(orders_list: list, es: Elasticsearch):
                     timedelta(hours=1)).strftime(DATE_TIME_FORMAT)
     for order_dict in orders_list:
         order_dict.update({'datetime_est': current_time})
-        print(f"\n Received order {order_dict}")
+        # print(f"\n Received order {order_dict}")
         # To save logs in MongoDB Atlas
         # docs.insert_one(order_dict)
 
@@ -123,6 +127,15 @@ def insert_orders(orders_list: list, es: Elasticsearch):
                        doc_type=ORDERS_SENT_DOC_TYPE,
                        body=order_dict)
         print(res)
+
+
+def save_on_disc(orders_list: list):
+    current_time = (datetime.now(EST) +
+                    timedelta(hours=1)).strftime(DATE_TIME_FORMAT)
+    for order_dict in orders_list:
+        order_dict.update({'datetime_est': current_time})
+        # print(f"\n Received order {order_dict}")
+        logging.info(json.dumps(order_dict))
 
 
 def main():
@@ -134,8 +147,7 @@ def main():
         orders_list = json.loads(message)
         print(f"\n\n [x] Received orders list")
         print(orders_list)
-
-        # print(orders_list)
+        save_on_disc(orders_list=orders_list)
         # insert_orders(orders_list=orders_list, es=es)
 
     channel.basic_consume(queue=ORDER_RELATED_DATA,

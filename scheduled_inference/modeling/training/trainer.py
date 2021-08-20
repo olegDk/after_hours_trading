@@ -53,7 +53,7 @@ def train_all_models():
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
     # for sector_dir in tqdm(sectors_dirs):
-    for sector_dir in tqdm(['analytics/modeling/sectors/ApplicationSoftware']):
+    for sector_dir in tqdm(['analytics/modeling/sectors/Oil']):
         sector = sector_dir.split('/')[-1]
         if 'tickers' not in os.listdir(sector_dir):
             print(f'tickers dir missing '
@@ -216,5 +216,6 @@ def run_sector_regression(sector_dir: str,
     except Exception as e:
         print(e)
         print(f'Failed saving data for sector: {sector}')
+
 
 train_all_models()
