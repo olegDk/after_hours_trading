@@ -54,7 +54,7 @@ class AppTrader(BaseTrader):
         order_data = {}
         delta_long = prediction - pct_ask_net
         delta_short = prediction - pct_bid_net
-        trade_flag = delta_long >= std_err/2 or delta_short <= -std_err*2  # change
+        trade_flag = delta_long >= std_err*2 or delta_short <= -std_err/2  # change
         if trade_flag:
             side = BUY if np.sign(delta_long) > 0 else SELL
             order_params = side_params[side]
