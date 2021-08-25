@@ -82,7 +82,7 @@ class Trader:
 
     def run_inference(self, l1_dict: dict) -> list:
         orders_list = []
-        print(f'l1_dict: {l1_dict}')
+        # print(f'l1_dict: {l1_dict}')
         return orders_list
 
 
