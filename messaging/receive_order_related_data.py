@@ -17,9 +17,9 @@ from elasticsearch import Elasticsearch, ConnectionError
 # RABBIT_MQ_HOST = 'localhost'
 # ES_HOST = 'localhost'
 
-# logging.basicConfig(filename=f"order_logs/"
-#                              f"{datetime.now().strftime('order_logs_%d_%m_%Y.log')}",
-#                     level=logging.INFO)
+logging.basicConfig(filename=f"order_logs/"
+                             f"{datetime.now().strftime('order_logs_%d_%m_%Y.log')}",
+                    level=logging.INFO)
 EST = timezone('EST')
 DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 RABBIT_MQ_HOST = 'rabbit'
@@ -134,8 +134,8 @@ def save_on_disc(orders_list: list):
                     timedelta(hours=1)).strftime(DATE_TIME_FORMAT)
     for order_dict in orders_list:
         order_dict.update({'datetime_est': current_time})
-        # print(f"\n Received order {order_dict}")
-        # logging.info(json.dumps(order_dict))
+        print(f"\n Received order {order_dict}")
+        logging.info(json.dumps(order_dict))
 
 
 def main():
