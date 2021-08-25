@@ -6,6 +6,7 @@ import traceback
 REDIS_HOST = 'redis'
 REDIS_PORT = 6379
 
+
 def connect_redis() -> redis.Redis:
     while True:
         try:

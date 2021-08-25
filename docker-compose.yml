@@ -65,7 +65,7 @@ services:
       context: ./messaging
       dockerfile: Dockerfile_order
     volumes:
-      - ./order_logs:/opt/messaging/order_logs
+      - ./order_logs:/messaging/order_logs
     depends_on:
       - rabbit
 #      - elasticsearch
