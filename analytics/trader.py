@@ -106,8 +106,8 @@ def init_indicators() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: 0,
-                                   PCT_ASK_NET: 0}
+    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
+                                   PCT_ASK_NET: INIT_PCT}
                        for indicator in indicators_list}
 
     print(indicators_dict)
