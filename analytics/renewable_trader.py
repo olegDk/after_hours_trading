@@ -16,10 +16,10 @@ def generate_cid() -> int:
     return random.getrandbits(64)
 
 
-class SemiTrader(BaseTrader):
+class RenewableTrader(BaseTrader):
     def __init__(self):
         super().__init__()
-        print('Initializing SemiTrader')
+        print('Initializing RenewableTrader')
         self.__sent_orders_by_ticker = {}
 
     def get_order(self,
@@ -37,7 +37,7 @@ class SemiTrader(BaseTrader):
                   std_err,
                   delta_long_coef,
                   delta_short_coef) -> dict:
-        print(f'From SemiTrader get order if exists for '
+        print(f'From RenewableTrader get order if exists for '
               f'symbol: {symbol}')
         side_params = {
             # Long params

@@ -25,6 +25,7 @@ BID_VENUE = 'bidVenue'
 ASK_VENUE = 'askVenue'
 CLOSE = 'close'
 L1 = 'l1'
+POLICY = 'policy'
 INIT_PCT = -1e3
 
 # Message types
@@ -71,3 +72,20 @@ SIZE = 'size'
 VENUE = 'venue'
 ACCOUNT_ID_KEY = 'accountId'
 ORDER_DATA = 'orderData'
+
+# Sector names
+APPLICATION_SOFTWARE = 'ApplicationSoftware'
+BANKS = 'Banks'
+OIL = 'Oil'
+RENEWABLE_ENERGY = 'Renewable'
+SEMICONDUCTORS = 'Semiconductors'
+
+# Trade policies
+NEUTRAL = 'neutral'
+BULL = 'bull'
+BEAR = 'bear'
+AGG_BULL = 'agg_bull'
+AGG_BEAR = 'agg_bear'
+LONG_COEF = 'long_coef'
+SHORT_COEF = 'short_coef'
+DELTA_COEF = 'delta_coef'

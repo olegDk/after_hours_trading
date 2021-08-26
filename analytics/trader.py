@@ -5,9 +5,12 @@ import copy
 from typing import Tuple
 import uuid
 from datetime import datetime
+import json
 import config.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender
+from messaging.redis_connector import RedisConnector
+import redis
 import random
 import traceback
 from analytics.base_trader import BaseTrader
@@ -15,6 +18,7 @@ from analytics.app_trader import AppTrader
 from analytics.banks_trader import BanksTrader
 from analytics.oil_trader import OilTrader
 from analytics.semi_trader import SemiTrader
+from analytics.renewable_trader import RenewableTrader
 
 sum_update_l1_speed = 0
 sum_predict_speed = 0
@@ -41,88 +45,133 @@ def generate_cid() -> int:
 
 def current_percentage(l1_dict: dict) -> float:
     try:
-        pctBidNet = l1_dict[PCT_BID_NET]
-        pctAskNet = l1_dict[PCT_ASK_NET]
-        if pctBidNet >= 0:
-            return pctBidNet
-        elif pctAskNet <= 0:
-            return pctAskNet
+        pct_bid_net = l1_dict[PCT_BID_NET]
+        pct_ask_net = l1_dict[PCT_ASK_NET]
+        if pct_bid_net >= 0:
+            return pct_bid_net
+        elif pct_ask_net <= 0:
+            return pct_ask_net
         else:
             return 0
     except TypeError:
         pass
 
 
+def get_tickers() -> list:
+    sectors_path = 'analytics/modeling/sectors'
+    sectors_dirs = \
+        [f.path for f in os.scandir(sectors_path) if f.is_dir()]
+
+    all_tickers = []
+
+    for sector_dir in sectors_dirs:
+        sector = sector_dir.split('/')[-1]
+        if 'tickers' not in os.listdir(sector_dir):
+            print(f'tickers dir missing '
+                  f'for sector: {sector}')
+            continue
+
+        tickers_files = os.listdir(f'{sector_dir}/tickers')
+
+        try:
+            for f in tickers_files:
+                with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
+                    tickers = pickle.load(inp)
+                    all_tickers = all_tickers + tickers
+
+        except Exception as e:
+            print(e)
+            print(f'Failed to load tickers for sector: {sector}')
+            continue
+
+    all_tickers = list(set(all_tickers))
+
+    # Getting earnings calendar manually every day
+    # https://hosting.briefing.com/cschwab/
+    # Calendars/EarningsCalendar5Weeks.htm
+    with open('analytics/modeling/reports') as i:
+        reports = i.read().splitlines()
+        print(f'Reports: {reports}')
+
+    all_tickers =\
+        [ticker for ticker in all_tickers if ticker not in reports]
+
+    return all_tickers
+
+
+def init_indicators() -> Tuple[dict, list]:
+    print('Inializing indicators...')
+    with open(f'analytics/modeling/'
+              f'all_indicators.pkl', 'rb') as i:
+        indicators_list = pickle.load(i)
+
+    # Update to get from subscription response or request directly
+    indicators_dict = {indicator: {PCT_BID_NET: 0,
+                                   PCT_ASK_NET: 0}
+                       for indicator in indicators_list}
+
+    print(indicators_dict)
+
+    return indicators_dict, indicators_list
+
+
+def get_sector_trader(sector: str) -> BaseTrader:
+    if sector == APPLICATION_SOFTWARE:
+        return AppTrader()
+    elif sector == BANKS:
+        return BanksTrader()
+    elif sector == OIL:
+        return OilTrader()
+    elif sector == SEMICONDUCTORS:
+        return SemiTrader()
+    elif sector == RENEWABLE_ENERGY:
+        return RenewableTrader()
+    else:
+        raise KeyError(f'Sector trader for {sector} not found')
+
+
+def init_models() -> dict:
+    print('Initializing models...')
+    sectors_path = 'analytics/modeling/sectors'
+    sectors_dirs = \
+        [f.path for f in os.scandir(sectors_path) if f.is_dir()]
+
+    models_dict = {}
+    for sector_dir in sectors_dirs:
+        sector = sector_dir.split('/')[-1]
+        print(f'Sector: {sector}...')
+        tickers_models_filtered_path \
+            = f'{sector_dir}/models/tickers_models_filtered.pkl'
+        try:
+            with open(tickers_models_filtered_path, 'rb') as i:
+                tickers_models_filtered = pickle.load(i)
+            models_dict.update(tickers_models_filtered)
+            print(f'Sector: {sector} loaded.')
+            print(f'-------')
+        except Exception as e:
+            print(e)
+            print(f'Failed to load tickers for sector: {sector}')
+            continue
+
+    return models_dict
+
+
 class Trader:
     def __init__(self):
         self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
-        self.__tickers = self.__get_tickers()
-        self.__stocks_l1, self.__all_indicators = self.__init_indicators()
+        self.__redis_connector = RedisConnector()
+        self.__init_policy()
+        self.__tickers = get_tickers()
+        self.__stocks_l1, self.__all_indicators = init_indicators()
         self.__factors, \
             self.__stock_to_sector,\
             self.__sector_to_indicators, \
             self.__sector_to_trader = self.__init_factors()
-        self.__models = self.__init_models()
+        self.__models = init_models()
         self.__positions = {}
 
     def get_subscription_list(self) -> list:
         return self.__tickers
-
-    def __get_tickers(self) -> list:
-        sectors_path = 'analytics/modeling/sectors'
-        sectors_dirs = \
-            [f.path for f in os.scandir(sectors_path) if f.is_dir()]
-
-        all_tickers = []
-
-        for sector_dir in sectors_dirs:
-            sector = sector_dir.split('/')[-1]
-            if 'tickers' not in os.listdir(sector_dir):
-                print(f'tickers dir missing '
-                      f'for sector: {sector}')
-                continue
-
-            tickers_files = os.listdir(f'{sector_dir}/tickers')
-
-            try:
-                for f in tickers_files:
-                    with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
-                        tickers = pickle.load(inp)
-                        all_tickers = all_tickers + tickers
-
-            except Exception as e:
-                print(e)
-                print(f'Failed to load tickers for sector: {sector}')
-                continue
-
-        all_tickers = list(set(all_tickers))
-
-        # Getting earnings calendar manually every day
-        # https://hosting.briefing.com/cschwab/
-        # Calendars/EarningsCalendar5Weeks.htm
-        with open('analytics/modeling/reports') as i:
-            reports = i.read().splitlines()
-            print(f'Reports: {reports}')
-
-        all_tickers =\
-            [ticker for ticker in all_tickers if ticker not in reports]
-
-        return all_tickers
-
-    def __init_indicators(self) -> Tuple[dict, list]:
-        print('Inializing indicators...')
-        with open(f'analytics/modeling/'
-                  f'all_indicators.pkl', 'rb') as i:
-            indicators_list = pickle.load(i)
-
-        # Update to get from subscription response or request directly
-        indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                       PCT_ASK_NET: INIT_PCT}
-                           for indicator in indicators_list}
-
-        print(indicators_dict)
-
-        return indicators_dict, indicators_list
 
     def __init_factors(self) -> Tuple[dict, dict, dict, dict]:
         print('Initializing factors...')
@@ -147,7 +196,7 @@ class Trader:
                 key = current_sector_stocks[0]
                 current_sector_indicators = tickers_indicators_filtered[key]
                 sector_to_indicators[sector] = current_sector_indicators
-                sector_to_trader[sector] = self.__get_sector_trader(sector)
+                sector_to_trader[sector] = get_sector_trader(sector)
                 for stock in current_sector_stocks:
                     stock_to_sector[stock] = sector
                 print(f'Sector: {sector} loaded.')
@@ -160,43 +209,6 @@ class Trader:
                 print(e)
 
         return factors_dict, stock_to_sector, sector_to_indicators, sector_to_trader
-
-    def __get_sector_trader(self, sector: str) -> BaseTrader:
-        if sector == "ApplicationSoftware":
-            return AppTrader()
-        elif sector == "Banks":
-            return BanksTrader()
-        elif sector == "Oil":
-            return OilTrader()
-        elif sector == "Semiconductors":
-            return SemiTrader()
-        else:
-            raise KeyError(f'Sector trader for {sector} not found')
-
-    def __init_models(self) -> dict:
-        print('Initializing models...')
-        sectors_path = 'analytics/modeling/sectors'
-        sectors_dirs = \
-            [f.path for f in os.scandir(sectors_path) if f.is_dir()]
-
-        models_dict = {}
-        for sector_dir in sectors_dirs:
-            sector = sector_dir.split('/')[-1]
-            print(f'Sector: {sector}...')
-            tickers_models_filtered_path \
-                = f'{sector_dir}/models/tickers_models_filtered.pkl'
-            try:
-                with open(tickers_models_filtered_path, 'rb') as i:
-                    tickers_models_filtered = pickle.load(i)
-                models_dict.update(tickers_models_filtered)
-                print(f'Sector: {sector} loaded.')
-                print(f'-------')
-            except Exception as e:
-                print(e)
-                print(f'Failed to load tickers for sector: {sector}')
-                continue
-
-        return models_dict
 
     def process_l1_message(self, msg_dict: dict) -> list:
         global average_update_l1_speed, average_predict_speed,\
@@ -231,7 +243,7 @@ class Trader:
                     if order:
                         orders.append(order)
                 except Exception as e:
-                    print(f'Inside get_dict process l1 message, '
+                    print(f'Inside process l1 message, '
                           f'process symbol, '
                          f'An exception of type {type(e).__name__}. Arguments: '
                          f'{e.args}')
@@ -278,6 +290,44 @@ class Trader:
         self.__rabbit_sender.send_message(message=log,
                                           routing_key=MARKET_DATA_TYPE)
 
+    def __init_policy(self):
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
+                       BANKS: BULL,
+                       OIL: NEUTRAL,
+                       RENEWABLE_ENERGY: BEAR,
+                       SEMICONDUCTORS: BEAR}
+        delta_dict = {NEUTRAL: {LONG_COEF: 1,
+                                SHORT_COEF: 1},
+                      BULL: {LONG_COEF: 1/2,
+                             SHORT_COEF: 2},
+                      BEAR: {LONG_COEF: 2,
+                             SHORT_COEF: 1/2},
+                      AGG_BULL: {LONG_COEF: 1/4,
+                                 SHORT_COEF: 4},
+                      AGG_BEAR: {LONG_COEF: 4,
+                                 SHORT_COEF: 1/4}}
+        # Map to str
+        for key in delta_dict.keys():
+            delta_dict[key] = json.dumps(delta_dict[key])
+        self.__redis_connector.set_dict(name=POLICY, d=policy_dict)
+        self.__redis_connector.set_dict(name=DELTA_COEF, d=delta_dict)
+        print(f'Policy inserted')
+
+    def __get_policy(self, sector: str) -> str:
+        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)
+        if not policy:
+            return NEUTRAL
+        print(f'Policy {policy} for sector {sector}')
+        return policy
+
+    def __get_deltas(self, sector: str) -> Tuple[float, float]:
+        symbol_policy = self.__get_policy(sector=sector)
+        deltas = json.loads(self.__redis_connector.hm_get(h=DELTA_COEF, key=symbol_policy)[0])
+        if not deltas:
+            return 1.0, 1.0
+        print(f'Deltas {deltas} for sector {sector}')
+        return float(deltas[LONG_COEF]), float(deltas[SHORT_COEF])
+
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
         pct_bid_net = symbol_dict[PCT_BID_NET]
@@ -317,18 +367,21 @@ class Trader:
                 # Check for trade opportunity
                 symbol_sector = self.__stock_to_sector[symbol]
                 symbol_trader = self.__sector_to_trader[symbol_sector]
-                order_data = symbol_trader.get_order(prediction,
-                                                     pct_bid_net,
-                                                     pct_ask_net,
-                                                     indicators,
-                                                     factors_l1,
-                                                     close,
-                                                     symbol,
-                                                     bid_l1,
-                                                     ask_l1,
-                                                     bid_venue,
-                                                     ask_venue,
-                                                     std_err)
+                delta_long_coef, delta_short_coef = self.__get_deltas(sector=symbol_sector)
+                order_data = symbol_trader.get_order(prediction=prediction,
+                                                     pct_bid_net=pct_bid_net,
+                                                     pct_ask_net=pct_ask_net,
+                                                     indicators=indicators,
+                                                     factors_l1=factors_l1,
+                                                     close=close,
+                                                     symbol=symbol,
+                                                     bid_l1=bid_l1,
+                                                     ask_l1=ask_l1,
+                                                     bid_venue=bid_venue,
+                                                     ask_venue=ask_venue,
+                                                     std_err=std_err,
+                                                     delta_long_coef=delta_long_coef,
+                                                     delta_short_coef=delta_short_coef)
 
                 return order_data
 
