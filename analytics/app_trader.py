@@ -16,6 +16,10 @@ def generate_cid() -> int:
     return random.getrandbits(64)
 
 
+def get_position_size(price: float, bp: float) -> int:
+    return int((bp*0.1*0.125)/(price+1e-7))
+
+
 class AppTrader(BaseTrader):
     def __init__(self):
         super().__init__()
@@ -35,8 +39,10 @@ class AppTrader(BaseTrader):
                   bid_venue,
                   ask_venue,
                   std_err,
+                  policy,
                   delta_long_coef,
-                  delta_short_coef) -> dict:
+                  delta_short_coef,
+                  bp) -> dict:
         print(f'From AppTrader get order if exists for '
               f'symbol: {symbol}')
         side_params = {
@@ -62,15 +68,19 @@ class AppTrader(BaseTrader):
             side = BUY if np.sign(delta_long) > 0 else SELL
             order_params = side_params[side]
             order_related_data_dict = dict(zip(indicators, factors_l1))
-            order_related_data_dict.update({LONG_COEF: delta_long_coef,
-                                            SHORT_COEF: delta_short_coef})
+            order_related_data_dict.update({POLICY: policy,
+                                            LONG_COEF: delta_long_coef,
+                                            SHORT_COEF: delta_short_coef,
+                                            'prediction': prediction})
             order_data[ORDER_RELATED_DATA] = order_related_data_dict
             target = float(close + float(prediction / 100) * close)
             order = messages.order_request()
             order[ORDER][DATA][SYMBOL] = symbol
-            order[ORDER][DATA][PRICE] = order_params[PRICE]
+            price = order_params[PRICE]
+            order[ORDER][DATA][PRICE] = price
             order[ORDER][DATA][SIDE] = side
-            order[ORDER][DATA][SIZE] = 100
+            order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
+                                                         bp=bp)
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = target  # change to target
             order[ORDER][CID] = generate_cid()
@@ -81,14 +91,4 @@ class AppTrader(BaseTrader):
                   f'prediction: {prediction}, '
                   f'target: {target}')
 
-        # Change in future, logic to avoid order spamming
-        num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
-        if num_orders_sent:
-            if num_orders_sent >= 3:
-                return {}
-            else:
-                self.__sent_orders_by_ticker[symbol] += 1
-                return order_data
-        else:
-            self.__sent_orders_by_ticker[symbol] = 1
-            return order_data
+        return order_data

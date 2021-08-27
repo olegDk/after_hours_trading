@@ -89,3 +89,4 @@ AGG_BEAR = 'agg_bear'
 LONG_COEF = 'long_coef'
 SHORT_COEF = 'short_coef'
 DELTA_COEF = 'delta_coef'
+BP = 5000000

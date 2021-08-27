@@ -4,7 +4,8 @@ import os
 import copy
 from typing import Tuple
 import uuid
-from datetime import datetime
+from pytz import timezone
+from datetime import datetime, timedelta
 import json
 import config.messages as messages
 from config.constants import *
@@ -31,6 +32,8 @@ count_process_speed = 0
 average_update_l1_speed = 0
 average_predict_speed = 0
 average_process_speed = 0
+
+EST = timezone('EST')
 
 
 def generate_id() -> str:
@@ -106,8 +109,8 @@ def init_indicators() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                   PCT_ASK_NET: INIT_PCT}
+    indicators_dict = {indicator: {PCT_BID_NET: 0,
+                                   PCT_ASK_NET: 0}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -169,6 +172,8 @@ class Trader:
             self.__sector_to_trader = self.__init_factors()
         self.__models = init_models()
         self.__positions = {}
+        self.__bp = BP
+        self.__sent_orders_by_ticker = {}
 
     def get_subscription_list(self) -> list:
         return self.__tickers
@@ -291,11 +296,11 @@ class Trader:
                                           routing_key=MARKET_DATA_TYPE)
 
     def __init_policy(self):
-        policy_dict = {APPLICATION_SOFTWARE: BEAR,
-                       BANKS: BULL,
+        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+                       BANKS: NEUTRAL,
                        OIL: NEUTRAL,
-                       RENEWABLE_ENERGY: BEAR,
-                       SEMICONDUCTORS: BEAR}
+                       RENEWABLE_ENERGY: NEUTRAL,
+                       SEMICONDUCTORS: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
@@ -314,19 +319,36 @@ class Trader:
         print(f'Policy inserted')
 
     def __get_policy(self, sector: str) -> str:
-        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)
+        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0].decode('utf-8')
+        print(policy)
         if not policy:
             return NEUTRAL
-        print(f'Policy {policy} for sector {sector}')
         return policy
 
-    def __get_deltas(self, sector: str) -> Tuple[float, float]:
-        symbol_policy = self.__get_policy(sector=sector)
-        deltas = json.loads(self.__redis_connector.hm_get(h=DELTA_COEF, key=symbol_policy)[0])
+    def __get_deltas(self, policy: str) -> Tuple[float, float]:
+        deltas = json.loads(self.__redis_connector.hm_get(h=DELTA_COEF, key=policy)[0])
         if not deltas:
             return 1.0, 1.0
-        print(f'Deltas {deltas} for sector {sector}')
         return float(deltas[LONG_COEF]), float(deltas[SHORT_COEF])
+
+    def __validate_tier(self, symbol: str) -> bool:
+        num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
+        if not num_orders_sent:
+            self.__sent_orders_by_ticker[symbol] = 1
+            return True
+        if num_orders_sent < 8:
+            cur_time = datetime.now(EST) + timedelta(hours=1)
+            cur_time_hour = cur_time.hour
+            cur_time_minute = cur_time.minute
+            if cur_time_hour < 8 and num_orders_sent < 2:
+                return True
+            elif cur_time_hour == 8 and num_orders_sent < 4:
+                return True
+            elif cur_time_hour == 8 and cur_time_minute > 30 and num_orders_sent < 6:
+                return True
+            elif cur_time_hour == 9 and num_orders_sent < 8:
+                return True
+        return False
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
@@ -355,47 +377,53 @@ class Trader:
 
             print(f'{symbol} current factors:')
             print(factors_l1)
-
             if INIT_PCT not in factors_l1:
-                pred_array = np.array(factors_l1).reshape(1, -1)
-                prediction = model.predict(pred_array)
-                print(f'{symbol} prediction: {prediction}\n'
-                      f'current pctBidNet: {pct_bid_net}, '
-                      f'current pctAskNet: {pct_ask_net}')
-                std_err = model_dict['mae']
+                valid_tier = self.__validate_tier(symbol=symbol)
+                if valid_tier:
+                    pred_array = np.array(factors_l1).reshape(1, -1)
+                    prediction = model.predict(pred_array)[0]
+                    print(f'{symbol} prediction: {prediction}\n'
+                          f'current pctBidNet: {pct_bid_net}, '
+                          f'current pctAskNet: {pct_ask_net}')
+                    std_err = model_dict['mae']
 
-                # Check for trade opportunity
-                symbol_sector = self.__stock_to_sector[symbol]
-                symbol_trader = self.__sector_to_trader[symbol_sector]
-                delta_long_coef, delta_short_coef = self.__get_deltas(sector=symbol_sector)
-                order_data = symbol_trader.get_order(prediction=prediction,
-                                                     pct_bid_net=pct_bid_net,
-                                                     pct_ask_net=pct_ask_net,
-                                                     indicators=indicators,
-                                                     factors_l1=factors_l1,
-                                                     close=close,
-                                                     symbol=symbol,
-                                                     bid_l1=bid_l1,
-                                                     ask_l1=ask_l1,
-                                                     bid_venue=bid_venue,
-                                                     ask_venue=ask_venue,
-                                                     std_err=std_err,
-                                                     delta_long_coef=delta_long_coef,
-                                                     delta_short_coef=delta_short_coef)
-
-                return order_data
+                    # Check for trade opportunity
+                    symbol_sector = self.__stock_to_sector[symbol]
+                    symbol_trader = self.__sector_to_trader[symbol_sector]
+                    symbol_policy = self.__get_policy(sector=symbol_sector)
+                    delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
+                    order_data = symbol_trader.get_order(prediction=prediction,
+                                                         pct_bid_net=pct_bid_net,
+                                                         pct_ask_net=pct_ask_net,
+                                                         indicators=indicators,
+                                                         factors_l1=factors_l1,
+                                                         close=close,
+                                                         symbol=symbol,
+                                                         bid_l1=bid_l1,
+                                                         ask_l1=ask_l1,
+                                                         bid_venue=bid_venue,
+                                                         ask_venue=ask_venue,
+                                                         std_err=std_err,
+                                                         policy=symbol_policy,
+                                                         delta_long_coef=delta_long_coef,
+                                                         delta_short_coef=delta_short_coef,
+                                                         bp=self.__bp)
+                    self.__sent_orders_by_ticker[symbol] += 1
+                    return order_data
 
             else:
                 raise TypeError('One of indicators is not populated yet')
 
         except KeyError as e:
-            print(e)
+            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
             print(f'Failed to make inference on symbol message: {symbol_dict}')
 
         except TypeError as e:
             print(e)
 
         except Exception as e:
-            print(e)
+            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
 
         return {}
