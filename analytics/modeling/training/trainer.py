@@ -53,7 +53,7 @@ def train_all_models():
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
     # for sector_dir in tqdm(sectors_dirs):
-    for sector_dir in tqdm(['analytics/modeling/sectors/Oil']):
+    for sector_dir in tqdm(sectors_dirs):
         sector = sector_dir.split('/')[-1]
         if 'tickers' not in os.listdir(sector_dir):
             print(f'tickers dir missing '
