@@ -344,7 +344,7 @@ class Trader:
 
     def __get_tier_prop(self, stock: str) -> float:
         prop = float(self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
-                                                  key=stock)[0].decode('utf-8'))
+                                                   key=stock)[0].decode('utf-8'))
         print(f'For symbol: {stock} prop: {prop}')
         return prop
 
