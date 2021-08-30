@@ -27,6 +27,7 @@ CLOSE = 'close'
 L1 = 'l1'
 POLICY = 'policy'
 INIT_PCT = -1e3
+STOCK_TO_TIER_PROPORTION = 'stock_to_tier_proportion'
 
 # Message types
 MESSAGE_ID = 'messageId'
@@ -77,7 +78,7 @@ ORDER_DATA = 'orderData'
 APPLICATION_SOFTWARE = 'ApplicationSoftware'
 BANKS = 'Banks'
 OIL = 'Oil'
-RENEWABLE_ENERGY = 'Renewable'
+RENEWABLE_ENERGY = 'RenewableEnergy'
 SEMICONDUCTORS = 'Semiconductors'
 
 # Trade policies

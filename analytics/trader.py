@@ -102,15 +102,15 @@ def get_tickers() -> list:
     return all_tickers
 
 
-def init_indicators() -> Tuple[dict, list]:
+def init_stocks_data() -> Tuple[dict, list]:
     print('Inializing indicators...')
     with open(f'analytics/modeling/'
               f'all_indicators.pkl', 'rb') as i:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                   PCT_ASK_NET: INIT_PCT}
+    indicators_dict = {indicator: {PCT_BID_NET: 0,
+                                   PCT_ASK_NET: 0}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -163,13 +163,13 @@ class Trader:
     def __init__(self):
         self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
         self.__redis_connector = RedisConnector()
-        self.__init_policy()
         self.__tickers = get_tickers()
-        self.__stocks_l1, self.__all_indicators = init_indicators()
+        self.__stocks_l1, self.__all_indicators = init_stocks_data()
         self.__factors, \
             self.__stock_to_sector,\
             self.__sector_to_indicators, \
             self.__sector_to_trader = self.__init_factors()
+        self.__init_policy()
         self.__models = init_models()
         self.__positions = {}
         self.__bp = BP
@@ -296,6 +296,7 @@ class Trader:
                                           routing_key=MARKET_DATA_TYPE)
 
     def __init_policy(self):
+        traidable_stocks = list(self.__stock_to_sector.keys())
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
@@ -311,11 +312,17 @@ class Trader:
                                  SHORT_COEF: 4},
                       AGG_BEAR: {LONG_COEF: 4,
                                  SHORT_COEF: 1/4}}
+        stock_to_tier_proportion = {}
+        for traidable_stock in traidable_stocks:
+            print(f'Setting default risk for symbol {traidable_stock}')
+            stock_to_tier_proportion[traidable_stock] = 1
         # Map to str
         for key in delta_dict.keys():
             delta_dict[key] = json.dumps(delta_dict[key])
         self.__redis_connector.set_dict(name=POLICY, d=policy_dict)
         self.__redis_connector.set_dict(name=DELTA_COEF, d=delta_dict)
+        self.__redis_connector.set_dict(name=STOCK_TO_TIER_PROPORTION,
+                                        d=stock_to_tier_proportion)
         print(f'Policy inserted')
 
     def __get_policy(self, sector: str) -> str:
@@ -330,6 +337,12 @@ class Trader:
         if not deltas:
             return 1.0, 1.0
         return float(deltas[LONG_COEF]), float(deltas[SHORT_COEF])
+
+    def __get_tier_prop(self, stock: str) -> float:
+        prop = float(self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
+                                                  key=stock)[0].decode('utf-8'))
+        print(f'For symbol: {stock} prop: {prop}')
+        return prop
 
     def __validate_tier(self, symbol: str) -> bool:
         num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
@@ -391,6 +404,7 @@ class Trader:
                     symbol_sector = self.__stock_to_sector[symbol]
                     symbol_trader = self.__sector_to_trader[symbol_sector]
                     symbol_policy = self.__get_policy(sector=symbol_sector)
+                    symbol_prop = self.__get_tier_prop(stock=symbol)
                     delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
                     order_data = symbol_trader.get_order(prediction=prediction,
                                                          pct_bid_net=pct_bid_net,
@@ -405,6 +419,7 @@ class Trader:
                                                          ask_venue=ask_venue,
                                                          std_err=std_err,
                                                          policy=symbol_policy,
+                                                         prop=symbol_prop,
                                                          delta_long_coef=delta_long_coef,
                                                          delta_short_coef=delta_short_coef,
                                                          bp=self.__bp)

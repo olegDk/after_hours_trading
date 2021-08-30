@@ -16,8 +16,10 @@ def generate_cid() -> int:
     return random.getrandbits(64)
 
 
-def get_position_size(price: float, bp: float) -> int:
-    return int((bp*0.1*0.125)/(price+1e-7))
+def get_position_size(price: float,
+                      bp: float,
+                      prop: float) -> int:
+    return int((bp*0.1*0.125*prop)/(price+1e-7))
 
 
 class OilTrader(BaseTrader):
@@ -40,6 +42,7 @@ class OilTrader(BaseTrader):
                   ask_venue,
                   std_err,
                   policy,
+                  prop,
                   delta_long_coef,
                   delta_short_coef,
                   bp) -> dict:
@@ -80,7 +83,8 @@ class OilTrader(BaseTrader):
             order[ORDER][DATA][PRICE] = price
             order[ORDER][DATA][SIDE] = side
             order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
-                                                         bp=bp)
+                                                         bp=bp,
+                                                         prop=prop)
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = target  # change to target
             order[ORDER][CID] = generate_cid()

@@ -15,7 +15,7 @@ def connect_redis() -> redis.Redis:
             print(f"========================================================="
                   f"===================================================")
             print(f"Connection attempt to redis from Trader...")
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
             print(f"Connected to redis from Trader successfully...")
             print(f"========================================================="
                   f"===================================================")
@@ -72,3 +72,29 @@ class RedisConnector:
                   f'{e.args}')
             print(traceback.format_exc())
             return ''
+
+    def h_set_float(self, h: str, key: str, value: float):
+        try:
+            print(f'Setting value: {value} for key: {key}, '
+                  f'in hash: {h}')
+            self.__redis.hset(name=h,
+                              key=key,
+                              value=value)
+        except Exception as e:
+            print(f'Inside h_set_float RedisConnector'
+                  f'An exception of type {type(e).__name__}. Arguments: '
+                  f'{e.args}')
+            print(traceback.format_exc())
+
+    def h_set_str(self, h: str, key: str, value: str):
+        try:
+            print(f'Setting value: {value} for key: {key}, '
+                  f'in hash: {h}')
+            self.__redis.hset(name=h,
+                              key=key,
+                              value=value)
+        except Exception as e:
+            print(f'Inside h_set_str RedisConnector'
+                  f'An exception of type {type(e).__name__}. Arguments: '
+                  f'{e.args}')
+            print(traceback.format_exc())
