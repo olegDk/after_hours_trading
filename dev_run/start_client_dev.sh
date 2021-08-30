@@ -9,7 +9,7 @@ if [[ $VAR = $prod ]]; then
   conda deactivate
   cd ~
 else
-  python main.py '192.168.137.11'
+  python main.py '10.101.3.83'
   conda deactivate
   cd ~
 fi
