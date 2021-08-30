@@ -274,7 +274,11 @@ class Trader:
         return orders
 
     def __update_l1(self, symbol_dict: dict):
-        symbol = symbol_dict[SYMBOL]
+        try:
+            symbol = symbol_dict[SYMBOL]
+        except KeyError as e:
+            print('KeyError on dict: ')
+            print(symbol_dict)
         pct_bid_net = symbol_dict[PCT_BID_NET]
         pct_ask_net = symbol_dict[PCT_ASK_NET]
         l1_dict = self.__stocks_l1.get(symbol)
