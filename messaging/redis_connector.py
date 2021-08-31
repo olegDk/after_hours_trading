@@ -15,7 +15,8 @@ def connect_redis() -> redis.Redis:
             print(f"========================================================="
                   f"===================================================")
             print(f"Connection attempt to redis from Trader...")
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0,
+                            decode_responses=True)
             print(f"Connected to redis from Trader successfully...")
             print(f"========================================================="
                   f"===================================================")
@@ -98,3 +99,15 @@ class RedisConnector:
                   f'An exception of type {type(e).__name__}. Arguments: '
                   f'{e.args}')
             print(traceback.format_exc())
+
+    def h_getall(self, h: str) -> dict:
+        try:
+            value = self.__redis.hgetall(h)
+            print(f'Got value: {value}')
+            return value
+        except Exception as e:
+            print(f'Inside h_getall RedisConnector'
+                  f'An exception of type {type(e).__name__}. Arguments: '
+                  f'{e.args}')
+            print(traceback.format_exc())
+            return {}

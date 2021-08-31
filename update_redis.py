@@ -1,5 +1,6 @@
 import os
 import pickle
+import json
 from messaging.redis_connector import RedisConnector
 from config.constants import *
 
@@ -77,7 +78,7 @@ def get_sector_policy(sector: str) -> str:
         print(f'Invalid sector: {sector}, should be one of: '
               f'{sectors}')
     sector_policy = r.hm_get(h=POLICY,
-                             key=sector)[0].decode('utf-8')
+                             key=sector)[0]
 
     return sector_policy
 
@@ -89,20 +90,42 @@ def get_stock_prop(stock: str) -> float:
         print(f'Invalid stock: {stock}, should be one of: '
               f'{stocks}')
         # stock_prop = float(r.hm_get(h=STOCK_TO_TIER_PROPORTION,
-        #                             key=stock)[0].decode('utf-8'))
+        #                             key=stock)[0])
     stock_prop = r.hm_get(h=STOCK_TO_TIER_PROPORTION,
-                          key=stock)[0].decode('utf-8')
+                          key=stock)[0]
 
     return stock_prop
 
 
+def get_acc_info() -> dict:
+    acc_info = r.h_getall(h=ACCOUNT_INFORMATION)
+    return acc_info
+
+
+def set_acc_info(bp: float,
+                 bp_usage: float):
+    if bp_usage < 0 or bp_usage > 1 or bp < 0:
+        print(f'Invalid arguments: bp: {bp}, '
+              f'bp_usage: {bp_usage}')
+    acc_policy = {
+        BP_KEY: bp,
+        BP_USAGE_PCT_KEY: bp_usage
+    }
+    r.set_dict(name=ACCOUNT_INFORMATION,
+               d=acc_policy)
+
+
 print(get_sector_policy(sector=APPLICATION_SOFTWARE))
 print(get_stock_prop(stock='AMZN'))
+print(get_acc_info())
 
 set_sector_policy(sector=APPLICATION_SOFTWARE,
                   policy=NEUTRAL)
 set_stock_prop(stock='AMZN',
                prop=1)
+set_acc_info(bp=1000000.0,
+             bp_usage=0.5)
 
 print(get_sector_policy(sector=APPLICATION_SOFTWARE))
 print(get_stock_prop(stock='AMZN'))
+print(get_acc_info())

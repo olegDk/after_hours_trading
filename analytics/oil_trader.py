@@ -18,8 +18,9 @@ def generate_cid() -> int:
 
 def get_position_size(price: float,
                       bp: float,
+                      bp_usage_pct: float,
                       prop: float) -> int:
-    return int((bp*0.1*0.125*prop)/(price+1e-7))
+    return int((bp*bp_usage_pct*0.1*0.125*prop)/(price+1e-7))
 
 
 class OilTrader(BaseTrader):
@@ -45,7 +46,8 @@ class OilTrader(BaseTrader):
                   prop,
                   delta_long_coef,
                   delta_short_coef,
-                  bp) -> dict:
+                  bp,
+                  bp_usage_pct) -> dict:
         print(f'From AppTrader get order if exists for '
               f'symbol: {symbol}')
         side_params = {
@@ -84,6 +86,7 @@ class OilTrader(BaseTrader):
             order[ORDER][DATA][SIDE] = side
             order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
                                                          bp=bp,
+                                                         bp_usage_pct=bp_usage_pct,
                                                          prop=prop)
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = target

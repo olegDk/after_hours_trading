@@ -112,8 +112,8 @@ def init_stocks_data() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                   PCT_ASK_NET: INIT_PCT}
+    indicators_dict = {indicator: {PCT_BID_NET: 0,
+                                   PCT_ASK_NET: 0}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -223,7 +223,6 @@ class Trader:
         self.__init_policy()
         self.__models = init_models()
         self.__positions = {}
-        self.__bp = BP
         self.__sent_orders_by_ticker = {}
 
     def get_subscription_list(self) -> list:
@@ -339,6 +338,8 @@ class Trader:
                                  SHORT_COEF: 4},
                       AGG_BEAR: {LONG_COEF: 4,
                                  SHORT_COEF: 1/4}}
+        acc_info_dict = {BP_KEY: INIT_BP,
+                         BP_USAGE_PCT_KEY: BP_USAGE_PCT}
         stock_to_tier_proportion = {}
         for traidable_stock in traidable_stocks:
             print(f'Setting default risk for symbol {traidable_stock}')
@@ -350,10 +351,12 @@ class Trader:
         self.__redis_connector.set_dict(name=DELTA_COEF, d=delta_dict)
         self.__redis_connector.set_dict(name=STOCK_TO_TIER_PROPORTION,
                                         d=stock_to_tier_proportion)
+        self.__redis_connector.set_dict(name=ACCOUNT_INFORMATION,
+                                        d=acc_info_dict)
         print(f'Policy inserted')
 
     def __get_policy(self, sector: str) -> str:
-        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0].decode('utf-8')
+        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0]
         print(policy)
         if not policy:
             return NEUTRAL
@@ -367,9 +370,13 @@ class Trader:
 
     def __get_tier_prop(self, stock: str) -> float:
         prop = float(self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
-                                                   key=stock)[0].decode('utf-8'))
+                                                   key=stock)[0])
         print(f'For symbol: {stock} prop: {prop}')
         return prop
+
+    def __get_acc_info(self) -> dict:
+        acc_info = self.__redis_connector.h_getall(h=ACCOUNT_INFORMATION)
+        return acc_info
 
     def __validate_tier(self, symbol: str) -> bool:
         num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
@@ -435,6 +442,13 @@ class Trader:
                         symbol_trader = self.__sector_to_trader[symbol_sector]
                         symbol_policy = self.__get_policy(sector=symbol_sector)
                         delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
+                        acc_info = self.__get_acc_info()
+                        bp = float(acc_info[BP_KEY])
+                        bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
+                        print(f'BP: {bp}')
+                        print(f'bp type: {type(bp)}')
+                        print(f'BP_USAGE_PCT: {bp_usage_pct}')
+                        print(f'bp_usage_pct type: {type(bp_usage_pct)}')
                         order_data = symbol_trader.get_order(prediction=prediction,
                                                              pct_bid_net=pct_bid_net,
                                                              pct_ask_net=pct_ask_net,
@@ -451,7 +465,8 @@ class Trader:
                                                              prop=symbol_prop,
                                                              delta_long_coef=delta_long_coef,
                                                              delta_short_coef=delta_short_coef,
-                                                             bp=self.__bp)
+                                                             bp=bp,
+                                                             bp_usage_pct=bp_usage_pct)
                         self.__sent_orders_by_ticker[symbol] += 1
                         return order_data
 
