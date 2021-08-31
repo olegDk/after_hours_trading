@@ -83,8 +83,11 @@ def get_tickers() -> list:
                     all_tickers = all_tickers + tickers
 
         except Exception as e:
-            print(e)
-            print(f'Failed to load tickers for sector: {sector}')
+            message = f'Get tickers error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to init factors')
             continue
 
     all_tickers = list(set(all_tickers))
@@ -152,11 +155,59 @@ def init_models() -> dict:
             print(f'Sector: {sector} loaded.')
             print(f'-------')
         except Exception as e:
-            print(e)
-            print(f'Failed to load tickers for sector: {sector}')
+            message = f'Init models error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to init models')
             continue
 
     return models_dict
+
+
+def init_factors() -> Tuple[dict, dict, dict, dict]:
+    print('Initializing factors...')
+    sectors_path = 'analytics/modeling/sectors'
+    sectors_dirs = \
+        [f.path for f in os.scandir(sectors_path) if f.is_dir()]
+
+    factors_dict = {}
+    stock_to_sector = {}
+    sector_to_indicators = {}
+    sector_to_trader = {}
+    for sector_dir in sectors_dirs:
+        sector = sector_dir.split('/')[-1]
+        print(f'Sector: {sector}...')
+        tickers_indicators_filtered_path \
+            = f'{sector_dir}/models/tickers_indicators_filtered.pkl'
+        try:
+            with open(tickers_indicators_filtered_path, 'rb') as i:
+                tickers_indicators_filtered = pickle.load(i)
+            factors_dict.update(tickers_indicators_filtered)
+            current_sector_stocks = list(tickers_indicators_filtered.keys())
+            key = current_sector_stocks[0]
+            current_sector_indicators = tickers_indicators_filtered[key]
+            sector_to_indicators[sector] = current_sector_indicators
+            sector_to_trader[sector] = get_sector_trader(sector)
+            for stock in current_sector_stocks:
+                stock_to_sector[stock] = sector
+            print(f'Sector: {sector} loaded.')
+            print(f'-------')
+        except Exception as e:
+            message = f'Init factors error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to init factors')
+            continue
+        except KeyError as e:
+            message = f'Init factors KeyError: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to init factors')
+
+    return factors_dict, stock_to_sector, sector_to_indicators, sector_to_trader
 
 
 class Trader:
@@ -168,7 +219,7 @@ class Trader:
         self.__factors, \
             self.__stock_to_sector,\
             self.__sector_to_indicators, \
-            self.__sector_to_trader = self.__init_factors()
+            self.__sector_to_trader = init_factors()
         self.__init_policy()
         self.__models = init_models()
         self.__positions = {}
@@ -177,43 +228,6 @@ class Trader:
 
     def get_subscription_list(self) -> list:
         return self.__tickers
-
-    def __init_factors(self) -> Tuple[dict, dict, dict, dict]:
-        print('Initializing factors...')
-        sectors_path = 'analytics/modeling/sectors'
-        sectors_dirs = \
-            [f.path for f in os.scandir(sectors_path) if f.is_dir()]
-
-        factors_dict = {}
-        stock_to_sector = {}
-        sector_to_indicators = {}
-        sector_to_trader = {}
-        for sector_dir in sectors_dirs:
-            sector = sector_dir.split('/')[-1]
-            print(f'Sector: {sector}...')
-            tickers_indicators_filtered_path \
-                = f'{sector_dir}/models/tickers_indicators_filtered.pkl'
-            try:
-                with open(tickers_indicators_filtered_path, 'rb') as i:
-                    tickers_indicators_filtered = pickle.load(i)
-                factors_dict.update(tickers_indicators_filtered)
-                current_sector_stocks = list(tickers_indicators_filtered.keys())
-                key = current_sector_stocks[0]
-                current_sector_indicators = tickers_indicators_filtered[key]
-                sector_to_indicators[sector] = current_sector_indicators
-                sector_to_trader[sector] = get_sector_trader(sector)
-                for stock in current_sector_stocks:
-                    stock_to_sector[stock] = sector
-                print(f'Sector: {sector} loaded.')
-                print(f'-------')
-            except Exception as e:
-                print(e)
-                print(f'Failed to load tickers for sector: {sector}')
-                continue
-            except KeyError as e:
-                print(e)
-
-        return factors_dict, stock_to_sector, sector_to_indicators, sector_to_trader
 
     def process_l1_message(self, msg_dict: dict) -> list:
         global average_update_l1_speed, average_predict_speed,\
@@ -248,11 +262,11 @@ class Trader:
                     if order:
                         orders.append(order)
                 except Exception as e:
-                    print(f'Inside process l1 message, '
-                          f'process symbol, '
-                         f'An exception of type {type(e).__name__}. Arguments: '
-                         f'{e.args}')
+                    message = f'Process l1 message error: ' \
+                              f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                    print(message)
                     print(traceback.format_exc())
+                    print(f'Failed to process l1 message: {msg_dict}')
                     pass
 
         finish = datetime.now()
@@ -276,20 +290,29 @@ class Trader:
     def __update_l1(self, symbol_dict: dict):
         try:
             symbol = symbol_dict[SYMBOL]
+            pct_bid_net = symbol_dict[PCT_BID_NET]
+            pct_ask_net = symbol_dict[PCT_ASK_NET]
+            l1_dict = self.__stocks_l1.get(symbol)
+            if not l1_dict:
+                self.__stocks_l1[symbol] = {
+                    PCT_BID_NET: pct_bid_net,
+                    PCT_ASK_NET: pct_ask_net
+                }
+            else:
+                self.__stocks_l1[symbol][PCT_BID_NET] = pct_bid_net
+                self.__stocks_l1[symbol][PCT_ASK_NET] = pct_ask_net
         except KeyError as e:
-            print('KeyError on dict: ')
-            print(symbol_dict)
-        pct_bid_net = symbol_dict[PCT_BID_NET]
-        pct_ask_net = symbol_dict[PCT_ASK_NET]
-        l1_dict = self.__stocks_l1.get(symbol)
-        if not l1_dict:
-            self.__stocks_l1[symbol] = {
-                PCT_BID_NET: pct_bid_net,
-                PCT_ASK_NET: pct_ask_net
-            }
-        else:
-            self.__stocks_l1[symbol][PCT_BID_NET] = pct_bid_net
-            self.__stocks_l1[symbol][PCT_ASK_NET] = pct_ask_net
+            message = f'Update l1 KeyError: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to make inference on symbol message: {symbol_dict}')
+        except Exception as e:
+            message = f'Update l1 error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to make inference on symbol message: {symbol_dict}')
 
     def send_order_log_to_mq(self, log: list):
         self.__rabbit_sender.send_message(message=log,
@@ -369,80 +392,91 @@ class Trader:
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
-        pct_bid_net = symbol_dict[PCT_BID_NET]
-        pct_ask_net = symbol_dict[PCT_ASK_NET]
-        bid_l1 = symbol_dict[BID]
-        ask_l1 = symbol_dict[ASK]
-        bid_venue = symbol_dict[BID_VENUE]
-        # bid_venue = 1
-        ask_venue = symbol_dict[ASK_VENUE]
-        # ask_venue = 1
-        close = symbol_dict[CLOSE]
+        symbol_prop = self.__get_tier_prop(stock=symbol)
+        # If the tier proportion is 0 (stock is in black list
+        if symbol_prop:
+            pct_bid_net = symbol_dict[PCT_BID_NET]
+            pct_ask_net = symbol_dict[PCT_ASK_NET]
+            bid_l1 = symbol_dict[BID]
+            ask_l1 = symbol_dict[ASK]
+            bid_venue = symbol_dict[BID_VENUE]
+            # bid_venue = 1
+            ask_venue = symbol_dict[ASK_VENUE]
+            # ask_venue = 1
+            close = symbol_dict[CLOSE]
 
-        # Make trade decision
-        try:
-            model_dict = self.__models[symbol]
-            model = model_dict[MODEL]
-            # Get indicators
-            indicators = self.__factors[symbol]
-            print(f'{symbol} indicators: ')
-            print(indicators)
-            # Get indicators l1
-            factors_l1 = list(
-                map(lambda x: current_percentage(
-                    self.__stocks_l1.get(x)), indicators))
+            # Make trade decision
+            try:
+                model_dict = self.__models[symbol]
+                model = model_dict[MODEL]
+                # Get indicators
+                indicators = self.__factors[symbol]
+                print(f'{symbol} indicators: ')
+                print(indicators)
+                # Get indicators l1
+                factors_l1 = list(
+                    map(lambda x: current_percentage(
+                        self.__stocks_l1.get(x)), indicators))
 
-            print(f'{symbol} current factors:')
-            print(factors_l1)
-            if INIT_PCT not in factors_l1:
-                valid_tier = self.__validate_tier(symbol=symbol)
-                if valid_tier:
-                    pred_array = np.array(factors_l1).reshape(1, -1)
-                    prediction = model.predict(pred_array)[0]
-                    print(f'{symbol} prediction: {prediction}\n'
-                          f'current pctBidNet: {pct_bid_net}, '
-                          f'current pctAskNet: {pct_ask_net}')
-                    std_err = model_dict['mae']
+                print(f'{symbol} current factors:')
+                print(factors_l1)
+                if INIT_PCT not in factors_l1:
+                    valid_tier = self.__validate_tier(symbol=symbol)
+                    if valid_tier:
+                        pred_array = np.array(factors_l1).reshape(1, -1)
+                        prediction = model.predict(pred_array)[0]
+                        print(f'{symbol} prediction: {prediction}\n'
+                              f'current pctBidNet: {pct_bid_net}, '
+                              f'current pctAskNet: {pct_ask_net}')
+                        std_err = model_dict['mae']
 
-                    # Check for trade opportunity
-                    symbol_sector = self.__stock_to_sector[symbol]
-                    symbol_trader = self.__sector_to_trader[symbol_sector]
-                    symbol_policy = self.__get_policy(sector=symbol_sector)
-                    symbol_prop = self.__get_tier_prop(stock=symbol)
-                    delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
-                    order_data = symbol_trader.get_order(prediction=prediction,
-                                                         pct_bid_net=pct_bid_net,
-                                                         pct_ask_net=pct_ask_net,
-                                                         indicators=indicators,
-                                                         factors_l1=factors_l1,
-                                                         close=close,
-                                                         symbol=symbol,
-                                                         bid_l1=bid_l1,
-                                                         ask_l1=ask_l1,
-                                                         bid_venue=bid_venue,
-                                                         ask_venue=ask_venue,
-                                                         std_err=std_err,
-                                                         policy=symbol_policy,
-                                                         prop=symbol_prop,
-                                                         delta_long_coef=delta_long_coef,
-                                                         delta_short_coef=delta_short_coef,
-                                                         bp=self.__bp)
-                    self.__sent_orders_by_ticker[symbol] += 1
-                    return order_data
+                        # Check for trade opportunity
+                        symbol_sector = self.__stock_to_sector[symbol]
+                        symbol_trader = self.__sector_to_trader[symbol_sector]
+                        symbol_policy = self.__get_policy(sector=symbol_sector)
+                        delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
+                        order_data = symbol_trader.get_order(prediction=prediction,
+                                                             pct_bid_net=pct_bid_net,
+                                                             pct_ask_net=pct_ask_net,
+                                                             indicators=indicators,
+                                                             factors_l1=factors_l1,
+                                                             close=close,
+                                                             symbol=symbol,
+                                                             bid_l1=bid_l1,
+                                                             ask_l1=ask_l1,
+                                                             bid_venue=bid_venue,
+                                                             ask_venue=ask_venue,
+                                                             std_err=std_err,
+                                                             policy=symbol_policy,
+                                                             prop=symbol_prop,
+                                                             delta_long_coef=delta_long_coef,
+                                                             delta_short_coef=delta_short_coef,
+                                                             bp=self.__bp)
+                        self.__sent_orders_by_ticker[symbol] += 1
+                        return order_data
 
-            else:
-                raise TypeError('One of indicators is not populated yet')
+                else:
+                    raise TypeError('One of indicators is not populated yet')
 
-        except KeyError as e:
-            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(f'Failed to make inference on symbol message: {symbol_dict}')
+            except KeyError as e:
+                message = f'Process symbol dict error: ' \
+                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to make inference on symbol message: {symbol_dict}')
 
-        except TypeError as e:
-            print(e)
+            except TypeError as e:
+                message = f'Process symbol dict error: ' \
+                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to make inference on symbol message: {symbol_dict}')
 
-        except Exception as e:
-            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
+            except Exception as e:
+                message = f'Process symbol dict error: ' \
+                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to make inference on symbol message: {symbol_dict}')
 
         return {}

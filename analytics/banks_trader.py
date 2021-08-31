@@ -66,7 +66,7 @@ class BanksTrader(BaseTrader):
         delta_long = prediction - pct_ask_net
         delta_short = prediction - pct_bid_net
         trade_flag = delta_long >= std_err * delta_long_coef or \
-                     delta_short <= -std_err * delta_short_coef  # change
+                     delta_short <= -std_err * delta_short_coef
         if trade_flag:
             side = BUY if np.sign(delta_long) > 0 else SELL
             order_params = side_params[side]
@@ -86,7 +86,7 @@ class BanksTrader(BaseTrader):
                                                          bp=bp,
                                                          prop=prop)
             order[ORDER][DATA][VENUE] = order_params[VENUE]
-            order[ORDER][DATA][TARGET] = target  # change to target
+            order[ORDER][DATA][TARGET] = target
             order[ORDER][CID] = generate_cid()
             order_data[ORDER_DATA] = order
             print(f'Stock: {symbol}, {side} '
