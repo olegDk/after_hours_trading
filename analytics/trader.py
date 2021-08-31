@@ -324,7 +324,7 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
