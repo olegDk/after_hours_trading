@@ -406,7 +406,7 @@ class Trader:
         symbol = symbol_dict[SYMBOL]
         symbol_prop = self.__get_tier_prop(stock=symbol)
         # If the tier proportion is 0 (stock is in black list
-        if symbol_prop:
+        if float(symbol_prop):
             pct_bid_net = symbol_dict[PCT_BID_NET]
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             bid_l1 = symbol_dict[BID]

@@ -131,5 +131,5 @@ set_stock_prop(stock='DOCU',
 #             bp_usage=0.5)
 
 print(get_sector_policy(sector=APPLICATION_SOFTWARE))
-print(get_stock_prop(stock='AMZN'))
+print(type(get_stock_prop(stock='FIVN')))
 print(get_acc_info())
