@@ -323,7 +323,7 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        policy_dict = {APPLICATION_SOFTWARE: BEAR,
+        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
@@ -406,7 +406,12 @@ class Trader:
         symbol = symbol_dict[SYMBOL]
         symbol_prop = self.__get_tier_prop(stock=symbol)
         # If the tier proportion is 0 (stock is in black list
-        if float(symbol_prop):
+        if symbol=='FIVN':
+            print('==============================================')
+            print(symbol_prop)
+            print(bool(float(symbol_prop)))
+            print('======================================')
+        if float(symbol_prop) and symbol not in ['BILI', 'FIVN', 'DOCU']:
             pct_bid_net = symbol_dict[PCT_BID_NET]
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             bid_l1 = symbol_dict[BID]
