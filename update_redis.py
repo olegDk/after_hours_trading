@@ -115,16 +115,20 @@ def set_acc_info(bp: float,
                d=acc_policy)
 
 
-print(get_sector_policy(sector=APPLICATION_SOFTWARE))
-print(get_stock_prop(stock='AMZN'))
-print(get_acc_info())
+#print(get_sector_policy(sector=APPLICATION_SOFTWARE))
+#print(get_stock_prop(stock='AMZN'))
+#print(get_acc_info())
 
-set_sector_policy(sector=APPLICATION_SOFTWARE,
-                  policy=NEUTRAL)
-set_stock_prop(stock='AMZN',
-               prop=1)
-set_acc_info(bp=1000000.0,
-             bp_usage=0.5)
+#set_sector_policy(sector=APPLICATION_SOFTWARE,
+#                  policy=NEUTRAL)
+set_stock_prop(stock='FIVN',
+               prop=0)
+set_stock_prop(stock='BILI',
+               prop=0)
+set_stock_prop(stock='DOCU',
+               prop=0)
+#set_acc_info(bp=1000000.0,
+#             bp_usage=0.5)
 
 print(get_sector_policy(sector=APPLICATION_SOFTWARE))
 print(get_stock_prop(stock='AMZN'))
