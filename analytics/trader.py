@@ -34,6 +34,13 @@ average_predict_speed = 0
 average_process_speed = 0
 
 EST = timezone('EST')
+now_init = datetime.now()
+final_dt = datetime(year=now_init.year,
+                    month=now_init.month,
+                    day=now_init.day,
+                    hour=9,
+                    minute=27,
+                    second=41)
 
 
 def generate_id() -> str:
@@ -112,8 +119,8 @@ def init_stocks_data() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                   PCT_ASK_NET: INIT_PCT}
+    indicators_dict = {indicator: {PCT_BID_NET: 0,
+                                   PCT_ASK_NET: 0}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -323,6 +330,7 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
+        black_list = ['FIVN', 'BILI', 'DOCU']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
@@ -342,8 +350,12 @@ class Trader:
                          BP_USAGE_PCT_KEY: BP_USAGE_PCT}
         stock_to_tier_proportion = {}
         for traidable_stock in traidable_stocks:
-            print(f'Setting default risk for symbol {traidable_stock}')
-            stock_to_tier_proportion[traidable_stock] = 1
+            if traidable_stock not in black_list:
+                print(f'Setting default risk for symbol {traidable_stock}')
+                stock_to_tier_proportion[traidable_stock] = 1
+            else:
+                print(f'Putting symbol {traidable_stock} in blacklist')
+                stock_to_tier_proportion[traidable_stock] = 0
         # Map to str
         for key in delta_dict.keys():
             delta_dict[key] = json.dumps(delta_dict[key])
@@ -384,10 +396,14 @@ class Trader:
         cur_time_hour = cur_time.hour
         cur_time_minute = cur_time.minute
         cur_time_second = cur_time.second
-        all_invalid_flag = cur_time_hour >= 9\
-                           and cur_time_minute >= 27\
-                           and cur_time_second >= 41
-        if not all_invalid_flag:
+        all_invalid_flag = datetime.now() > final_dt
+        print('======================================')
+        print(f'Validity flag: {all_invalid_flag}')
+        print('======================================')
+        if all_invalid_flag:  # change to negation
+            print('======================================')
+            print(f'Validity flag: {all_invalid_flag}')
+            print('======================================')
             if not num_orders_sent:
                 self.__sent_orders_by_ticker[symbol] = 1
                 return True
@@ -405,13 +421,9 @@ class Trader:
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
         symbol_prop = self.__get_tier_prop(stock=symbol)
-        # If the tier proportion is 0 (stock is in black list
-        if symbol=='FIVN':
-            print('==============================================')
-            print(symbol_prop)
-            print(bool(float(symbol_prop)))
-            print('======================================')
-        if float(symbol_prop) and symbol not in ['BILI', 'FIVN', 'DOCU']:
+        # If the tier proportion is 0 (stock is in black list)
+        if float(symbol_prop):
+            print(f'Valid symbol: {symbol}')
             pct_bid_net = symbol_dict[PCT_BID_NET]
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             bid_l1 = symbol_dict[BID]

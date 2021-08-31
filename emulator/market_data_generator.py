@@ -27,13 +27,13 @@ def get_tickers() -> dict:
     tickers = list(set(tickers))
 
     # Manually approximate sum of probabilities for most liquid stocks
-    sum_liquid = 0.35
+    sum_liquid = 0.75
 
     # Determine probability mass to distribute across other tickers
     sum_to_distribute = float(1 - sum_liquid)
 
     # Uniformly distribute probability mass across rest of the tickers
-    uniform_prob = float(sum_to_distribute/(len(tickers) - 3))
+    uniform_prob = float(sum_to_distribute/(len(tickers) - 4))
 
     uniform_dist = [uniform_prob for _ in tickers]
 
@@ -44,6 +44,7 @@ def get_tickers() -> dict:
     prob_dict['QQQ'] = 0.1
     # prob_dict['BAC'] = 0.1
     prob_dict['DIA'] = 0.05
+    prob_dict['FIVN'] = 0.4  # Test stock ignoring
 
     return prob_dict
 
