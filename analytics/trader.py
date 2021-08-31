@@ -380,21 +380,26 @@ class Trader:
 
     def __validate_tier(self, symbol: str) -> bool:
         num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
-        if not num_orders_sent:
-            self.__sent_orders_by_ticker[symbol] = 1
-            return True
-        if num_orders_sent < 8:
-            cur_time = datetime.now(EST) + timedelta(hours=1)
-            cur_time_hour = cur_time.hour
-            cur_time_minute = cur_time.minute
-            if cur_time_hour < 8 and num_orders_sent < 2:
+        cur_time = datetime.now(EST) + timedelta(hours=1)
+        cur_time_hour = cur_time.hour
+        cur_time_minute = cur_time.minute
+        cur_time_second = cur_time.second
+        all_invalid_flag = cur_time_hour >= 9\
+                           and cur_time_minute >= 27\
+                           and cur_time_second >= 41
+        if not all_invalid_flag:
+            if not num_orders_sent:
+                self.__sent_orders_by_ticker[symbol] = 1
                 return True
-            elif cur_time_hour == 8 and num_orders_sent < 4:
-                return True
-            elif cur_time_hour == 8 and cur_time_minute > 30 and num_orders_sent < 6:
-                return True
-            elif cur_time_hour == 9 and num_orders_sent < 8:
-                return True
+            if num_orders_sent < 8:
+                if cur_time_hour < 8 and num_orders_sent < 2:
+                    return True
+                elif cur_time_hour == 8 and num_orders_sent < 4:
+                    return True
+                elif cur_time_hour == 8 and cur_time_minute > 30 and num_orders_sent < 6:
+                    return True
+                elif cur_time_hour == 9 and num_orders_sent < 8:
+                    return True
         return False
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
