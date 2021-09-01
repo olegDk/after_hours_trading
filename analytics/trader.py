@@ -119,8 +119,8 @@ def init_stocks_data() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: 0,
-                                   PCT_ASK_NET: 0}
+    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
+                                   PCT_ASK_NET: INIT_PCT}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -330,7 +330,17 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['FIVN', 'BILI', 'DOCU']  # Add untraidable stocks here
+        black_list = ['GBS',
+                      'FCUV',
+                      'PLAN',
+                      'BXRX',
+                      'FTRP',
+                      'AMBA',
+                      'PVH',
+                      'CAL',
+                      'SKLZ',
+                      'BLCM',
+                      '']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
@@ -517,3 +527,10 @@ class Trader:
                 print(f'Failed to make inference on symbol message: {symbol_dict}')
 
         return {}
+
+
+# trader = Trader()
+# print(trader.get_subscription_list())
+# import pandas as pd
+# pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
+
