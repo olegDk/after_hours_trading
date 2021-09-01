@@ -336,7 +336,7 @@ class Trader:
                       'TELL',
                       'XPEV'
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
