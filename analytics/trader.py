@@ -330,17 +330,12 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['GBS',
-                      'FCUV',
-                      'PLAN',
-                      'BXRX',
-                      'FTRP',
-                      'AMBA',
-                      'PVH',
-                      'CAL',
-                      'SKLZ',
-                      'BLCM',
-                      '']  # Add untraidable stocks here
+        black_list = ['RUN',
+                      'NOVA',
+                      'NIO',
+                      'TELL',
+                      'XPEV'
+                      ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
