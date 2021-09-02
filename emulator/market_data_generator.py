@@ -44,7 +44,7 @@ def get_tickers() -> dict:
     prob_dict['QQQ'] = 0.1
     # prob_dict['BAC'] = 0.1
     prob_dict['DIA'] = 0.05
-    prob_dict['FIVN'] = 0.4  # Test stock ignoring
+    prob_dict['BABA'] = 0.4  # Test stock ignoring
 
     return prob_dict
 

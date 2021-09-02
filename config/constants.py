@@ -80,6 +80,7 @@ BANKS = 'Banks'
 OIL = 'Oil'
 RENEWABLE_ENERGY = 'RenewableEnergy'
 SEMICONDUCTORS = 'Semiconductors'
+CHINA = 'China'
 
 # Trade policies
 NEUTRAL = 'neutral'

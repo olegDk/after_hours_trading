@@ -20,6 +20,7 @@ from analytics.banks_trader import BanksTrader
 from analytics.oil_trader import OilTrader
 from analytics.semi_trader import SemiTrader
 from analytics.renewable_trader import RenewableTrader
+from analytics.china_trader import ChinaTrader
 
 sum_update_l1_speed = 0
 sum_predict_speed = 0
@@ -139,6 +140,8 @@ def get_sector_trader(sector: str) -> BaseTrader:
         return SemiTrader()
     elif sector == RENEWABLE_ENERGY:
         return RenewableTrader()
+    elif sector == CHINA:
+        return ChinaTrader()
     else:
         raise KeyError(f'Sector trader for {sector} not found')
 
@@ -336,7 +339,8 @@ class Trader:
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: NEUTRAL}
+                       SEMICONDUCTORS: NEUTRAL,
+                       CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
@@ -524,4 +528,3 @@ class Trader:
 # print(trader.get_subscription_list())
 # import pandas as pd
 # pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
-
