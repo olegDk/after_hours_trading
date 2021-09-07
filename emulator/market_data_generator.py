@@ -27,7 +27,7 @@ def get_tickers() -> dict:
     tickers = list(set(tickers))
 
     # Manually approximate sum of probabilities for most liquid stocks
-    sum_liquid = 0.75
+    sum_liquid = 0.45
 
     # Determine probability mass to distribute across other tickers
     sum_to_distribute = float(1 - sum_liquid)
@@ -42,9 +42,8 @@ def get_tickers() -> dict:
     # Manually assigning probabilities for most liquid stocks
     prob_dict['SPY'] = 0.2
     prob_dict['QQQ'] = 0.1
-    # prob_dict['BAC'] = 0.1
+    prob_dict['BAC'] = 0.1
     prob_dict['DIA'] = 0.05
-    prob_dict['BABA'] = 0.4  # Test stock ignoring
 
     return prob_dict
 

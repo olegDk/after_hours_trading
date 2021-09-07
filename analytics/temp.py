@@ -35,3 +35,5 @@ res_md_total = res_md_joined.groupby(by='Symbol').agg({
     'Size': 'sum',
     'Profit': 'sum'
 }).sort_values(by='Profit', ascending=False)
+
+res_md_total.sum()

@@ -1,0 +1,358 @@
+stock,sector
+CRM,Application Software
+ADBE,Application Software
+INTU,Application Software
+ATVI,Application Software
+WDAY,Application Software
+ADSK,Application Software
+TEAM,Application Software
+EA,Application Software
+VEEV,Application Software
+CERN,Application Software
+SNPS,Application Software
+ANSS,Application Software
+CDNS,Application Software
+TTWO,Application Software
+SSNC,Application Software
+SE,Application Software
+OKTA,Application Software
+PAYC,Application Software
+DOCU,Application Software
+OTEX,Application Software
+DDOG,Application Software
+BKI,Application Software
+GWRE,Application Software
+COUP,Application Software
+AZPN,Application Software
+PTC,Application Software
+ZEN,Application Software
+HUBS,Application Software
+CDAY,Application Software
+PLAN,Application Software
+SWI,Application Software
+CDK,Application Software
+AYX,Application Software
+RP,Application Software
+ZNGA,Application Software
+MANH,Application Software
+NET,Application Software
+NUAN,Application Software
+SMAR,Application Software
+ACIW,Application Software
+NEWR,Application Software
+MDLA,Application Software
+GSX,Application Software
+QTWO,Application Software
+FIVN,Application Software
+ENV,Application Software
+VRNT,Application Software
+APPN,Application Software
+BB,Application Software
+LPSN,Application Software
+BL,Application Software
+ALTR,Application Software
+EVBG,Application Software
+VRRM,Application Software
+INOV,Application Software
+PRO,Application Software
+MDRX,Application Software
+PRGS,Application Software
+SAIL,Application Software
+INST,Application Software
+CHNG,Application Software
+AVYA,Application Software
+HCAT,Application Software
+GOOG,Application Software
+GOOGL,Application Software
+FB,Application Software
+TCEHY,Application Software
+NFLX,Application Software
+PROSY,Application Software
+NPSNY,Application Software
+SPOT,Application Software
+TWTR,Application Software
+TME,Application Software
+SNAP,Application Software
+ROKU,Application Software
+PINS,Application Software
+YELP,Application Software
+SOGO,Application Software
+OPRA,Application Software
+MSFT,Application Software
+ORCL,Application Software
+VMW,Application Software
+NOW,Application Software
+PANW,Application Software
+SPLK,Application Software
+ZM,Application Software
+CHKP,Application Software
+AKAM,Application Software
+TWLO,Application Software
+SYMC,Application Software
+CTXS,Application Software
+FTNT,Application Software
+CRWD,Application Software
+DBX,Application Software
+MDB,Application Software
+INXN,Application Software
+PFPT,Application Software
+ZS,Application Software
+DT,Application Software
+JCOM,Application Software
+MFGP,Application Software
+PVTL,Application Software
+CYBR,Application Software
+TDC,Application Software
+FEYE,Application Software
+LOGM,Application Software
+QLYS,Application Software
+BOX,Application Software
+RPD,Application Software
+MIME,Application Software
+CVLT,Application Software
+TENB,Application Software
+FSLY,Application Software
+YEXT,Application Software
+ZUO,Application Software
+CISN,Application Software
+FSCT,Application Software
+BAND,Application Software
+PING,Application Software
+TIVO,Application Software
+AMZN,Application Software
+EBAY,Application Software
+MELI,Application Software
+CHWY,Application Software
+W,Application Software
+ETSY,Application Software
+FTCH,Application Software
+SFIX,Application Software
+REAL,Application Software
+RVLV,Application Software
+SQ,Application Software
+JPM,Banks
+BAC,Banks
+C,Banks
+RY,Banks
+BNS,Banks
+BMO,Banks
+CLSK,Banks
+WFC,Banks
+TD,Banks
+USB,Banks
+PNC,Banks
+CM,Banks
+STI,Banks
+FITB,Banks
+MTB,Banks
+KEY,Banks
+FRC,Banks
+RF,Banks
+CFG,Banks
+HBAN,Banks
+SIVB,Banks
+CMA,Banks
+BSMX,Banks
+ZION,Banks
+CBSH,Banks
+PBCT,Banks
+SBNY,Banks
+EWBC,Banks
+NYCB,Banks
+TCF,Banks
+CFR,Banks
+BPOP,Banks
+WAL,Banks
+SNV,Banks
+FHN,Banks
+PB,Banks
+FFIN,Banks
+PNFP,Banks
+PACW,Banks
+CIT,Banks
+WBS,Banks
+STL,Banks
+UBSI,Banks
+FNB,Banks
+GBCI,Banks
+IBKC,Banks
+VLY,Banks
+OZK,Banks
+WTFC,Banks
+HWC,Banks
+FHB,Banks
+UMPQ,Banks
+ISBC,Banks
+BKU,Banks
+ASB,Banks
+CSFL,Banks
+HOMB,Banks
+BXS,Banks
+ONB,Banks
+AUB,Banks
+ABCB,Banks
+CVBF,Banks
+WAFD,Banks
+FULT,Banks
+TCBI,Banks
+UCBI,Banks
+FFBC,Banks
+SFNC,Banks
+FBP,Banks
+FMBI,Banks
+HTH,Banks
+LTXB,Banks
+PPBI,Banks
+CADE,Banks
+NWBI,Banks
+HOPE,Banks
+GGAL,Banks
+BMA,Banks
+FCF,Banks
+VBTX,Banks
+CASH,Banks
+OFG,Banks
+GS,Banks
+MS,Banks
+IBKR,Banks
+TW,Banks
+JEF,Banks
+LAZ,Banks
+VIRT,Banks
+HLI,Banks
+EVR,Banks
+BGCP,Banks
+MC,Banks
+FSLR,Renewable Energy
+SEDG,Renewable Energy
+ENPH,Renewable Energy
+BLDP,Renewable Energy
+SPWR,Renewable Energy
+CSIQ,Renewable Energy
+RUN,Renewable Energy
+JKS,Renewable Energy
+NOVA,Renewable Energy
+ARRY,Renewable Energy
+SHLS,Renewable Energy
+API,China
+ATHM,China
+BABA,China
+BIDU,China
+BILI,China
+WB,China
+YY,China
+HUYA,China
+BILI,China
+MOMO,China
+IQ,China
+PDD,China
+JD,China
+BABA,China
+VIPS,China
+TCOM,China
+CD,China
+KC,China
+TUYA,China
+LI,China
+BZ,China
+GDS,China
+DADA,China
+XPEV,China
+QFIN,China
+NIO,China
+HTHT,China
+ZTO,China
+INTC,Semiconductors
+NVDA,Semiconductors
+AVGO,Semiconductors
+TXN,Semiconductors
+QCOM,Semiconductors
+MU,Semiconductors
+ADI,Semiconductors
+AMD,Semiconductors
+NXPI,Semiconductors
+XLNX,Semiconductors
+MCHP,Semiconductors
+MRVL,Semiconductors
+MXIM,Semiconductors
+SWKS,Semiconductors
+QRVO,Semiconductors
+ON,Semiconductors
+CY,Semiconductors
+OLED,Semiconductors
+MPWR,Semiconductors
+IPGP,Semiconductors
+MLNX,Semiconductors
+CREE,Semiconductors
+SMTC,Semiconductors
+CRUS,Semiconductors
+IIVI,Semiconductors
+VSH,Semiconductors
+IPHI,Semiconductors
+LSCC,Semiconductors
+AMBA,Semiconductors
+RMBS,Semiconductors
+MTSI,Semiconductors
+MXL,Semiconductors
+SYNA,Semiconductors
+KEM,Semiconductors
+AMAT,Semiconductors
+LRCX,Semiconductors
+KLAC,Semiconductors
+TER,Semiconductors
+ENTG,Semiconductors
+MKSI,Semiconductors
+AMKR,Semiconductors
+BRKS,Semiconductors
+TSEM,Semiconductors
+FORM,Semiconductors
+KLIC,Semiconductors
+XOM,Oil
+CVX,Oil
+SLB,Oil
+BKR,Oil
+HAL,Oil
+NOV,Oil
+FTI,Oil
+HP,Oil
+RIG,Oil
+APY,Oil
+CLB,Oil
+PTEN,Oil
+DRQ,Oil
+AROC,Oil
+OII,Oil
+HLX,Oil
+DNOW,Oil
+FI,Oil
+LBRT,Oil
+COP,Oil
+EOG,Oil
+OXY,Oil
+CNQ,Oil
+PXD,Oil
+HES,Oil
+FANG,Oil
+CXO,Oil
+CLR,Oil
+NBL,Oil
+MRO,Oil
+DVN,Oil
+APA,Oil
+COG,Oil
+PE,Oil
+XEC,Oil
+WPX,Oil
+MUR,Oil
+MGY,Oil
+EQT,Oil
+KOS,Oil
+VET,Oil
+TELL,Oil
+MTDR,Oil
+CNX,Oil
+JAG,Oil
+ERF,Oil
+PDCE,Oil
+CRK,Oil
+LPI,Oil
