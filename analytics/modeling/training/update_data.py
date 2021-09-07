@@ -218,38 +218,38 @@ oil_etfs = ['XOP', 'XLE', 'XLF', 'DIA', 'SPY']
 renew_stocks = sector_to_stocks['Renewable Energy']
 renew_etfs = ['TAN', 'ARKK', 'SPY']
 china_stocks = sector_to_stocks['China']
-china_etfs = ['QQQ', 'SPY', 'KWEB', 'FXI']
+china_etfs = ['QQQ', 'KWEB']
 
 all_sectors = [
-    {'sector': 'Banks',
-     'data': {
-         'stocks': banks_stocks,
-         'etfs': banks_etfs
-     }},
-
-    {'sector': 'ApplicationSoftware',
-     'data': {
-         'stocks': app_stocks,
-         'etfs': app_etfs
-     }},
-
-    {'sector': 'Semiconductors',
-     'data': {
-         'stocks': semi_stocks,
-         'etfs': semi_etfs
-     }},
-
-    {'sector': 'Oil',
-     'data': {
-         'stocks': oil_stocks,
-         'etfs': oil_etfs
-     }},
-
-    {'sector': 'RenewableEnergy',
-     'data': {
-         'stocks': renew_stocks,
-         'etfs': renew_etfs
-     }},
+    # {'sector': 'Banks',
+    #  'data': {
+    #      'stocks': banks_stocks,
+    #      'etfs': banks_etfs
+    #  }},
+    #
+    # {'sector': 'ApplicationSoftware',
+    #  'data': {
+    #      'stocks': app_stocks,
+    #      'etfs': app_etfs
+    #  }},
+    #
+    # {'sector': 'Semiconductors',
+    #  'data': {
+    #      'stocks': semi_stocks,
+    #      'etfs': semi_etfs
+    #  }},
+    #
+    # {'sector': 'Oil',
+    #  'data': {
+    #      'stocks': oil_stocks,
+    #      'etfs': oil_etfs
+    #  }},
+    #
+    # {'sector': 'RenewableEnergy',
+    #  'data': {
+    #      'stocks': renew_stocks,
+    #      'etfs': renew_etfs
+    #  }},
 
     {'sector': 'China',
      'data': {
