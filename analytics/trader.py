@@ -339,7 +339,12 @@ class Trader:
                       'SPOT',
                       'CRUS',
                       'TD',
-                      'FTCH'
+                      'FTCH',
+                      'ZS',
+                      'BIDU',
+                      'BRKS',
+                      'FIVN',
+                      
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
