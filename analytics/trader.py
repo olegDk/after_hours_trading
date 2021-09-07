@@ -335,7 +335,11 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['CS',
                       'MDB',
-                      'BILI']  # Add untraidable stocks here
+                      'BILI',
+                      'SPOT',
+                      'CRUS',
+                      'TD'
+                      ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
