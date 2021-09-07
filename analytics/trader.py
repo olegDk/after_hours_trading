@@ -343,8 +343,7 @@ class Trader:
                       'ZS',
                       'BIDU',
                       'BRKS',
-                      'FIVN',
-                      
+                      'FIVN'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
