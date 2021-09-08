@@ -11,16 +11,8 @@ import config.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender
 from messaging.redis_connector import RedisConnector
-import redis
 import random
 import traceback
-from analytics.base_trader import BaseTrader
-from analytics.app_trader import AppTrader
-from analytics.banks_trader import BanksTrader
-from analytics.oil_trader import OilTrader
-from analytics.semi_trader import SemiTrader
-from analytics.renewable_trader import RenewableTrader
-from analytics.china_trader import ChinaTrader
 
 sum_update_l1_speed = 0
 sum_predict_speed = 0
@@ -52,6 +44,13 @@ def generate_id() -> str:
 
 def generate_cid() -> int:
     return random.getrandbits(64)
+
+
+def get_position_size(price: float,
+                      bp: float,
+                      bp_usage_pct: float,
+                      prop: float) -> int:
+    return int((bp*bp_usage_pct*0.1*0.125*prop)/(price+1e-7))
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -129,23 +128,6 @@ def init_stocks_data() -> Tuple[dict, list]:
     return indicators_dict, indicators_list
 
 
-def get_sector_trader(sector: str) -> BaseTrader:
-    if sector == APPLICATION_SOFTWARE:
-        return AppTrader()
-    elif sector == BANKS:
-        return BanksTrader()
-    elif sector == OIL:
-        return OilTrader()
-    elif sector == SEMICONDUCTORS:
-        return SemiTrader()
-    elif sector == RENEWABLE_ENERGY:
-        return RenewableTrader()
-    elif sector == CHINA:
-        return ChinaTrader()
-    else:
-        raise KeyError(f'Sector trader for {sector} not found')
-
-
 def init_models() -> dict:
     print('Initializing models...')
     sectors_path = 'analytics/modeling/sectors'
@@ -175,7 +157,7 @@ def init_models() -> dict:
     return models_dict
 
 
-def init_factors() -> Tuple[dict, dict, dict, dict]:
+def init_factors() -> Tuple[dict, dict, dict]:
     print('Initializing factors...')
     sectors_path = 'analytics/modeling/sectors'
     sectors_dirs = \
@@ -184,7 +166,6 @@ def init_factors() -> Tuple[dict, dict, dict, dict]:
     factors_dict = {}
     stock_to_sector = {}
     sector_to_indicators = {}
-    sector_to_trader = {}
     for sector_dir in sectors_dirs:
         sector = sector_dir.split('/')[-1]
         print(f'Sector: {sector}...')
@@ -198,7 +179,6 @@ def init_factors() -> Tuple[dict, dict, dict, dict]:
             key = current_sector_stocks[0]
             current_sector_indicators = tickers_indicators_filtered[key]
             sector_to_indicators[sector] = current_sector_indicators
-            sector_to_trader[sector] = get_sector_trader(sector)
             for stock in current_sector_stocks:
                 stock_to_sector[stock] = sector
             print(f'Sector: {sector} loaded.')
@@ -217,7 +197,7 @@ def init_factors() -> Tuple[dict, dict, dict, dict]:
             print(traceback.format_exc())
             print(f'Failed to init factors')
 
-    return factors_dict, stock_to_sector, sector_to_indicators, sector_to_trader
+    return factors_dict, stock_to_sector, sector_to_indicators
 
 
 class Trader:
@@ -228,8 +208,7 @@ class Trader:
         self.__stocks_l1, self.__all_indicators = init_stocks_data()
         self.__factors, \
             self.__stock_to_sector,\
-            self.__sector_to_indicators, \
-            self.__sector_to_trader = init_factors()
+            self.__sector_to_indicators = init_factors()
         self.__init_policy()
         self.__models = init_models()
         self.__positions = {}
@@ -420,7 +399,6 @@ class Trader:
             print(f'Validity flag: {all_invalid_flag}')
             print('======================================')
             if not num_orders_sent:
-                self.__sent_orders_by_ticker[symbol] = 1
                 return True
             if num_orders_sent < 8:
                 if cur_time_hour < 8 and num_orders_sent < 2:
@@ -476,7 +454,6 @@ class Trader:
 
                         # Check for trade opportunity
                         symbol_sector = self.__stock_to_sector[symbol]
-                        symbol_trader = self.__sector_to_trader[symbol_sector]
                         symbol_policy = self.__get_policy(sector=symbol_sector)
                         delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
                         acc_info = self.__get_acc_info()
@@ -486,25 +463,24 @@ class Trader:
                         print(f'bp type: {type(bp)}')
                         print(f'BP_USAGE_PCT: {bp_usage_pct}')
                         print(f'bp_usage_pct type: {type(bp_usage_pct)}')
-                        order_data = symbol_trader.get_order(prediction=prediction,
-                                                             pct_bid_net=pct_bid_net,
-                                                             pct_ask_net=pct_ask_net,
-                                                             indicators=indicators,
-                                                             factors_l1=factors_l1,
-                                                             close=close,
-                                                             symbol=symbol,
-                                                             bid_l1=bid_l1,
-                                                             ask_l1=ask_l1,
-                                                             bid_venue=bid_venue,
-                                                             ask_venue=ask_venue,
-                                                             std_err=std_err,
-                                                             policy=symbol_policy,
-                                                             prop=symbol_prop,
-                                                             delta_long_coef=delta_long_coef,
-                                                             delta_short_coef=delta_short_coef,
-                                                             bp=bp,
-                                                             bp_usage_pct=bp_usage_pct)
-                        self.__sent_orders_by_ticker[symbol] += 1
+                        order_data = self.__get_order(prediction=prediction,
+                                                      pct_bid_net=pct_bid_net,
+                                                      pct_ask_net=pct_ask_net,
+                                                      indicators=indicators,
+                                                      factors_l1=factors_l1,
+                                                      close=close,
+                                                      symbol=symbol,
+                                                      bid_l1=bid_l1,
+                                                      ask_l1=ask_l1,
+                                                      bid_venue=bid_venue,
+                                                      ask_venue=ask_venue,
+                                                      std_err=std_err,
+                                                      policy=symbol_policy,
+                                                      prop=symbol_prop,
+                                                      delta_long_coef=delta_long_coef,
+                                                      delta_short_coef=delta_short_coef,
+                                                      bp=bp,
+                                                      bp_usage_pct=bp_usage_pct)
                         return order_data
 
                 else:
@@ -532,6 +508,78 @@ class Trader:
                 print(f'Failed to make inference on symbol message: {symbol_dict}')
 
         return {}
+
+    def __get_order(self,
+                    prediction,
+                    pct_bid_net,
+                    pct_ask_net,
+                    indicators,
+                    factors_l1,
+                    close,
+                    symbol,
+                    bid_l1,
+                    ask_l1,
+                    bid_venue,
+                    ask_venue,
+                    std_err,
+                    policy,
+                    prop,
+                    delta_long_coef,
+                    delta_short_coef,
+                    bp,
+                    bp_usage_pct) -> dict:
+        print(f'From Trader get order if exists for '
+              f'symbol: {symbol}')
+        side_params = {
+            # Long params
+            BUY: {
+                PRICE: ask_l1,
+                VENUE: ask_venue,
+                PCT_NET: pct_ask_net,
+            },
+            # Short params
+            SELL: {
+                PRICE: bid_l1,
+                VENUE: bid_venue,
+                PCT_NET: pct_bid_net
+            }
+        }
+        order_data = {}
+        delta_long = prediction - pct_ask_net
+        delta_short = prediction - pct_bid_net
+        trade_flag = delta_long >= std_err * delta_long_coef or \
+                     delta_short <= -std_err * delta_short_coef
+        if trade_flag:
+            side = BUY if np.sign(delta_long) > 0 else SELL
+            order_params = side_params[side]
+            order_related_data_dict = dict(zip(indicators, factors_l1))
+            order_related_data_dict.update({POLICY: policy,
+                                            LONG_COEF: delta_long_coef,
+                                            SHORT_COEF: delta_short_coef,
+                                            PREDICTION_KEY: prediction})
+            order_data[ORDER_RELATED_DATA] = order_related_data_dict
+            target = float(close + float(prediction / 100) * close)
+            order = messages.order_request()
+            order[ORDER][DATA][SYMBOL] = symbol
+            price = order_params[PRICE]
+            order[ORDER][DATA][PRICE] = price
+            order[ORDER][DATA][SIDE] = side
+            order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
+                                                         bp=bp,
+                                                         bp_usage_pct=bp_usage_pct,
+                                                         prop=prop)
+            order[ORDER][DATA][VENUE] = order_params[VENUE]
+            order[ORDER][DATA][TARGET] = target
+            order[ORDER][CID] = generate_cid()
+            order_data[ORDER_DATA] = order
+            print(f'Stock: {symbol}, {side} '
+                  f'{order_params[PRICE]},\n'
+                  f'Current entry: {order_params[PCT_NET]}, '
+                  f'prediction: {prediction}, '
+                  f'target: {target}')
+            self.__sent_orders_by_ticker[symbol] += 1
+
+        return order_data
 
 
 # trader = Trader()

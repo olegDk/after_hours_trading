@@ -51,6 +51,7 @@ EXTENDED = 53
 CID = 'cid'
 BUY = 'B'
 SELL = 'H'
+PREDICTION_KEY = 'prediction'
 
 # Constants related to orderResponse only
 MNEMONIC = 'mnemonic'

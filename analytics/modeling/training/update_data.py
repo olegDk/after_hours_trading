@@ -1,18 +1,10 @@
 import numpy as np
 import pandas as pd
 import yfinance as yfinance
-import yahoo_fin as yahoo_fin
-import time
-import yahoo_fin.stock_info as si
-from yahoo_fin import news
 from tqdm import tqdm
-from typing import Tuple
 import os
-import gc
 from functools import reduce
-import requests
-from datetime import datetime, timedelta, timezone, date
-import pytz
+from datetime import datetime, timedelta, date
 import pickle
 
 cwd = os.getcwd()
@@ -25,7 +17,7 @@ ETFs = ['SPY', 'QQQ', 'CLOU', 'DIA', 'GDX', 'IWM', 'JETS',
         'SMH', 'TAN', 'XBI', 'XLE', 'XLF', 'XLK', 'XLP',
         'XLU', 'XLV', 'XOP', 'ARKG', 'ARKK', 'EWZ', 'FXI', 'HYG',
         'IEFA', 'IEF', 'EEM', 'EFA', 'IEMG', 'VXX', 'TLT', 'SOXL',
-        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB']
+        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI']
 
 with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
     pickle.dump(ETFs, o)
@@ -84,9 +76,6 @@ renew_stocks = sector_to_stocks['Renewable Energy']
 tickers_to_update = banks_stocks + app_stocks + semi_stocks + oil_stocks + renew_stocks + china_stocks + ETFs
 print(f'Num symbols to update: '
       f'{len(tickers_to_update)}')
-
-start_date = '2019-01-01'
-end_date = date.today().strftime('%Y-%m-%d')
 
 
 def run_data_update():
@@ -216,40 +205,40 @@ semi_etfs = ['QQQ', 'SPY', 'SOXL', 'TLT']
 oil_stocks = sector_to_stocks['Oil']
 oil_etfs = ['XOP', 'XLE', 'XLF', 'DIA', 'SPY']
 renew_stocks = sector_to_stocks['Renewable Energy']
-renew_etfs = ['TAN', 'ARKK', 'SPY']
+renew_etfs = ['TAN', 'XOP', 'SPY']
 china_stocks = sector_to_stocks['China']
 china_etfs = ['QQQ', 'KWEB']
 
 all_sectors = [
-    # {'sector': 'Banks',
-    #  'data': {
-    #      'stocks': banks_stocks,
-    #      'etfs': banks_etfs
-    #  }},
-    #
-    # {'sector': 'ApplicationSoftware',
-    #  'data': {
-    #      'stocks': app_stocks,
-    #      'etfs': app_etfs
-    #  }},
-    #
-    # {'sector': 'Semiconductors',
-    #  'data': {
-    #      'stocks': semi_stocks,
-    #      'etfs': semi_etfs
-    #  }},
-    #
-    # {'sector': 'Oil',
-    #  'data': {
-    #      'stocks': oil_stocks,
-    #      'etfs': oil_etfs
-    #  }},
-    #
-    # {'sector': 'RenewableEnergy',
-    #  'data': {
-    #      'stocks': renew_stocks,
-    #      'etfs': renew_etfs
-    #  }},
+    {'sector': 'Banks',
+     'data': {
+         'stocks': banks_stocks,
+         'etfs': banks_etfs
+     }},
+
+    {'sector': 'ApplicationSoftware',
+     'data': {
+         'stocks': app_stocks,
+         'etfs': app_etfs
+     }},
+
+    {'sector': 'Semiconductors',
+     'data': {
+         'stocks': semi_stocks,
+         'etfs': semi_etfs
+     }},
+
+    {'sector': 'Oil',
+     'data': {
+         'stocks': oil_stocks,
+         'etfs': oil_etfs
+     }},
+
+    {'sector': 'RenewableEnergy',
+     'data': {
+         'stocks': renew_stocks,
+         'etfs': renew_etfs
+     }},
 
     {'sector': 'China',
      'data': {

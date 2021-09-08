@@ -52,8 +52,11 @@ def train_all_models():
     sectors_dirs = \
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
+    print(sectors_dirs)
+
     # for sector_dir in tqdm(sectors_dirs):
-    for sector_dir in tqdm(sectors_dirs):
+    for sector_dir in tqdm(['analytics/modeling/sectors/RenewableEnergy']):
+        print(sector_dir)
         sector = sector_dir.split('/')[-1]
         if 'tickers' not in os.listdir(sector_dir):
             print(f'tickers dir missing '
