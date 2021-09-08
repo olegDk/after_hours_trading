@@ -321,7 +321,9 @@ class Trader:
                       'MFGP',
                       'TELL',
                       'XPEV',
-                      'LI']  # Add untraidable stocks here
+                      'LI',
+                      'RF',
+                      'FHN']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
