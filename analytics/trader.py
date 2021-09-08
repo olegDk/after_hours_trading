@@ -49,8 +49,9 @@ def generate_cid() -> int:
 def get_position_size(price: float,
                       bp: float,
                       bp_usage_pct: float,
-                      prop: float) -> int:
-    return int((bp*bp_usage_pct*0.1*0.125*prop)/(price+1e-7))
+                      prop: float,
+                      time_bp_prop: float) -> int:
+    return int((bp*bp_usage_pct*0.1*0.125*prop*time_bp_prop)/(price+1e-7))
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -312,18 +313,15 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['CS',
-                      'MDB',
+        black_list = ['CTXS',
+                      'DADA',
+                      'NIO',
+                      'BB',
                       'BILI',
-                      'SPOT',
-                      'CRUS',
-                      'TD',
-                      'FTCH',
-                      'ZS',
-                      'BIDU',
-                      'BRKS',
-                      'FIVN'
-                      ]  # Add untraidable stocks here
+                      'MFGP',
+                      'TELL',
+                      'XPEV',
+                      'LI']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
@@ -384,7 +382,7 @@ class Trader:
         acc_info = self.__redis_connector.h_getall(h=ACCOUNT_INFORMATION)
         return acc_info
 
-    def __validate_tier(self, symbol: str) -> bool:
+    def __validate_tier(self, symbol: str) -> Tuple[bool, float]:
         num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
         cur_time = datetime.now(EST) + timedelta(hours=1)
         cur_time_hour = cur_time.hour
@@ -399,17 +397,20 @@ class Trader:
             print(f'Validity flag: {all_invalid_flag}')
             print('======================================')
             if not num_orders_sent:
-                return True
+                if cur_time_hour < 9:
+                    return True, 0.5
+                else:
+                    return True, 1.0
             if num_orders_sent < 8:
                 if cur_time_hour < 8 and num_orders_sent < 2:
-                    return True
+                    return True, 0.25
                 elif cur_time_hour == 8 and num_orders_sent < 4:
-                    return True
+                    return True, 0.5
                 elif cur_time_hour == 8 and cur_time_minute > 30 and num_orders_sent < 6:
-                    return True
+                    return True, 0.5
                 elif cur_time_hour == 9 and num_orders_sent < 8:
-                    return True
-        return False
+                    return True, 1
+        return False, 0.0
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
@@ -443,7 +444,7 @@ class Trader:
                 print(f'{symbol} current factors:')
                 print(factors_l1)
                 if INIT_PCT not in factors_l1:
-                    valid_tier = self.__validate_tier(symbol=symbol)
+                    valid_tier, time_bp_prop = self.__validate_tier(symbol=symbol)
                     if valid_tier:
                         pred_array = np.array(factors_l1).reshape(1, -1)
                         prediction = model.predict(pred_array)[0]
@@ -480,7 +481,8 @@ class Trader:
                                                       delta_long_coef=delta_long_coef,
                                                       delta_short_coef=delta_short_coef,
                                                       bp=bp,
-                                                      bp_usage_pct=bp_usage_pct)
+                                                      bp_usage_pct=bp_usage_pct,
+                                                      time_bp_prop=time_bp_prop)
                         return order_data
 
                 else:
@@ -527,7 +529,8 @@ class Trader:
                     delta_long_coef,
                     delta_short_coef,
                     bp,
-                    bp_usage_pct) -> dict:
+                    bp_usage_pct,
+                    time_bp_prop) -> dict:
         print(f'From Trader get order if exists for '
               f'symbol: {symbol}')
         side_params = {
@@ -567,7 +570,8 @@ class Trader:
             order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
                                                          bp=bp,
                                                          bp_usage_pct=bp_usage_pct,
-                                                         prop=prop)
+                                                         prop=prop,
+                                                         time_bp_prop=time_bp_prop)
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = target
             order[ORDER][CID] = generate_cid()
@@ -577,7 +581,10 @@ class Trader:
                   f'Current entry: {order_params[PCT_NET]}, '
                   f'prediction: {prediction}, '
                   f'target: {target}')
-            self.__sent_orders_by_ticker[symbol] += 1
+            if self.__sent_orders_by_ticker.get(symbol):
+                self.__sent_orders_by_ticker[symbol] += 1
+            else:
+                self.__sent_orders_by_ticker[symbol] = 1
 
         return order_data
 

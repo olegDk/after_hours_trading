@@ -19,7 +19,6 @@ def calculate_IQR(x: pd.Series) -> Tuple[float, float, float]:
 
 def calculate_outlier_mask(x: pd.Series,
                            num_iqrs: float = 1.5) -> pd.Series:
-
     IQR, Q1, Q3 = calculate_IQR(x)
     x_up = Q3 + num_iqrs * IQR
     x_down = Q1 - num_iqrs * IQR
@@ -54,8 +53,8 @@ def train_all_models():
 
     print(sectors_dirs)
 
-    # for sector_dir in tqdm(sectors_dirs):
-    for sector_dir in tqdm(['analytics/modeling/sectors/RenewableEnergy']):
+    # for sector_dir in tqdm(['analytics/modeling/sectors/RenewableEnergy']):
+    for sector_dir in tqdm(sectors_dirs):
         print(sector_dir)
         sector = sector_dir.split('/')[-1]
         if 'tickers' not in os.listdir(sector_dir):
@@ -75,7 +74,7 @@ def train_all_models():
         indicators = []
 
         tickers_files = os.listdir(f'{sector_dir}/tickers')
-        
+
         try:
             for f in tickers_files:
                 with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
@@ -87,7 +86,7 @@ def train_all_models():
             print(e)
             print(f'Failed to load tickers for sector: {sector}')
             continue
-    
+
         if not traidable_tickers:
             print(f'Traidable tickers missing '
                   f'for sector: {sector}')
@@ -99,7 +98,7 @@ def train_all_models():
 
         # Check for intersection, for now, don't trade indicators tickers,
         # so exclude intersection from traidable tickers
-        intersection =\
+        intersection = \
             list(set(traidable_tickers).intersection(set(indicators)))
 
         traidable_tickers = [ticker for ticker in traidable_tickers

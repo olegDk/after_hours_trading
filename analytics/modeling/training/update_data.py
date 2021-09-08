@@ -207,7 +207,7 @@ oil_etfs = ['XOP', 'XLE', 'XLF', 'DIA', 'SPY']
 renew_stocks = sector_to_stocks['Renewable Energy']
 renew_etfs = ['TAN', 'XOP', 'SPY']
 china_stocks = sector_to_stocks['China']
-china_etfs = ['QQQ', 'KWEB']
+china_etfs = ['QQQ', 'KWEB', 'MCHI']
 
 all_sectors = [
     {'sector': 'Banks',
