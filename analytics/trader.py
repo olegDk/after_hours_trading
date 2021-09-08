@@ -328,7 +328,8 @@ class Trader:
                       'RUN',
                       'SPWR',
                       'FSLR',
-                      'ARRY']  # Add untraidable stocks here
+                      'ARRY',
+                      'ENPH']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
