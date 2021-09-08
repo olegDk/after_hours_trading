@@ -234,14 +234,14 @@ class Trader:
             self.__update_l1(symbol_dict)
             if symbol_dict[SYMBOL] not in self.__all_indicators:
                 traidable_list = traidable_list + [symbol_dict]
-                print(f'Added {symbol_dict[SYMBOL]} to '
-                      f'further processing')
+                # print(f'Added {symbol_dict[SYMBOL]} to '
+                #       f'further processing')
         finish_update = datetime.now()
         delta_update = (finish_update - start).microseconds
         sum_update_l1_speed = sum_update_l1_speed + delta_update
         count_update_l1_speed = count_update_l1_speed + 1
         average_update_l1_speed = sum_update_l1_speed / count_update_l1_speed
-        print(f'Update l1 time: {delta_update} microseconds')
+        # print(f'Update l1 time: {delta_update} microseconds')
 
         start_predict = datetime.now()
         if traidable_list:
@@ -324,7 +324,11 @@ class Trader:
                       'LI',
                       'RF',
                       'FHN',
-                      'ADI']  # Add untraidable stocks here
+                      'ADI',
+                      'RUN',
+                      'SPWR',
+                      'FSLR',
+                      'ARRY']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
@@ -392,13 +396,13 @@ class Trader:
         cur_time_minute = cur_time.minute
         cur_time_second = cur_time.second
         all_invalid_flag = datetime.now() > final_dt
-        print('======================================')
-        print(f'Validity flag: {all_invalid_flag}')
-        print('======================================')
+        # print('======================================')
+        # print(f'Validity flag: {all_invalid_flag}')
+        # print('======================================')
         if all_invalid_flag:  # change to negation
-            print('======================================')
-            print(f'Validity flag: {all_invalid_flag}')
-            print('======================================')
+            # print('======================================')
+            # print(f'Validity flag: {all_invalid_flag}')
+            # print('======================================')
             if not num_orders_sent:
                 if cur_time_hour < 9:
                     return True, 0.5
@@ -420,7 +424,7 @@ class Trader:
         symbol_prop = self.__get_tier_prop(stock=symbol)
         # If the tier proportion is 0 (stock is in black list)
         if float(symbol_prop):
-            print(f'Valid symbol: {symbol}')
+            # print(f'Valid symbol: {symbol}')
             pct_bid_net = symbol_dict[PCT_BID_NET]
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             bid_l1 = symbol_dict[BID]
@@ -437,23 +441,23 @@ class Trader:
                 model = model_dict[MODEL]
                 # Get indicators
                 indicators = self.__factors[symbol]
-                print(f'{symbol} indicators: ')
-                print(indicators)
+                # print(f'{symbol} indicators: ')
+                # print(indicators)
                 # Get indicators l1
                 factors_l1 = list(
                     map(lambda x: current_percentage(
                         self.__stocks_l1.get(x)), indicators))
 
-                print(f'{symbol} current factors:')
-                print(factors_l1)
+                # print(f'{symbol} current factors:')
+                # print(factors_l1)
                 if INIT_PCT not in factors_l1:
                     valid_tier, time_bp_prop = self.__validate_tier(symbol=symbol)
                     if valid_tier:
                         pred_array = np.array(factors_l1).reshape(1, -1)
                         prediction = model.predict(pred_array)[0]
-                        print(f'{symbol} prediction: {prediction}\n'
-                              f'current pctBidNet: {pct_bid_net}, '
-                              f'current pctAskNet: {pct_ask_net}')
+                        # print(f'{symbol} prediction: {prediction}\n'
+                        #       f'current pctBidNet: {pct_bid_net}, '
+                        #       f'current pctAskNet: {pct_ask_net}')
                         std_err = model_dict['mae']
 
                         # Check for trade opportunity
@@ -463,10 +467,10 @@ class Trader:
                         acc_info = self.__get_acc_info()
                         bp = float(acc_info[BP_KEY])
                         bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
-                        print(f'BP: {bp}')
-                        print(f'bp type: {type(bp)}')
-                        print(f'BP_USAGE_PCT: {bp_usage_pct}')
-                        print(f'bp_usage_pct type: {type(bp_usage_pct)}')
+                        # print(f'BP: {bp}')
+                        # print(f'bp type: {type(bp)}')
+                        # print(f'BP_USAGE_PCT: {bp_usage_pct}')
+                        # print(f'bp_usage_pct type: {type(bp_usage_pct)}')
                         order_data = self.__get_order(prediction=prediction,
                                                       pct_bid_net=pct_bid_net,
                                                       pct_ask_net=pct_ask_net,
@@ -534,8 +538,8 @@ class Trader:
                     bp,
                     bp_usage_pct,
                     time_bp_prop) -> dict:
-        print(f'From Trader get order if exists for '
-              f'symbol: {symbol}')
+        # print(f'From Trader get order if exists for '
+        #       f'symbol: {symbol}')
         side_params = {
             # Long params
             BUY: {
