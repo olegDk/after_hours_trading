@@ -68,6 +68,32 @@ def current_percentage(l1_dict: dict) -> float:
         pass
 
 
+def invert_dict(d: dict) -> dict:
+    inverse = dict()
+    for key in d:
+        # Go through the list that is saved in the dict:
+        for item in d[key]:
+            # Check if in the inverted dict the key exists
+            if item not in inverse:
+                # If not create a new list
+                inverse[item] = [key]
+            else:
+                inverse[item].append(key)
+    return inverse
+
+
+def extend_dict(fr: dict, to: dict) -> dict:
+    extended = {}
+    for key_1 in fr:
+        print(key_1)
+        key_1_vals = []
+        for key_2 in fr[key_1]:
+            key_1_vals = key_1_vals + to[key_2]
+        print(key_1_vals)
+        extended[key_1] = list(set(key_1_vals))
+    return extended
+
+
 def get_tickers() -> list:
     sectors_path = 'analytics/modeling/sectors'
     sectors_dirs = \
@@ -158,7 +184,7 @@ def init_models() -> dict:
     return models_dict
 
 
-def init_factors() -> Tuple[dict, dict, dict]:
+def init_factors() -> Tuple[dict, dict, dict, dict, dict]:
     print('Initializing factors...')
     sectors_path = 'analytics/modeling/sectors'
     sectors_dirs = \
@@ -167,6 +193,8 @@ def init_factors() -> Tuple[dict, dict, dict]:
     factors_dict = {}
     stock_to_sector = {}
     sector_to_indicators = {}
+    sector_to_stocks = {}
+
     for sector_dir in sectors_dirs:
         sector = sector_dir.split('/')[-1]
         print(f'Sector: {sector}...')
@@ -180,6 +208,7 @@ def init_factors() -> Tuple[dict, dict, dict]:
             key = current_sector_stocks[0]
             current_sector_indicators = tickers_indicators_filtered[key]
             sector_to_indicators[sector] = current_sector_indicators
+            sector_to_stocks[sector] = current_sector_stocks
             for stock in current_sector_stocks:
                 stock_to_sector[stock] = sector
             print(f'Sector: {sector} loaded.')
@@ -198,7 +227,10 @@ def init_factors() -> Tuple[dict, dict, dict]:
             print(traceback.format_exc())
             print(f'Failed to init factors')
 
-    return factors_dict, stock_to_sector, sector_to_indicators
+    indicator_to_sectors = invert_dict(d=sector_to_indicators)
+    indicator_to_stocks = extend_dict(fr=indicator_to_sectors, to=sector_to_stocks)
+
+    return factors_dict, stock_to_sector, sector_to_indicators, indicator_to_sectors, indicator_to_stocks
 
 
 class Trader:
@@ -209,7 +241,9 @@ class Trader:
         self.__stocks_l1, self.__all_indicators = init_stocks_data()
         self.__factors, \
             self.__stock_to_sector,\
-            self.__sector_to_indicators = init_factors()
+            self.__sector_to_indicators,\
+            self.__indicator_to_sectors,\
+            self.__indicators_to_stocks = init_factors()
         self.__init_policy()
         self.__models = init_models()
         self.__positions = {}
@@ -234,14 +268,14 @@ class Trader:
             self.__update_l1(symbol_dict)
             if symbol_dict[SYMBOL] not in self.__all_indicators:
                 traidable_list = traidable_list + [symbol_dict]
-                # print(f'Added {symbol_dict[SYMBOL]} to '
-                #       f'further processing')
+                print(f'Added {symbol_dict[SYMBOL]} to '
+                      f'further processing')
         finish_update = datetime.now()
         delta_update = (finish_update - start).microseconds
         sum_update_l1_speed = sum_update_l1_speed + delta_update
         count_update_l1_speed = count_update_l1_speed + 1
         average_update_l1_speed = sum_update_l1_speed / count_update_l1_speed
-        # print(f'Update l1 time: {delta_update} microseconds')
+        print(f'Update l1 time: {delta_update} microseconds')
 
         start_predict = datetime.now()
         if traidable_list:
@@ -313,29 +347,21 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['CTXS',
-                      'DADA',
-                      'NIO',
-                      'BB',
-                      'BILI',
-                      'MFGP',
+        black_list = ['CLSK',
+                      'CS',
+                      'SLB',
                       'TELL',
-                      'XPEV',
-                      'LI',
-                      'RF',
-                      'FHN',
-                      'ADI',
-                      'RUN',
-                      'SPWR',
-                      'FSLR',
-                      'ARRY',
-                      'ENPH']  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+                      'HAL',
+                      'SE',
+                      'HUYA',
+                      'BILI'
+                      ]  # Add untraidable stocks here
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: NEUTRAL,
-                       CHINA: NEUTRAL}
+                       SEMICONDUCTORS: BEAR,
+                       CHINA: BEAR}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
