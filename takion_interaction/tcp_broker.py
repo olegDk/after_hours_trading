@@ -26,15 +26,21 @@ async def send_tcp_message(writer: asyncio.StreamWriter, msg: dict):
 
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
-    msg_type = json_msg['messageId']
+    msg_type = json_msg[MESSAGE_ID]
     if msg_type == LOGON_TYPE:
         handle_logon(json_msg)
     elif msg_type == MARKET_DATA_TYPE:
         await handle_market_data(writer, json_msg)
+    elif msg_type == NEWS_TYPE:
+        print(f'Received news: '
+              f'{json_msg}')
     elif msg_type == ORDER_STATUS:
         handle_order_status(json_msg)
     elif msg_type == ORDER_RESPONSE:
         print(f'Received order response: '
+              f'{json_msg}\n\n')
+    elif msg_type == ORDER_REPORT:
+        print(f'Received order report: '
               f'{json_msg}\n\n')
     elif msg_type == SUBSCRIBE:
         print(f'Received subscribed: '

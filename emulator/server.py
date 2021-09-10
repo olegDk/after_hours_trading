@@ -1,4 +1,6 @@
+import numpy as np
 import asyncio
+import traceback
 import socket
 from config import messages
 from config.constants import *
@@ -10,6 +12,8 @@ from market_data_generator import MarketDataGenerator
 logon = False
 subscribe = False
 mdg = MarketDataGenerator()
+md_types = [MARKET_DATA_TYPE, NEWS_TYPE]
+md_prob_dist = [0.9, 0.1]
 
 
 def generate_id() -> str:
@@ -47,6 +51,17 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         )
         sleeping_time = random.randint(1, 10) * 0.1
         await asyncio.sleep(sleeping_time)
+        order_report = messages.order_report()
+        order_report[DATA][CID] = json_msg[ORDER][CID]
+        order_report[DATA][SYMBOL] = json_msg[ORDER][DATA][SYMBOL]
+        order_report[DATA][SIZE] = json_msg[ORDER][DATA][SIZE]
+        order_report[DATA][SIDE] = json_msg[ORDER][DATA][SIDE]
+        await send_to_analytics_server(
+            writer,
+            json.dumps(order_report)
+        )
+        sleeping_time = random.randint(1, 10) * 0.1
+        await asyncio.sleep(sleeping_time)
     elif msg_type == 'subscribe':
         print('Received subscribe\n\n')
         subscribe_response = messages.subscribe_response()
@@ -65,15 +80,23 @@ async def handle_message(writer: asyncio.StreamWriter, msg: str):
     except json.JSONDecodeError:
         print('Received a msg with incorrect format')
     except Exception as e:
-        print('Handle message in server')
-        print(e)
+        message = f'Handle message in server error: ' \
+                  f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
 
 
 async def emulate_market_data(writer: asyncio.StreamWriter):
     while True:
         if logon and subscribe:
             while True:
-                msg = json.dumps(mdg.sample_l1_update())
+                md_type = np.random.choice(a=md_types,
+                                           size=1,
+                                           p=md_prob_dist)
+                if md_type == MARKET_DATA_TYPE:
+                    msg = json.dumps(mdg.sample_l1_update())
+                else:
+                    msg = json.dumps(mdg.sample_news_update())
                 await send_to_analytics_server(writer, msg)
                 print('Sent l1:')
                 print(f'{msg}\n\n')

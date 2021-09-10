@@ -129,3 +129,15 @@ def order_complete() -> dict:
             STATUS: ''
         }
     }
+
+
+def order_report() -> dict:
+    return {
+        MESSAGE_ID: ORDER_REPORT,
+        DATA: {CID: '',
+               ORDER_ID: '',
+               STATUS: EXECUTION,
+               SYMBOL: '',
+               SIZE: 0,
+               SIDE: ''}
+    }

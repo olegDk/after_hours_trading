@@ -38,6 +38,7 @@ ORDER_REQUEST = 'orderRequest'
 MARKET_DATA_TYPE = 'marketData'
 ORDER_STATUS = 'orderStatus'
 ORDER_RESPONSE = 'orderResponse'
+ORDER_REPORT = 'orderReport'
 SUBSCRIBE = 'subscribe'
 KEEP_ALIVE = 'keepAlive'
 NEWS_TYPE = 'news'
@@ -59,7 +60,7 @@ BUY = 'B'
 SELL = 'H'
 PREDICTION_KEY = 'prediction'
 
-# Constants related to orderResponse only
+# Constants related to orderResponse/Report only
 MNEMONIC = 'mnemonic'
 PENDING_SIZE = 'pendingSize'
 BPU = 'BPU'
@@ -69,6 +70,7 @@ TIME = 'time'
 STATUS = 'status'
 RESPONSE = 'response'
 CLIENT_ID = 'clientId'
+EXECUTION = 'execution'
 
 # Order request-response data
 ORDER = 'order'
