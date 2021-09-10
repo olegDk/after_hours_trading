@@ -1,5 +1,6 @@
 from config.constants import *
 
+
 def logon() -> dict:
     return {
         MESSAGE_ID: LOGON_TYPE,
@@ -13,7 +14,8 @@ def logon_response() -> dict:
     return {
         MESSAGE_ID: LOGON_TYPE,
         REF: None,
-        SESSION_KEY: ''
+        SESSION_KEY: '',
+        DATA: {}
     }
 
 
@@ -59,6 +61,13 @@ def subscribe_response() -> dict:
 def market_data() -> dict:
     return {
         MESSAGE_ID: MARKET_DATA_TYPE,
+        DATA: []
+    }
+
+
+def news_data() -> dict:
+    return {
+        MESSAGE_ID: NEWS_TYPE,
         DATA: []
     }
 

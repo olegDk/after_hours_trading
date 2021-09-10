@@ -67,6 +67,9 @@ def handle_logon(msg: dict):
         session_key = msg[SESSION_KEY]
         print(f'Received successfull logon response, '
               f'session_key: {session_key}')
+        # if DATA in msg.keys():
+        #     acc_info = msg[DATA]
+        #     trader.update_account_information(data=data)
     else:
         print(f'Error on logon, full message: {msg}')
 

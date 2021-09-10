@@ -347,14 +347,10 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['CLSK',
-                      'CS',
-                      'SLB',
-                      'TELL',
-                      'HAL',
+        black_list = ['RUN',
                       'SE',
-                      'HUYA',
-                      'BILI'
+                      'WFC',
+                      'PANW'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: NEUTRAL,

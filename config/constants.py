@@ -28,6 +28,9 @@ L1 = 'l1'
 POLICY = 'policy'
 INIT_PCT = -1e3
 STOCK_TO_TIER_PROPORTION = 'stock_to_tier_proportion'
+CONTENT = 'content'
+RELEVANCE = 'relevance'
+AMC_KEY = 'isYesterdaysAMC'
 
 # Message types
 MESSAGE_ID = 'messageId'
@@ -37,12 +40,15 @@ ORDER_STATUS = 'orderStatus'
 ORDER_RESPONSE = 'orderResponse'
 SUBSCRIBE = 'subscribe'
 KEEP_ALIVE = 'keepAlive'
+NEWS_TYPE = 'news'
 
 # Plain constants to use in code
 MODEL = 'model'
 TARGET = 'target'
 DATETIME = "datetime"
 PCT_NET = 'pct_net'
+ORDERS = 'orders'
+POSITIONS = 'positions'
 
 # Constants related to orderRequest only
 TIF = 'TIF'

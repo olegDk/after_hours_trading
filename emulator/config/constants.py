@@ -25,7 +25,12 @@ BID_VENUE = 'bidVenue'
 ASK_VENUE = 'askVenue'
 CLOSE = 'close'
 L1 = 'l1'
+POLICY = 'policy'
 INIT_PCT = -1e3
+STOCK_TO_TIER_PROPORTION = 'stock_to_tier_proportion'
+CONTENT = 'content'
+RELEVANCE = 'relevance'
+AMC_KEY = 'isYesterdaysAMC'
 
 # Message types
 MESSAGE_ID = 'messageId'
@@ -35,24 +40,31 @@ ORDER_STATUS = 'orderStatus'
 ORDER_RESPONSE = 'orderResponse'
 SUBSCRIBE = 'subscribe'
 KEEP_ALIVE = 'keepAlive'
+NEWS_TYPE = 'news'
 
 # Plain constants to use in code
 MODEL = 'model'
 TARGET = 'target'
 DATETIME = "datetime"
+PCT_NET = 'pct_net'
+ORDERS = 'orders'
+POSITIONS = 'positions'
 
 # Constants related to orderRequest only
 TIF = 'TIF'
 LIMIT = 'limit'
-EXTENDED = 1  # or 1 if integer
+EXTENDED = 53
 CID = 'cid'
+BUY = 'B'
+SELL = 'H'
+PREDICTION_KEY = 'prediction'
 
 # Constants related to orderResponse only
 MNEMONIC = 'mnemonic'
 PENDING_SIZE = 'pendingSize'
 BPU = 'BPU'
 CPNL = 'CPNL'
-ORDER_ID = 'orderId'
+ORDER_ID = 'id'
 TIME = 'time'
 STATUS = 'status'
 RESPONSE = 'response'
@@ -68,3 +80,26 @@ SIZE = 'size'
 VENUE = 'venue'
 ACCOUNT_ID_KEY = 'accountId'
 ORDER_DATA = 'orderData'
+
+# Sector names
+APPLICATION_SOFTWARE = 'ApplicationSoftware'
+BANKS = 'Banks'
+OIL = 'Oil'
+RENEWABLE_ENERGY = 'RenewableEnergy'
+SEMICONDUCTORS = 'Semiconductors'
+CHINA = 'China'
+
+# Trade policies
+NEUTRAL = 'neutral'
+BULL = 'bull'
+BEAR = 'bear'
+AGG_BULL = 'agg_bull'
+AGG_BEAR = 'agg_bear'
+LONG_COEF = 'long_coef'
+SHORT_COEF = 'short_coef'
+DELTA_COEF = 'delta_coef'
+INIT_BP = 2000000
+BP_KEY = 'bp'
+ACCOUNT_INFORMATION = 'account_information'
+BP_USAGE_PCT = 1.0
+BP_USAGE_PCT_KEY = 'bp_usage_key'

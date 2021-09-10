@@ -1,5 +1,6 @@
 from config.constants import *
 
+
 def logon() -> dict:
     return {
         MESSAGE_ID: LOGON_TYPE,
@@ -13,7 +14,8 @@ def logon_response() -> dict:
     return {
         MESSAGE_ID: LOGON_TYPE,
         REF: None,
-        SESSION_KEY: ''
+        SESSION_KEY: '',
+        DATA: {}
     }
 
 
@@ -63,6 +65,13 @@ def market_data() -> dict:
     }
 
 
+def news_data() -> dict:
+    return {
+        MESSAGE_ID: NEWS_TYPE,
+        DATA: []
+    }
+
+
 def order_request() -> dict:
     return {
         MESSAGE_ID: ORDER_REQUEST,
@@ -76,7 +85,7 @@ def order_request() -> dict:
                 SIDE: '',
                 SIZE: None,
                 SYMBOL: '',
-                ACCOUNT_ID: '',
+                ACCOUNT_ID_KEY: '',
                 VENUE: None,
                 TARGET: None
             }
@@ -93,7 +102,7 @@ def order_response() -> dict:
             RESPONSE: '',
             DATA: {
                 SYMBOL: '',
-                ACCOUNT_ID: '',
+                ACCOUNT_ID_KEY: '',
                 ORDER_ID: '',
                 CLIENT_ID: '',
                 TIME: None,

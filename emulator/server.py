@@ -32,6 +32,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         session_key = generate_id()
         logon_response[SESSION_KEY] = session_key
         logon_response[REF] = json_msg[SEQ]
+        logon_response[DATA] = mdg.sample_acc_snapshot()
         await send_to_analytics_server(
             writer,
             json.dumps(logon_response)
