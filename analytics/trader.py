@@ -347,17 +347,18 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['RUN',
+        black_list = ['BILI',
+                      'RUN',
                       'SE',
                       'WFC',
                       'PANW'
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: BEAR,
+        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: BEAR,
-                       CHINA: BEAR}
+                       SEMICONDUCTORS: NEUTRAL,
+                       CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
