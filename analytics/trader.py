@@ -390,7 +390,8 @@ class Trader:
                       'TSEM',
                       'SNAP',
                       'QFIN',
-                      'CRWD'
+                      'CRWD',
+                      'TWTR'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
