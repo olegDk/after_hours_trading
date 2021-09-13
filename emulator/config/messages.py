@@ -139,5 +139,6 @@ def order_report() -> dict:
                STATUS: EXECUTION,
                SYMBOL: '',
                SIZE: 0,
-               SIDE: ''}
+               SIDE: '',
+               PRICE: ''}
     }

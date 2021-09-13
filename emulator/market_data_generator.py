@@ -160,13 +160,14 @@ def get_uniform_tickers() -> dict:
 
 
 def sample_stock_l1(ticker: str) -> dict:
-    sample_dict = {SYMBOL: ticker, CLOSE: 0}
+    close = round(np.random.uniform(990.0, 1010.0), 2)
+    sample_dict = {SYMBOL: ticker, CLOSE: close}
     bid_net = uniform(-1, 1)
     ask_net = uniform(bid_net, 1)
     sample_dict[PCT_BID_NET] = bid_net
     sample_dict[PCT_ASK_NET] = ask_net
-    sample_dict[BID] = 0
-    sample_dict[ASK] = 0
+    sample_dict[BID] = 1000.0
+    sample_dict[ASK] = 1001.5
     sample_dict[BID_VENUE] = 1
     sample_dict[ASK_VENUE] = 1
     return sample_dict
@@ -228,7 +229,8 @@ class MarketDataGenerator:
                                     replace=False,
                                     p=side_probs)
             pos_dict[SIDE] = side[0]
-            pos_dict[SIZE] = randint(a=1, b=10000)
+            pos_dict[SIZE] = randint(a=1, b=100)
+            pos_dict[PRICE] = np.random.uniform(990.0, 1010.0)
             pos_list.append(pos_dict)
 
         sampled_orders_tickers = np.random.choice(tickers,
@@ -242,7 +244,8 @@ class MarketDataGenerator:
                                     replace=False,
                                     p=side_probs)
             orders_dict[SIDE] = side[0]
-            orders_dict[SIZE] = randint(a=1, b=10000)
+            orders_dict[SIZE] = randint(a=1, b=100)
+            orders_dict[PRICE] = np.random.uniform(990.0, 1010.0)
             orders_list.append(orders_dict)
 
         data_dict[ORDERS] = orders_list

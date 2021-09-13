@@ -34,8 +34,6 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
     elif msg_type == NEWS_TYPE:
         print(f'Received news: '
               f'{json_msg}')
-    elif msg_type == ORDER_STATUS:
-        handle_order_status(json_msg)
     elif msg_type == ORDER_RESPONSE:
         print(f'Received order response: '
               f'{json_msg}\n\n')
@@ -48,7 +46,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
 
 
 async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
-    orders_data = trader.process_l1_message(msg)
+    orders_data = trader.process_md_message(msg)
     market_data = msg[DATA]
     print(orders_data)
     if orders_data:
@@ -73,19 +71,11 @@ def handle_logon(msg: dict):
         session_key = msg[SESSION_KEY]
         print(f'Received successfull logon response, '
               f'session_key: {session_key}')
-        # if DATA in msg.keys():
-        #     acc_info = msg[DATA]
-        #     trader.update_account_information(data=data)
+        if DATA in msg.keys():
+            acc_info = msg[DATA]
+            trader.update_account_information(acc_info=acc_info)
     else:
         print(f'Error on logon, full message: {msg}')
-
-
-def handle_order_status(msg: dict):
-    client_order_id = msg[ORDER].get(CID)
-    takion_order_id = msg[ORDER].get(ORDER_ID)
-    status = msg[ORDER].get(STATUS)
-    print(f'Status of order with cid: {client_order_id} '
-          f'and tid: {takion_order_id}: {status}')
 
 
 async def handle_message(writer: asyncio.StreamWriter, msg: str):

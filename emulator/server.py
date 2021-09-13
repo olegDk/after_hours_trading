@@ -29,8 +29,8 @@ async def send_to_analytics_server(writer: asyncio.StreamWriter, msg: str):
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
     global logon, subscribe
-    msg_type = json_msg['messageId']
-    if msg_type == 'logon':
+    msg_type = json_msg[MESSAGE_ID]
+    if msg_type == LOGON_TYPE:
         print('Received logon\n\n')
         logon_response = messages.logon_response()
         session_key = generate_id()
@@ -42,7 +42,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
             json.dumps(logon_response)
         )
         logon = True
-    elif msg_type == 'orderRequest':
+    elif msg_type == ORDER_REQUEST:
         order_response = messages.order_response()
         order_response[REF] = json_msg[SEQ]
         await send_to_analytics_server(
@@ -62,7 +62,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         )
         sleeping_time = random.randint(1, 10) * 0.1
         await asyncio.sleep(sleeping_time)
-    elif msg_type == 'subscribe':
+    elif msg_type == SUBSCRIBE:
         print('Received subscribe\n\n')
         subscribe_response = messages.subscribe_response()
         subscribe_response[REF] = json_msg[SEQ]

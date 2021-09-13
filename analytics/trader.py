@@ -247,12 +247,47 @@ class Trader:
         self.__init_policy()
         self.__models = init_models()
         self.__positions = {}
+        self.__orders = {}
         self.__sent_orders_by_ticker = {}
 
     def get_subscription_list(self) -> list:
         return self.__tickers
 
-    def process_l1_message(self, msg_dict: dict) -> list:
+    def update_account_information(self,
+                                   acc_info: dict):
+        if acc_info:
+            positions = acc_info.get(POSITIONS)
+            if positions:
+                for pos_dict in positions:
+                    symbol = pos_dict.get(SYMBOL)
+                    if symbol and symbol in self.__positions:
+                        self.__positions[symbol][SIZE] = pos_dict[SIZE]
+                        self.__positions[symbol][SIDE] = pos_dict[SIDE]
+                        self.__positions[symbol][PRICE] = pos_dict[PRICE]
+                    elif symbol:
+                        self.__positions[symbol] = {
+                            SIZE: pos_dict[SIZE],
+                            SIDE: pos_dict[SIDE],
+                            PRICE: pos_dict[PRICE]
+                        }
+            orders = acc_info.get(ORDERS)
+            if orders:
+                for order_dict in orders:
+                    symbol = order_dict.get(SYMBOL)
+                    if symbol and symbol in self.__orders:
+                        self.__orders[symbol] = self.__orders[symbol] + [order_dict]
+                    elif symbol:
+                        self.__orders[symbol] = [order_dict]
+            positions_to_save = {}
+            orders_to_save = {}
+            for key in self.__positions.keys():
+                positions_to_save[key] = json.dumps(self.__positions[key])
+            for key in self.__orders.keys():
+                orders_to_save[key] = json.dumps(self.__orders[key])
+            self.__redis_connector.set_dict(name=POSITIONS, d=positions_to_save)
+            self.__redis_connector.set_dict(name=ORDERS, d=orders_to_save)
+
+    def process_md_message(self, msg_dict: dict) -> list:
         global average_update_l1_speed, average_predict_speed,\
             average_process_speed, sum_update_l1_speed, sum_predict_speed, \
             sum_process_speed, count_update_l1_speed, count_predict_speed,\
@@ -348,17 +383,20 @@ class Trader:
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BILI',
-                      'RUN',
-                      'SE',
-                      'WFC',
-                      'PANW'
+                      'AMZN',
+                      'GGAL',
+                      'BMA',
+                      'RVLV',
+                      'TSEM',
+                      'SNAP',
+                      'QFIN'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
-                       CHINA: NEUTRAL}
+                       CHINA: BEAR}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
@@ -596,7 +634,7 @@ class Trader:
             order = messages.order_request()
             order[ORDER][DATA][SYMBOL] = symbol
             price = order_params[PRICE]
-            order[ORDER][DATA][PRICE] = price
+            order[ORDER][DATA][LIMIT] = price
             order[ORDER][DATA][SIDE] = side
             order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
                                                          bp=bp,
