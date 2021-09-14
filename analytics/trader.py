@@ -466,7 +466,8 @@ class Trader:
                       'MU',
                       'JKS',
                       'VIRT',
-                      'ADI'
+                      'ADI',
+                      'RUN'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
