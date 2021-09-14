@@ -214,10 +214,10 @@ class MarketDataGenerator:
         # Sample ticker, pctBidNet and pctAskNet
         tickers = list(self.__tickers_uniform_dict.keys())
         probs = list(self.__tickers_uniform_dict.values())
-        sampled_pos_tickers = np.random.choice(tickers,
-                                               size=num_positions,
-                                               replace=False,
-                                               p=probs)
+        sampled_pos_tickers = list(np.random.choice(tickers,
+                                                    size=num_positions,
+                                                    replace=False,
+                                                    p=probs))
         side_list = [BUY, SELL]
         side_probs = [0.5, 0.5]
         pos_list = []
@@ -233,11 +233,11 @@ class MarketDataGenerator:
             pos_dict[PRICE] = np.random.uniform(990.0, 1010.0)
             pos_list.append(pos_dict)
 
-        sampled_orders_tickers = np.random.choice(tickers,
-                                                  size=num_orders,
-                                                  replace=False,
-                                                  p=probs)
-        for ticker in sampled_orders_tickers:
+        sampled_orders_tickers = list(np.random.choice(tickers,
+                                                       size=num_orders,
+                                                       replace=False,
+                                                       p=probs))
+        for ticker in sampled_orders_tickers + sampled_pos_tickers:
             orders_dict = {SYMBOL: ticker}
             side = np.random.choice(side_list,
                                     size=1,

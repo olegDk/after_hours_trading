@@ -1,7 +1,6 @@
 import numpy as np
 import pickle
 import os
-import copy
 from typing import Tuple
 import uuid
 from pytz import timezone
@@ -33,7 +32,8 @@ final_dt = datetime(year=now_init.year,
                     day=now_init.day,
                     hour=9,
                     minute=27,
-                    second=41)
+                    second=41,
+                    tzinfo=EST)
 
 
 def generate_id() -> str:
@@ -49,9 +49,8 @@ def generate_cid() -> int:
 def get_position_size(price: float,
                       bp: float,
                       bp_usage_pct: float,
-                      prop: float,
-                      time_bp_prop: float) -> int:
-    return int((bp*bp_usage_pct*0.1*0.125*prop*time_bp_prop)/(price+1e-7))
+                      prop: float) -> int:
+    return int((bp*bp_usage_pct*0.1*0.0625*prop)/(price+1e-7))
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -146,8 +145,8 @@ def init_stocks_data() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                   PCT_ASK_NET: INIT_PCT}
+    indicators_dict = {indicator: {PCT_BID_NET: 0,
+                                   PCT_ASK_NET: 0}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -249,6 +248,7 @@ class Trader:
         self.__positions = {}
         self.__orders = {}
         self.__sent_orders_by_ticker = {}
+        self.__news_data = {}
 
     def get_subscription_list(self) -> list:
         return self.__tickers
@@ -256,6 +256,10 @@ class Trader:
     def update_account_information(self,
                                    acc_info: dict):
         if acc_info:
+            bp_info = self.__get_acc_info()
+            bp = float(bp_info[BP_KEY])
+            bp_usage_pct = float(bp_info[BP_USAGE_PCT_KEY])
+            cur_bp_per_tier = bp * bp_usage_pct * 0.1 / MAX_ORDERS
             positions = acc_info.get(POSITIONS)
             if positions:
                 for pos_dict in positions:
@@ -270,6 +274,11 @@ class Trader:
                             SIDE: pos_dict[SIDE],
                             PRICE: pos_dict[PRICE]
                         }
+                positions_to_save = {}
+                for key in self.__positions.keys():
+                    positions_to_save[key] = json.dumps(self.__positions[key])
+                self.__redis_connector.set_dict(name=POSITIONS, d=positions_to_save)
+
             orders = acc_info.get(ORDERS)
             if orders:
                 for order_dict in orders:
@@ -278,14 +287,47 @@ class Trader:
                         self.__orders[symbol] = self.__orders[symbol] + [order_dict]
                     elif symbol:
                         self.__orders[symbol] = [order_dict]
-            positions_to_save = {}
-            orders_to_save = {}
-            for key in self.__positions.keys():
-                positions_to_save[key] = json.dumps(self.__positions[key])
-            for key in self.__orders.keys():
-                orders_to_save[key] = json.dumps(self.__orders[key])
-            self.__redis_connector.set_dict(name=POSITIONS, d=positions_to_save)
-            self.__redis_connector.set_dict(name=ORDERS, d=orders_to_save)
+                orders_to_save = {}
+                for key in self.__orders.keys():
+                    orders_to_save[key] = json.dumps(self.__orders[key])
+                self.__redis_connector.set_dict(name=ORDERS, d=orders_to_save)
+
+            # Calculate number of sent tiers by symbol if exist
+            if self.__positions:
+                for symbol in self.__positions.keys():
+                    bp_symbol = self.__positions[symbol][SIZE] *\
+                                    self.__positions[symbol][PRICE]
+                    print(f'BP symbol: {symbol}: {bp_symbol}')
+                    n_tiers_symbol = int(bp_symbol/cur_bp_per_tier)
+                    print(f'cur_bp_per_tier: {cur_bp_per_tier}')
+                    print(f'n_tiers_symbol symbol: {symbol}: {n_tiers_symbol}')
+                    if symbol in self.__sent_orders_by_ticker:
+                        self.__sent_orders_by_ticker[symbol] = \
+                            self.__sent_orders_by_ticker[symbol] + n_tiers_symbol
+                    else:
+                        self.__sent_orders_by_ticker[symbol] = n_tiers_symbol
+            if self.__orders:
+                for symbol in self.__orders:
+                    n_tiers_symbol = 0
+                    side = None
+                    if symbol in self.__positions:
+                        side = self.__positions[symbol][SIDE]
+                    for order in self.__orders[symbol]:
+                        order_side = order[SIDE]
+                        if not side or side == order_side:
+                            bp_order = order[SIZE] * order[PRICE]
+                            n_tiers_order = int(bp_order / cur_bp_per_tier)
+                            n_tiers_symbol += n_tiers_order
+                            print(f'BP symbol order: {symbol}: {bp_order}')
+                            print(f'cur_bp_per_tier: {cur_bp_per_tier}')
+                            print(f'n_tiers_symbol symbol: {symbol}: {n_tiers_symbol}')
+                    if symbol in self.__sent_orders_by_ticker:
+                        self.__sent_orders_by_ticker[symbol] = \
+                            self.__sent_orders_by_ticker[symbol] + n_tiers_symbol
+                    else:
+                        self.__sent_orders_by_ticker[symbol] = n_tiers_symbol
+            if self.__sent_orders_by_ticker:
+                self.__redis_connector.set_dict(name=SENT_ORDERS_BY_TICKER, d=self.__sent_orders_by_ticker)
 
     def process_md_message(self, msg_dict: dict) -> list:
         global average_update_l1_speed, average_predict_speed,\
@@ -293,18 +335,21 @@ class Trader:
             sum_process_speed, count_update_l1_speed, count_predict_speed,\
             count_process_speed
         # Update stock's l1
-        msg = copy.deepcopy(msg_dict)
-        data = msg[DATA]
+        data = msg_dict[DATA].copy()
         orders = []
         start = datetime.now()
         traidable_list = []
+        indicators_names_list = []
         while data:
             symbol_dict = data.pop()
+            sym  = symbol_dict[SYMBOL]
             self.__update_l1(symbol_dict)
-            if symbol_dict[SYMBOL] not in self.__all_indicators:
+            if sym not in self.__all_indicators:
                 traidable_list = traidable_list + [symbol_dict]
-                print(f'Added {symbol_dict[SYMBOL]} to '
+                print(f'Added {sym} to '
                       f'further processing')
+            else:
+                indicators_names_list = indicators_names_list + [sym]
         finish_update = datetime.now()
         delta_update = (finish_update - start).microseconds
         sum_update_l1_speed = sum_update_l1_speed + delta_update
@@ -325,7 +370,6 @@ class Trader:
                     print(message)
                     print(traceback.format_exc())
                     print(f'Failed to process l1 message: {msg_dict}')
-                    pass
 
         finish = datetime.now()
         delta_predict = (finish - start_predict).microseconds
@@ -344,6 +388,33 @@ class Trader:
         print(f'Average process time: {average_process_speed} microseconds')
 
         return orders
+
+    def process_news(self, news_data: list):
+        try:
+            if news_data:
+                for symbol_news_dict in news_data:
+                    symbol = symbol_news_dict[SYMBOL]
+                    if symbol in self.__news_data:
+                        self.__news_data[symbol][N_NEWS] += 1
+                        self.__news_data[symbol][NEWS_TYPE] = \
+                            self.__news_data[symbol][NEWS_TYPE] + [symbol_news_dict]
+                    else:
+                        self.__news_data[symbol] = {
+                            N_NEWS: 1,
+                            NEWS_TYPE: [symbol_news_dict]
+                        }
+                    self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
+                                                       key=symbol, value=0.1)
+                news_data_to_save = {}
+                for key in self.__news_data.keys():
+                    news_data_to_save[key] = json.dumps(self.__news_data[key])
+                self.__redis_connector.set_dict(name=NEWS_TYPE, d=news_data_to_save)
+        except Exception as e:
+            message = f'Process news: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to process news list: {news_data}')
 
     def __update_l1(self, symbol_dict: dict):
         try:
@@ -383,22 +454,15 @@ class Trader:
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BILI',
-                      'AMZN',
-                      'GGAL',
-                      'BMA',
-                      'RVLV',
-                      'TSEM',
-                      'SNAP',
-                      'QFIN',
-                      'CRWD',
-                      'TWTR'
+                      'CS',
+                      'BB'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
-                       CHINA: BEAR}
+                       CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
@@ -453,35 +517,42 @@ class Trader:
         acc_info = self.__redis_connector.h_getall(h=ACCOUNT_INFORMATION)
         return acc_info
 
-    def __validate_tier(self, symbol: str) -> Tuple[bool, float]:
+    def __validate_tier(self, symbol: str) -> bool:
         num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
         cur_time = datetime.now(EST) + timedelta(hours=1)
         cur_time_hour = cur_time.hour
         cur_time_minute = cur_time.minute
-        cur_time_second = cur_time.second
-        all_invalid_flag = datetime.now() > final_dt
+        all_invalid_flag = cur_time > final_dt
         # print('======================================')
         # print(f'Validity flag: {all_invalid_flag}')
         # print('======================================')
-        if all_invalid_flag:  # change to negation
+        if not all_invalid_flag:  # change to negation
             # print('======================================')
             # print(f'Validity flag: {all_invalid_flag}')
             # print('======================================')
             if not num_orders_sent:
                 if cur_time_hour < 9:
-                    return True, 0.5
+                    return True
                 else:
-                    return True, 1.0
-            if num_orders_sent < 8:
-                if cur_time_hour < 8 and num_orders_sent < 2:
-                    return True, 0.25
-                elif cur_time_hour == 8 and num_orders_sent < 4:
-                    return True, 0.5
-                elif cur_time_hour == 8 and cur_time_minute > 30 and num_orders_sent < 6:
-                    return True, 0.5
-                elif cur_time_hour == 9 and num_orders_sent < 8:
-                    return True, 1
-        return False, 0.0
+                    return True
+            if num_orders_sent < MAX_ORDERS:
+                if cur_time_hour < 8 and \
+                        num_orders_sent < BEFORE_8_N_ORDERS:
+                    return True
+                elif cur_time_hour == 8 and \
+                        num_orders_sent < BEFORE_8_30_N_ORDERS:
+                    return True
+                elif cur_time_hour == 8 and \
+                        cur_time_minute > 30 and \
+                        num_orders_sent < BEFORE_9_N_ORDERS:
+                    return True
+                elif cur_time_hour == 9 and \
+                        num_orders_sent < MAX_ORDERS:
+                    return True
+        print('======================================')
+        print(f'Current time: {cur_time}, returning False, 0.0')
+        print('======================================')
+        return False
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
@@ -515,7 +586,7 @@ class Trader:
                 # print(f'{symbol} current factors:')
                 # print(factors_l1)
                 if INIT_PCT not in factors_l1:
-                    valid_tier, time_bp_prop = self.__validate_tier(symbol=symbol)
+                    valid_tier = self.__validate_tier(symbol=symbol)
                     if valid_tier:
                         pred_array = np.array(factors_l1).reshape(1, -1)
                         prediction = model.predict(pred_array)[0]
@@ -552,8 +623,7 @@ class Trader:
                                                       delta_long_coef=delta_long_coef,
                                                       delta_short_coef=delta_short_coef,
                                                       bp=bp,
-                                                      bp_usage_pct=bp_usage_pct,
-                                                      time_bp_prop=time_bp_prop)
+                                                      bp_usage_pct=bp_usage_pct)
                         return order_data
 
                 else:
@@ -600,8 +670,7 @@ class Trader:
                     delta_long_coef,
                     delta_short_coef,
                     bp,
-                    bp_usage_pct,
-                    time_bp_prop) -> dict:
+                    bp_usage_pct) -> dict:
         # print(f'From Trader get order if exists for '
         #       f'symbol: {symbol}')
         side_params = {
@@ -641,8 +710,7 @@ class Trader:
             order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
                                                          bp=bp,
                                                          bp_usage_pct=bp_usage_pct,
-                                                         prop=prop,
-                                                         time_bp_prop=time_bp_prop)
+                                                         prop=prop)
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = target
             order[ORDER][CID] = generate_cid()

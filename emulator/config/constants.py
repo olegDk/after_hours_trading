@@ -51,6 +51,7 @@ DATETIME = "datetime"
 PCT_NET = 'pct_net'
 ORDERS = 'orders'
 POSITIONS = 'positions'
+SENT_ORDERS_BY_TICKER = 'sent_orders_by_ticker'
 
 # Constants related to orderRequest only
 TIF = 'TIF'
@@ -106,3 +107,7 @@ BP_KEY = 'bp'
 ACCOUNT_INFORMATION = 'account_information'
 BP_USAGE_PCT = 1.0
 BP_USAGE_PCT_KEY = 'bp_usage_key'
+MAX_ORDERS = 16
+BEFORE_8_N_ORDERS = int(MAX_ORDERS/8)
+BEFORE_8_30_N_ORDERS = int(MAX_ORDERS/4)
+BEFORE_9_N_ORDERS = int(MAX_ORDERS/2)

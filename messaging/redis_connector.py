@@ -53,8 +53,6 @@ class RedisConnector:
 
     def set_dict(self, name: str, d: dict):
         try:
-            print(d)
-            print(type(d))
             self.__redis.hmset(name, d)
         except Exception as e:
             print(f'Inside set_dict RedisConnector'
