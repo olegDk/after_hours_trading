@@ -455,7 +455,18 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BILI',
                       'CS',
-                      'BB'
+                      'BB',
+                      'KLAC',
+                      'PANW',
+                      'LI',
+                      'DADA',
+                      'TUYA',
+                      'AMAT',
+                      'LRCX',
+                      'MU',
+                      'JKS',
+                      'VIRT',
+                      'ADI'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
