@@ -458,7 +458,8 @@ class Trader:
                       'SE',
                       'CVX',
                       'BB',
-                      'BILI']  # Add untraidable stocks here
+                      'BILI',
+                      'GS']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
