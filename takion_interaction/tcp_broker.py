@@ -26,19 +26,22 @@ async def send_tcp_message(writer: asyncio.StreamWriter, msg: dict):
 
 
 async def reply(writer: asyncio.StreamWriter, json_msg: dict):
-    msg_type = json_msg[MESSAGE_ID]
-    if msg_type == LOGON_TYPE:
-        handle_logon(json_msg)
-    elif msg_type == MARKET_DATA_TYPE:
-        await handle_market_data(writer, json_msg)
-    elif msg_type == NEWS_TYPE:
+    if MESSAGE_ID in json_msg:
+        msg_type = json_msg[MESSAGE_ID]
+        if msg_type == LOGON_TYPE:
+            handle_logon(json_msg)
+        elif msg_type == MARKET_DATA_TYPE:
+            await handle_market_data(writer, json_msg)
+        elif msg_type == NEWS_TYPE:
+            handle_news(json_msg)
+        elif msg_type == ORDER_RESPONSE:
+            pass
+        elif msg_type == ORDER_REPORT:
+            pass
+        elif msg_type == SUBSCRIBE:
+            pass
+    elif CONTENT in json_msg:
         handle_news(json_msg)
-    elif msg_type == ORDER_RESPONSE:
-        pass
-    elif msg_type == ORDER_REPORT:
-        pass
-    elif msg_type == SUBSCRIBE:
-        pass
 
 
 async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
