@@ -453,22 +453,12 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['BILI',
-                      'CS',
+        black_list = ['CTXS',
+                      'RIG',
+                      'SE',
+                      'CVX',
                       'BB',
-                      'KLAC',
-                      'PANW',
-                      'LI',
-                      'DADA',
-                      'TUYA',
-                      'AMAT',
-                      'LRCX',
-                      'MU',
-                      'JKS',
-                      'VIRT',
-                      'ADI',
-                      'RUN'
-                      ]  # Add untraidable stocks here
+                      'BILI']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
@@ -740,7 +730,7 @@ class Trader:
         return order_data
 
 
-# trader = Trader()
-# print(trader.get_subscription_list())
-# import pandas as pd
-# pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
+trader = Trader()
+print(trader.get_subscription_list())
+import pandas as pd
+pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
