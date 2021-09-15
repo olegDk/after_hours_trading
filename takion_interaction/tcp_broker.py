@@ -144,7 +144,7 @@ async def handle_server(reader: asyncio.StreamReader,
             received_byte =\
                 await asyncio.wait_for(reader.read(1),
                                        timeout=TIMEOUT_GRACE_PERIOD)
-            character = str(received_byte, 'UTF-8')
+            character = received_byte.decode('utf-8', 'ignore')
             if character == '\n' and prev_character == '\n':
                 print(f'\n\nReceived: {msg}\n\n')
                 await handle_message(writer, msg)
