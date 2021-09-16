@@ -277,22 +277,17 @@ class MarketDataGenerator:
         tickers = list(self.__tickers_uniform_dict.keys())
         probs = list(self.__tickers_uniform_dict.values())
 
-        n_tickers = randint(1, 6)
-        sampled_tickers = np.random.choice(tickers,
-                                           size=n_tickers,
-                                           replace=False,
-                                           p=probs)
+        ticker = np.random.choice(tickers,
+                                  size=1,
+                                  replace=False,
+                                  p=probs)[0]
 
-        sampled_news_dicts = []
-        for ticker in sampled_tickers:
-            sentiment = np.random.choice(a=self.__sentiments,
-                                         size=1,
-                                         replace=False,
-                                         p=self.__sentiment_probs)[0]
-            words_dict = self.__sentiment_to_dict[sentiment]
-            n_words = randint(a=1, b=10)
-            sample_news_dict = sample_stock_news(ticker, words_dict, n_words)
-            sampled_news_dicts = sampled_news_dicts + [sample_news_dict]
-
-        sample_dict[DATA] = sampled_news_dicts
+        sentiment = np.random.choice(a=self.__sentiments,
+                                     size=1,
+                                     replace=False,
+                                     p=self.__sentiment_probs)[0]
+        words_dict = self.__sentiment_to_dict[sentiment]
+        n_words = randint(a=1, b=10)
+        sample_news_dict = sample_stock_news(ticker, words_dict, n_words)
+        sample_dict.update(sample_news_dict)
         return sample_dict

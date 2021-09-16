@@ -67,8 +67,7 @@ def market_data() -> dict:
 
 def news_data() -> dict:
     return {
-        MESSAGE_ID: NEWS_TYPE,
-        DATA: []
+        MESSAGE_ID: NEWS_TYPE
     }
 
 

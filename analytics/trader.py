@@ -393,22 +393,21 @@ class Trader:
 
         return orders
 
-    def process_news(self, news_data: list):
+    def process_news(self, news_data: dict):
         try:
             if news_data:
-                for symbol_news_dict in news_data:
-                    symbol = symbol_news_dict[SYMBOL]
-                    if symbol in self.__news_data:
-                        self.__news_data[symbol][N_NEWS] += 1
-                        self.__news_data[symbol][NEWS_TYPE] = \
-                            self.__news_data[symbol][NEWS_TYPE] + [symbol_news_dict]
-                    else:
-                        self.__news_data[symbol] = {
-                            N_NEWS: 1,
-                            NEWS_TYPE: [symbol_news_dict]
-                        }
-                    self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
-                                                       key=symbol, value=0.1)
+                symbol = news_data[SYMBOL]
+                if symbol in self.__news_data:
+                    self.__news_data[symbol][N_NEWS] += 1
+                    self.__news_data[symbol][NEWS_TYPE] = \
+                        self.__news_data[symbol][NEWS_TYPE] + [news_data]
+                else:
+                    self.__news_data[symbol] = {
+                        N_NEWS: 1,
+                        NEWS_TYPE: [news_data]
+                    }
+                self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
+                                                   key=symbol, value=0.1)
                 news_data_to_save = {}
                 for key in self.__news_data.keys():
                     news_data_to_save[key] = json.dumps(self.__news_data[key])

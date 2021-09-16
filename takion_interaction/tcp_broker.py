@@ -33,7 +33,6 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         elif msg_type == MARKET_DATA_TYPE:
             await handle_market_data(writer, json_msg)
         elif msg_type == NEWS_TYPE:
-            print('Received news type')
             handle_news(json_msg)
         elif msg_type == ORDER_RESPONSE:
             pass
@@ -62,9 +61,7 @@ async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
 
 
 def handle_news(msg: dict):
-    news_data = msg.get(DATA)
-    if news_data:
-        trader.process_news(news_data=news_data)
+    trader.process_news(msg)
 
 
 def handle_logon(msg: dict):

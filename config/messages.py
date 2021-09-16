@@ -67,8 +67,7 @@ def market_data() -> dict:
 
 def news_data() -> dict:
     return {
-        MESSAGE_ID: NEWS_TYPE,
-        DATA: []
+        MESSAGE_ID: NEWS_TYPE
     }
 
 
@@ -139,5 +138,6 @@ def order_report() -> dict:
                STATUS: EXECUTION,
                SYMBOL: '',
                SIZE: 0,
-               SIDE: ''}
+               SIDE: '',
+               PRICE: ''}
     }
