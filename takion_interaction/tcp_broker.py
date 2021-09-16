@@ -40,8 +40,6 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
             pass
         elif msg_type == SUBSCRIBE:
             pass
-    elif CONTENT in json_msg:
-        handle_news(json_msg)
 
 
 async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
