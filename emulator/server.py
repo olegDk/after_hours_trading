@@ -129,8 +129,10 @@ async def handle_client(reader: asyncio.StreamReader,
         await asyncio.gather(handle_client_messages(reader, writer),
                              emulate_market_data(writer))
     except Exception as e:
-        print('Handle client in server')
-        print(e)
+        message = f'Handle client in server error: ' \
+                  f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
     finally:
         writer.close()
 

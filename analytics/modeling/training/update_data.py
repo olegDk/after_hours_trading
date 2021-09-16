@@ -17,7 +17,7 @@ ETFs = ['SPY', 'QQQ', 'CLOU', 'DIA', 'GDX', 'IWM', 'JETS',
         'SMH', 'TAN', 'XBI', 'XLE', 'XLF', 'XLK', 'XLP',
         'XLU', 'XLV', 'XOP', 'ARKG', 'ARKK', 'EWZ', 'FXI', 'HYG',
         'IEFA', 'IEF', 'EEM', 'EFA', 'IEMG', 'VXX', 'TLT', 'SOXL',
-        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI']
+        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI', 'BAC']
 
 with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
     pickle.dump(ETFs, o)

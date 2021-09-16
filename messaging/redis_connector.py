@@ -51,19 +51,23 @@ class RedisConnector:
             print(traceback.format_exc())
             return {}
 
-    def set_dict(self, name: str, d: dict):
+    def set_dict(self, name: str, d: dict, rewrite: bool = False):
         try:
+            if rewrite:
+                self.h_del(h=name)
             self.__redis.hmset(name, d)
         except Exception as e:
             print(f'Inside set_dict RedisConnector'
                   f'An exception of type {type(e).__name__}. Arguments: '
                   f'{e.args}')
             print(traceback.format_exc())
+            print(f'Failed to set dict: {d}')
 
     def hm_get(self, h: str, key: str) -> str:
         try:
             value = self.__redis.hmget(h, key)
-            print(f'Got value: {value}')
+            print(f'Got value in hm_get for hash: {h}, '
+                  f'and key: {key}: {value}')
             return value
         except Exception as e:
             print(f'Inside hm_get RedisConnector'
@@ -101,7 +105,7 @@ class RedisConnector:
     def h_getall(self, h: str) -> dict:
         try:
             value = self.__redis.hgetall(h)
-            print(f'Got value: {value}')
+            print(f'Got value in h_getall for hash {h}: {value}')
             return value
         except Exception as e:
             print(f'Inside h_getall RedisConnector'
@@ -109,3 +113,13 @@ class RedisConnector:
                   f'{e.args}')
             print(traceback.format_exc())
             return {}
+
+    def h_del(self, h: str):
+        try:
+            all_keys = list(self.__redis.hgetall(h).keys())
+            self.__redis.hdel(h, *all_keys)
+        except Exception as e:
+            print(f'Inside h_del RedisConnector'
+                  f'An exception of type {type(e).__name__}. Arguments: '
+                  f'{e.args}')
+            print(traceback.format_exc())

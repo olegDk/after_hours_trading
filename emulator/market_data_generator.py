@@ -14,7 +14,7 @@ RELEVANT_NEWS_WORDS = ['upgrade', 'neutral', 'downgrade',
                        'raised', 'lowered', 'Q1', 'Q2', 'Q3', 'Q4',
                        'reports', 'guides', 'report', 'guidance',
                        'merge', 'acquire', 'acquisition',
-                       'initiated', 'sees']
+                       'initiated', 'sees', 'maintain', 'outlook']
 
 POSITIVE_WORDS = ['upgrade', 'overweight', 'raised',
                   'merge', 'acquire', 'acquisition']
@@ -23,7 +23,7 @@ NEGATIVE_WORDS = ['downgrade', 'underweight', 'lowered']
 
 NEUTRAL_WORDS = ['neutral', 'equalweight', 'Q1', 'Q2', 'Q3', 'Q4',
                  'reports', 'guides', 'report', 'guidance',
-                 'initiated', 'sees']
+                 'initiated', 'sees', 'maintain', 'outlook']
 
 WORDS_DICT = {
     'POSITIVE': POSITIVE_WORDS,
@@ -41,7 +41,7 @@ def get_tickers() -> dict:
         path = f'{cwd}/../analytics/modeling'
     else:
         path = f'analytics/modeling'
-    list_subfolders_with_paths =\
+    list_subfolders_with_paths = \
         [f.path for f in os.scandir(f'{path}/sectors') if f.is_dir()]
 
     tickers = []
@@ -66,7 +66,7 @@ def get_tickers() -> dict:
     sum_to_distribute = float(1 - sum_liquid)
 
     # Uniformly distribute probability mass across rest of the tickers
-    uniform_prob = float(sum_to_distribute/(len(tickers) - 4))
+    uniform_prob = float(sum_to_distribute / (len(tickers) - 4))
 
     uniform_dist = [uniform_prob for _ in tickers]
 
@@ -93,11 +93,11 @@ def get_words() -> Tuple[dict, dict, dict, dict]:
 
     # Manually approximate sum of probabilities for most relevant words
     sum_relevant = 0.6
-    sum_default = float(1-sum_relevant)
-    sum_positive = sum_negative = sum_neutral = float(sum_relevant/3)
+    sum_default = float(1 - sum_relevant)
+    sum_positive = sum_negative = sum_neutral = float(sum_relevant / 3)
 
     # Uniformly distribute probability mass across rest of the tickers
-    uniform_positive_prob =\
+    uniform_positive_prob = \
         float(sum_positive / (len(POSITIVE_WORDS)))
     uniform_negative_prob = \
         float(sum_negative / (len(NEGATIVE_WORDS)))
@@ -124,7 +124,7 @@ def get_words() -> Tuple[dict, dict, dict, dict]:
 
     prob_neutral_dict = dict(zip(NEUTRAL_WORDS, uniform_neutral_dist))
 
-    return prob_default_dict, prob_positive_dict,\
+    return prob_default_dict, prob_positive_dict, \
            prob_negative_dict, prob_neutral_dict
 
 
@@ -134,7 +134,7 @@ def get_uniform_tickers() -> dict:
         path = f'{cwd}/../analytics/modeling'
     else:
         path = f'analytics/modeling'
-    list_subfolders_with_paths =\
+    list_subfolders_with_paths = \
         [f.path for f in os.scandir(f'{path}/sectors') if f.is_dir()]
 
     tickers = []
@@ -152,7 +152,7 @@ def get_uniform_tickers() -> dict:
 
     # Removing duplicates
     tickers = list(set(tickers))
-    uniform_prob = float(1/len(tickers))
+    uniform_prob = float(1 / len(tickers))
     uniform_dist = [uniform_prob for _ in tickers]
     prob_dict = dict(zip(tickers, uniform_dist))
 
@@ -179,7 +179,7 @@ def sample_stock_news(ticker: str,
     sample_dict = {SYMBOL: ticker}
     words = list(words_dict.keys())
     len_words = len(words)
-    probs = [float(1/len_words) for _ in words]
+    probs = [float(1 / len_words) for _ in words]
     content_list = np.random.choice(a=words,
                                     size=num_words,
                                     replace=True,
@@ -197,7 +197,7 @@ class MarketDataGenerator:
     def __init__(self):
         self.__tickers_dict = get_tickers()
         self.__tickers_uniform_dict = get_uniform_tickers()
-        self.__default_dict, self.__positive_dict,\
+        self.__default_dict, self.__positive_dict, \
             self.__negative_dict, self.__neutral_dict = get_words()
         self.__sentiments = ['POSITIVE', 'NEGATIVE', 'NEUTRAL']
         self.__sentiment_probs = [1 / 3 for _ in range(3)]
@@ -296,7 +296,3 @@ class MarketDataGenerator:
 
         sample_dict[DATA] = sampled_news_dicts
         return sample_dict
-
-
-md = MarketDataGenerator()
-md.sample_news_update()
