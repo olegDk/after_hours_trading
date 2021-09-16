@@ -1,6 +1,6 @@
 import asyncio
 import json
-import socket
+import traceback
 import config.messages as messages
 from analytics.trader import Trader
 from config.constants import *
@@ -156,6 +156,11 @@ async def handle_server(reader: asyncio.StreamReader,
     except TimeoutError as e:
         print(e)
         print(f'Timeout error in handle server')
+    except Exception as e:
+        message = f'handle_server error: ' \
+                  f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
     finally:
         writer.close()
 
