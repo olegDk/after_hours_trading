@@ -161,6 +161,7 @@ async def handle_server(reader: asyncio.StreamReader,
                   f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
         print(message)
         print(traceback.format_exc())
+        print(f'Is closing: {writer.is_closing()}')
     finally:
         writer.close()
 
