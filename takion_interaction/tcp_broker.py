@@ -33,7 +33,8 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         elif msg_type == MARKET_DATA_TYPE:
             await handle_market_data(writer, json_msg)
         elif msg_type == NEWS_TYPE:
-            handle_news(json_msg)
+            # handle_news(json_msg)
+            print('Received news')
         elif msg_type == ORDER_RESPONSE:
             pass
         elif msg_type == ORDER_REPORT:
