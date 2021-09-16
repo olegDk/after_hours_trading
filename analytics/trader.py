@@ -412,6 +412,9 @@ class Trader:
                 news_data_to_save = {}
                 for key in self.__news_data.keys():
                     news_data_to_save[key] = json.dumps(self.__news_data[key])
+                print("===============")
+                print("I am going to insert news data into news hash")
+                print("===============")
                 self.__redis_connector.set_dict(name=NEWS_TYPE,
                                                 d=news_data_to_save,
                                                 rewrite=True)
