@@ -469,7 +469,8 @@ class Trader:
                       'TTWO',
                       'NVDA',
                       'SIVB',
-                      'ON'
+                      'ON',
+                      'ZNGA'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
