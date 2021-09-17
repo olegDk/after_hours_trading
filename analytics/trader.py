@@ -411,9 +411,6 @@ class Trader:
                 news_data_to_save = {}
                 for key in self.__news_data.keys():
                     news_data_to_save[key] = json.dumps(self.__news_data[key])
-                print("===============")
-                print("I am going to insert news data into news hash")
-                print("===============")
                 self.__redis_connector.set_dict(name=NEWS_TYPE,
                                                 d=news_data_to_save,
                                                 rewrite=True)
@@ -463,10 +460,16 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BB',
                       'CS',
-                      'AAPL',
-                      'TXN',
-                      'EA',
-                      'LFG'
+                      'FANG',
+                      'BLDP',
+                      'JKS',
+                      'CREE',
+                      'CRUS',
+                      'SNPS',
+                      'TTWO',
+                      'NVDA',
+                      'SIVB',
+                      'ON'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,

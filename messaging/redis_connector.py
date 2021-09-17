@@ -117,7 +117,8 @@ class RedisConnector:
     def h_del(self, h: str):
         try:
             all_keys = list(self.__redis.hgetall(h).keys())
-            self.__redis.hdel(h, *all_keys)
+            if all_keys:
+                self.__redis.hdel(h, *all_keys)
         except Exception as e:
             print(f'Inside h_del RedisConnector'
                   f'An exception of type {type(e).__name__}. Arguments: '

@@ -163,6 +163,7 @@ async def handle_server(reader: asyncio.StreamReader,
         print(traceback.format_exc())
         print(f'Is closing: {writer.is_closing()}')
     finally:
+        print('Unhandled exception happened, closing connection')
         writer.close()
 
 
