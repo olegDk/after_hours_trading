@@ -470,12 +470,12 @@ class Trader:
                       'PXD',
                       'ADBE',
                       'ORCL']  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
-                       BANKS: NEUTRAL,
-                       OIL: NEUTRAL,
-                       RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: NEUTRAL,
-                       CHINA: NEUTRAL}
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
+                       BANKS: BEAR,
+                       OIL: BEAR,
+                       RENEWABLE_ENERGY: BEAR,
+                       SEMICONDUCTORS: BEAR,
+                       CHINA: BEAR}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
