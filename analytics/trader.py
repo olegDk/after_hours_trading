@@ -474,8 +474,8 @@ class Trader:
                        BANKS: BEAR,
                        OIL: BEAR,
                        RENEWABLE_ENERGY: BEAR,
-                       SEMICONDUCTORS: BEAR,
-                       CHINA: BEAR}
+                       SEMICONDUCTORS: AGG_BEAR,
+                       CHINA: AGG_BEAR}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
