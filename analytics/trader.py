@@ -399,6 +399,11 @@ class Trader:
         try:
             if news_data:
                 content = news_data.get(CONTENT)
+                dt = datetime.strptime(news_data.get(DATETIME),
+                                       format='%m-%d-%Y %H:%M:%S')
+                print('=============================================')
+                print(dt)
+                print('=============================================')
                 relevant = self.__na.is_relevant(text=content)
                 symbol = news_data[SYMBOL]
                 news_data[NEWS_RELEVANCE_KEY] = relevant
@@ -467,7 +472,7 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BB',
                       'CS',
-                      'APA',
+                      'APA'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: BULL,
