@@ -401,31 +401,31 @@ class Trader:
                 content = news_data.get(CONTENT)
                 dt = datetime.strptime(news_data.get(DATETIME),
                                        '%m-%d-%Y %H:%M:%S')
-                print('=============================================')
-                print(dt)
-                print('=============================================')
-                relevant = self.__na.is_relevant(text=content)
-                symbol = news_data[SYMBOL]
-                news_data[NEWS_RELEVANCE_KEY] = relevant
-                if symbol in self.__news_data:
-                    self.__news_data[symbol][N_NEWS] += 1
-                    # News type is news heading not topic
-                    self.__news_data[symbol][NEWS_TYPE] = \
-                        self.__news_data[symbol][NEWS_TYPE] + [news_data]
-                else:
-                    self.__news_data[symbol] = {
-                        N_NEWS: 1,
-                        NEWS_TYPE: [news_data]
-                    }
-                if relevant:
-                    self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
-                                                       key=symbol, value=0.1)
-                news_data_to_save = {}
-                for key in self.__news_data.keys():
-                    news_data_to_save[key] = json.dumps(self.__news_data[key])
-                self.__redis_connector.set_dict(name=NEWS_TYPE,
-                                                d=news_data_to_save,
-                                                rewrite=True)
+                # Filter by datetime
+                delta_days = (now_init - dt).days
+                if delta_days <= 1:
+                    relevant = self.__na.is_relevant(text=content)
+                    symbol = news_data[SYMBOL]
+                    news_data[NEWS_RELEVANCE_KEY] = relevant
+                    if symbol in self.__news_data:
+                        self.__news_data[symbol][N_NEWS] += 1
+                        # News type is news heading not topic
+                        self.__news_data[symbol][NEWS_TYPE] = \
+                            self.__news_data[symbol][NEWS_TYPE] + [news_data]
+                    else:
+                        self.__news_data[symbol] = {
+                            N_NEWS: 1,
+                            NEWS_TYPE: [news_data]
+                        }
+                    if relevant:
+                        self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
+                                                           key=symbol, value=0.1)
+                    news_data_to_save = {}
+                    for key in self.__news_data.keys():
+                        news_data_to_save[key] = json.dumps(self.__news_data[key])
+                    self.__redis_connector.set_dict(name=NEWS_TYPE,
+                                                    d=news_data_to_save,
+                                                    rewrite=True)
         except Exception as e:
             message = f'Process news: ' \
                       f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
