@@ -62,6 +62,7 @@ async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
 
 
 def handle_news(msg: dict):
+    print(f'Received news: {msg}')
     trader.process_news(msg)
 
 
@@ -143,7 +144,7 @@ async def handle_server(reader: asyncio.StreamReader,
                                        timeout=TIMEOUT_GRACE_PERIOD)
             character = received_byte.decode('utf-8', 'ignore')
             if character == '\n' and prev_character == '\n':
-                print(f'\n\nReceived: {msg}\n\n')
+                # print(f'\n\nReceived: {msg}\n\n')
                 await handle_message(writer, msg)
                 msg = ''
                 prev_character = ''
