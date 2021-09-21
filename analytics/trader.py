@@ -470,11 +470,11 @@ class Trader:
                       'APA',
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
-                       BANKS: BEAR,
-                       OIL: BEAR,
-                       RENEWABLE_ENERGY: BEAR,
-                       SEMICONDUCTORS: AGG_BEAR,
-                       CHINA: AGG_BEAR}
+                       BANKS: BULL,
+                       OIL: NEUTRAL,
+                       RENEWABLE_ENERGY: NEUTRAL,
+                       SEMICONDUCTORS: NEUTRAL,
+                       CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1/2,
