@@ -401,9 +401,18 @@ class Trader:
                 content = news_data.get(CONTENT)
                 dt = datetime.strptime(news_data.get(DATETIME),
                                        '%m-%d-%Y %H:%M:%S')
+                dt_hour = dt.hour
+                dt_aligned = datetime(year=dt.year,
+                                      month=dt.month,
+                                      day=dt.day,
+                                      hour=now_init.hour,
+                                      minute=now_init.minute,
+                                      second=now_init.second)
                 # Filter by datetime
-                delta_days = (now_init - dt).days
-                if delta_days <= 1:
+                delta_days = (now_init - dt_aligned).days
+                postmarket_condition = delta_days == 1 and dt_hour >= 16
+                premarket_condition = delta_days == 0
+                if premarket_condition or postmarket_condition:
                     relevant = self.__na.is_relevant(text=content)
                     symbol = news_data[SYMBOL]
                     news_data[NEWS_RELEVANCE_KEY] = relevant

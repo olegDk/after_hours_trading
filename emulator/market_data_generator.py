@@ -6,7 +6,7 @@ from config import messages
 from typing import Tuple
 from config.constants import *
 from random import uniform, randint
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 
 RELEVANT_NEWS_WORDS = ['upgrade', 'neutral', 'downgrade',
@@ -180,15 +180,22 @@ def sample_stock_news(ticker: str,
     words = list(words_dict.keys())
     len_words = len(words)
     probs = [float(1 / len_words) for _ in words]
+    delta_days = [0, 1, 2, 3]
+    delta_probs = [0.25, 0.25, 0.25, 0.25]
     content_list = np.random.choice(a=words,
                                     size=num_words,
                                     replace=True,
                                     p=probs)
+    delta_days_sampled = int(np.random.choice(a=delta_days,
+                                              size=1,
+                                              replace=False,
+                                              p=delta_probs)[0])
     content = ' '.join(content_list)
     sample_dict[CONTENT] = content
     sample_dict[RELEVANCE] = 9
     sample_dict[AMC_KEY] = 0
-    sample_dict[DATETIME] = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+    dt = datetime.now() - timedelta(days=delta_days_sampled)
+    sample_dict[DATETIME] = dt.strftime("%m-%d-%Y %H:%M:%S")
 
     return sample_dict
 
