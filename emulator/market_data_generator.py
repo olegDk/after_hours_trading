@@ -188,7 +188,7 @@ def sample_stock_news(ticker: str,
     sample_dict[CONTENT] = content
     sample_dict[RELEVANCE] = 9
     sample_dict[AMC_KEY] = 0
-    sample_dict[DATETIME] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sample_dict[DATETIME] = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
 
     return sample_dict
 

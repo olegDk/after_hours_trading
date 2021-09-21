@@ -400,7 +400,7 @@ class Trader:
             if news_data:
                 content = news_data.get(CONTENT)
                 dt = datetime.strptime(news_data.get(DATETIME),
-                                       format='%m-%d-%Y %H:%M:%S')
+                                       '%m-%d-%Y %H:%M:%S')
                 print('=============================================')
                 print(dt)
                 print('=============================================')
