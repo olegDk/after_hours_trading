@@ -8,45 +8,39 @@ RELEVANT_NEWS_WORDS = ['upgrade', 'neutral', 'downgrade',
                        'raised', 'lowered', 'Q1', 'Q2', 'Q3', 'Q4',
                        'reports', 'guides', 'report', 'guidance',
                        'merge', 'acquire', 'acquisition',
-                       'initiated', 'sees', 'maintain', 'outlook', 'target']
+                       'initiated', 'sees', 'maintain', 'outlook', 'target',
+                       'reiterate', 'rating']
 
 
 class NewsAnalyzer:
     def __init__(self):
-        self.__nlp = spacy.load('en_core_web_sm')
-        self.relevant_words_embeddings, self.relevant_words_embeddings_matrix =\
+        self.__nlp = spacy.load('en_core_web_lg')
+        self.__relevant_words_embeddings_dict, self.__relevant_words_embeddings_matrix =\
             self.__init_embeddings()
 
     def __init_embeddings(self) -> Tuple[dict, np.ndarray]:
-        embeddings = {}
-        relevant_words_str = ' '.join(RELEVANT_NEWS_WORDS)
-        doc = self.__nlp(relevant_words_str)
-        for token in doc:
-            print(token)
-            vec = token.vector / token.vector_norm  # l2 normalization
-            print(vec)
-            embeddings[str(token)] = vec
-        embeddings_matrix = np.stack(embeddings.values())
-        return embeddings, embeddings_matrix
+        tok_2_emb = {}
+        word_doc = self.__nlp(RELEVANT_NEWS_WORDS[0])
+        vec = word_doc.vector / word_doc.vector_norm
+        embeddings_matrix = vec
+        tok_2_emb[word_doc.text] = vec
+        for relevant_word in RELEVANT_NEWS_WORDS[1:]:
+            word_doc = self.__nlp(relevant_word)
+            vec = word_doc.vector / word_doc.vector_norm
+            tok_2_emb[word_doc.text] = vec
+            embeddings_matrix = np.vstack((embeddings_matrix, vec))
+        return tok_2_emb, embeddings_matrix
 
-    def get_relevance(self, text: str) -> int:
-        text = preprocess(text)
-        print(text)
-        doc = self.__nlp(text)
-        embeddings_array = doc[0].vector / doc[0].vector_norm
-        for token in doc[1:]:
-            print(token)
-            vec = token.vector / token.vector_norm
-            print(vec)
-            embeddings_array = np.vstack((embeddings_array, vec))
-        relevance_matrix = np.dot(self.relevant_words_embeddings_matrix, embeddings_array.T) > 0.8
-        print(True in relevance_matrix)
+    def is_relevant(self, text: str) -> bool:
+        text_list = preprocess(text).split(' ')
+        word_doc = self.__nlp(text_list[0])
+        vec = word_doc.vector / word_doc.vector_norm
+        embeddings_matrix = vec
+        for token in text_list[1:]:
+            word_doc = self.__nlp(token)
+            vec = word_doc.vector / word_doc.vector_norm
+            embeddings_matrix = np.vstack((embeddings_matrix, vec))
+        relevance_matrix = np.dot(self.__relevant_words_embeddings_matrix,
+                                  embeddings_matrix.T) > 0.5
 
-        return 0
-
-
-na = NewsAnalyzer()
-# news = 'Nvidia price target raised to $275 from $260 at BofA'
-# not_news = 'Yesterday Apple rose for more than 1%'
-# na.relevant_words_embeddings['raised']
-# na.get_relevance(text=news)
+        return True in relevance_matrix

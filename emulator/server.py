@@ -13,7 +13,7 @@ logon = False
 subscribe = False
 mdg = MarketDataGenerator()
 md_types = [MARKET_DATA_TYPE, NEWS_TYPE]
-md_prob_dist = [0.9, 0.1]
+md_prob_dist = [0.1, 0.9]
 
 
 def generate_id() -> str:

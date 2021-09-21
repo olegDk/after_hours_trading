@@ -10,6 +10,7 @@ import config.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender
 from messaging.redis_connector import RedisConnector
+from news_analyzer.news_analyzer import NewsAnalyzer
 import random
 import traceback
 
@@ -247,6 +248,7 @@ class Trader:
         self.__orders = {}
         self.__sent_orders_by_ticker = {}
         self.__news_data = {}
+        self.__na = NewsAnalyzer()
 
     def get_subscription_list(self) -> list:
         return self.__tickers
@@ -396,9 +398,13 @@ class Trader:
     def process_news(self, news_data: dict):
         try:
             if news_data:
+                content = news_data.get(CONTENT)
+                relevant = self.__na.is_relevant(text=content)
                 symbol = news_data[SYMBOL]
+                news_data[NEWS_RELEVANCE_KEY] = relevant
                 if symbol in self.__news_data:
                     self.__news_data[symbol][N_NEWS] += 1
+                    # News type is news heading not topic
                     self.__news_data[symbol][NEWS_TYPE] = \
                         self.__news_data[symbol][NEWS_TYPE] + [news_data]
                 else:
@@ -406,8 +412,9 @@ class Trader:
                         N_NEWS: 1,
                         NEWS_TYPE: [news_data]
                     }
-                self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
-                                                   key=symbol, value=0.1)
+                if relevant:
+                    self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
+                                                       key=symbol, value=0.1)
                 news_data_to_save = {}
                 for key in self.__news_data.keys():
                     news_data_to_save[key] = json.dumps(self.__news_data[key])
