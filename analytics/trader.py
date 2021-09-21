@@ -352,8 +352,8 @@ class Trader:
             self.__update_l1(symbol_dict)
             if sym not in self.__all_indicators:
                 traidable_list = traidable_list + [symbol_dict]
-                # print(f'Added {sym} to '
-                #       f'further processing')
+                print(f'Added {sym} to '
+                      f'further processing')
             else:
                 indicators_names_list = indicators_names_list + [sym]
         finish_update = datetime.now()
@@ -361,7 +361,7 @@ class Trader:
         sum_update_l1_speed = sum_update_l1_speed + delta_update
         count_update_l1_speed = count_update_l1_speed + 1
         average_update_l1_speed = sum_update_l1_speed / count_update_l1_speed
-        # print(f'Update l1 time: {delta_update} microseconds')
+        print(f'Update l1 time: {delta_update} microseconds')
 
         start_predict = datetime.now()
         if traidable_list:
@@ -386,12 +386,12 @@ class Trader:
         sum_process_speed = sum_process_speed + delta
         count_process_speed = count_process_speed + 1
         average_process_speed = sum_process_speed / count_process_speed
-        # print(f'Predict time: {delta_predict} microseconds')
-        # print(f'Process time: {delta} microseconds')
-        #
-        # print(f'Average update l1 time: {average_update_l1_speed} microseconds')
-        # print(f'Average predict time: {average_predict_speed} microseconds')
-        # print(f'Average process time: {average_process_speed} microseconds')
+        print(f'Predict time: {delta_predict} microseconds')
+        print(f'Process time: {delta} microseconds')
+
+        print(f'Average update l1 time: {average_update_l1_speed} microseconds')
+        print(f'Average predict time: {average_predict_speed} microseconds')
+        print(f'Average process time: {average_process_speed} microseconds')
 
         return orders
 
@@ -513,7 +513,7 @@ class Trader:
 
     def __get_policy(self, sector: str) -> str:
         policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0]
-        # print(policy)
+        print(policy)
         if not policy:
             return NEUTRAL
         return policy
@@ -563,7 +563,7 @@ class Trader:
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
-        # print(f'Start processing symbol: {symbol}')
+        print(f'Start processing symbol: {symbol}')
         symbol_prop = self.__get_tier_prop(stock=symbol)
         # If the tier proportion is not 0 (stock is in black list)
         if float(symbol_prop):
