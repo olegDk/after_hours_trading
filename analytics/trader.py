@@ -467,16 +467,8 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BB',
                       'CS',
-                      'BRKS',
-                      'SOGO',
-                      'TDC',
-                      'JKS',
-                      'LI',
-                      'LPI',
-                      'FSLR',
-                      'PXD',
-                      'ADBE',
-                      'ORCL']  # Add untraidable stocks here
+                      'APA',
+                      ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: BEAR,
                        OIL: BEAR,
