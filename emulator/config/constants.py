@@ -43,6 +43,7 @@ ORDER_REPORT = 'orderReport'
 SUBSCRIBE = 'subscribe'
 KEEP_ALIVE = 'keepAlive'
 NEWS_TYPE = 'news'
+N_NEWS = 'n_news'
 
 # Plain constants to use in code
 MODEL = 'model'
@@ -52,6 +53,7 @@ PCT_NET = 'pct_net'
 ORDERS = 'orders'
 POSITIONS = 'positions'
 SENT_ORDERS_BY_TICKER = 'sent_orders_by_ticker'
+DATETIME_FORMAT = '%m-%d-%Y %H:%M:%S'
 
 # Constants related to orderRequest only
 TIF = 'TIF'
@@ -102,7 +104,7 @@ AGG_BEAR = 'agg_bear'
 LONG_COEF = 'long_coef'
 SHORT_COEF = 'short_coef'
 DELTA_COEF = 'delta_coef'
-INIT_BP = 2000000
+INIT_BP = 500000
 BP_KEY = 'bp'
 ACCOUNT_INFORMATION = 'account_information'
 BP_USAGE_PCT = 1.0
@@ -111,3 +113,4 @@ MAX_ORDERS = 16
 BEFORE_8_N_ORDERS = int(MAX_ORDERS/8)
 BEFORE_8_30_N_ORDERS = int(MAX_ORDERS/4)
 BEFORE_9_N_ORDERS = int(MAX_ORDERS/2)
+NEWS_RELEVANCE_KEY = 'news_relevance'

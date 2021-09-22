@@ -53,6 +53,7 @@ PCT_NET = 'pct_net'
 ORDERS = 'orders'
 POSITIONS = 'positions'
 SENT_ORDERS_BY_TICKER = 'sent_orders_by_ticker'
+DATETIME_FORMAT = '%m-%d-%Y %H:%M:%S'
 
 # Constants related to orderRequest only
 TIF = 'TIF'

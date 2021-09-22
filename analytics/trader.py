@@ -400,7 +400,7 @@ class Trader:
             if news_data:
                 content = news_data.get(CONTENT)
                 dt = datetime.strptime(news_data.get(DATETIME),
-                                       '%m-%d-%Y %H:%M:%S')
+                                       DATETIME_FORMAT)
                 dt_hour = dt.hour
                 dt_aligned = datetime(year=dt.year,
                                       month=dt.month,
