@@ -195,7 +195,7 @@ def sample_stock_news(ticker: str,
     sample_dict[RELEVANCE] = 9
     sample_dict[AMC_KEY] = 0
     dt = datetime.now() - timedelta(days=delta_days_sampled)
-    sample_dict[DATETIME] = dt.strftime("%m-%d-%Y %H:%M:%S")
+    sample_dict[DATETIME] = dt.strftime(DATETIME_FORMAT)
 
     return sample_dict
 
