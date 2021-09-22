@@ -251,7 +251,8 @@ class Trader:
         self.__na = NewsAnalyzer()
 
     def get_subscription_list(self) -> list:
-        return self.__tickers
+        # return self.__tickers
+        return ['SFIX']
 
     def update_account_information(self,
                                    acc_info: dict):
@@ -480,11 +481,13 @@ class Trader:
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BB',
-                      'CS']  # Add untraidable stocks here
+                      'CS',
+                      # 'SFIX',
+                      ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: BULL,
-                       OIL: NEUTRAL,
-                       RENEWABLE_ENERGY: NEUTRAL,
+                       OIL: BULL,
+                       RENEWABLE_ENERGY: BULL,
                        SEMICONDUCTORS: NEUTRAL,
                        CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
