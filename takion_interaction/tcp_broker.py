@@ -40,6 +40,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
             print('============================')
             print(f'Received order report: {json_msg}\n\n')
             print('============================')
+            await asyncio.sleep(5)
         elif msg_type == SUBSCRIBE:
             pass
 
@@ -143,7 +144,7 @@ async def handle_server(reader: asyncio.StreamReader,
                                        timeout=TIMEOUT_GRACE_PERIOD)
             character = received_byte.decode('utf-8', 'ignore')
             if character == '\n' and prev_character == '\n':
-                print(f'\n\nReceived: {msg}\n\n')
+                # print(f'\n\nReceived: {msg}\n\n')
                 await handle_message(writer, msg)
                 msg = ''
                 prev_character = ''
