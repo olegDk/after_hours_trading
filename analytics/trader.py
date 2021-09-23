@@ -484,12 +484,13 @@ class Trader:
                       'ROKU',
                       'DADA',
                       'AKA',
-                      'MDLA'
+                      'MDLA',
+                      'CRM'
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: BEAR,
-                       BANKS: BULL,
-                       OIL: BULL,
-                       RENEWABLE_ENERGY: BULL,
+        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+                       BANKS: NEUTRAL,
+                       OIL: NEUTRAL,
+                       RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
                        CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
@@ -579,20 +580,8 @@ class Trader:
         symbol_prop = self.__get_tier_prop(stock=symbol)
         # If the tier proportion is not 0 (stock is in black list)
         if float(symbol_prop):
-            pct_bid_net = symbol_dict[PCT_BID_NET]
-            pct_ask_net = symbol_dict[PCT_ASK_NET]
-            bid_l1 = symbol_dict[BID]
-            ask_l1 = symbol_dict[ASK]
-            bid_venue = symbol_dict[BID_VENUE]
-            # bid_venue = 1
-            ask_venue = symbol_dict[ASK_VENUE]
-            # ask_venue = 1
-            close = symbol_dict[CLOSE]
-
             # Make trade decision
             try:
-                model_dict = self.__models[symbol]
-                model = model_dict[MODEL]
                 # Get indicators
                 indicators = self.__factors[symbol]
                 factors_l1 = list(
@@ -602,6 +591,17 @@ class Trader:
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.__validate_tier(symbol=symbol)
                     if valid_tier:
+                        model_dict = self.__models[symbol]
+                        model = model_dict[MODEL]
+                        pct_bid_net = symbol_dict[PCT_BID_NET]
+                        pct_ask_net = symbol_dict[PCT_ASK_NET]
+                        bid_l1 = symbol_dict[BID]
+                        ask_l1 = symbol_dict[ASK]
+                        bid_venue = symbol_dict[BID_VENUE]
+                        # bid_venue = 1
+                        ask_venue = symbol_dict[ASK_VENUE]
+                        # ask_venue = 1
+                        close = symbol_dict[CLOSE]
                         pred_array = np.array(factors_l1).reshape(1, -1)
                         prediction = model.predict(pred_array)[0]
                         std_err = model_dict['mae']
