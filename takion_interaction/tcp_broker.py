@@ -37,7 +37,9 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         elif msg_type == ORDER_RESPONSE:
             pass
         elif msg_type == ORDER_REPORT:
-            pass
+            print('============================')
+            print(f'Received order report: {json_msg}\n\n')
+            print('============================')
         elif msg_type == SUBSCRIBE:
             pass
 
