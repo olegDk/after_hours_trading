@@ -498,7 +498,7 @@ class Trader:
                         }
                     if relevant:
                         self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
-                                                           key=symbol, value=0.1)
+                                                           key=symbol, value=0)
                     news_data_to_save = {}
                     for key in self.__news_data.keys():
                         news_data_to_save[key] = json.dumps(self.__news_data[key])
