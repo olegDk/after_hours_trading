@@ -66,8 +66,8 @@ class RedisConnector:
     def hm_get(self, h: str, key: str) -> str:
         try:
             value = self.__redis.hmget(h, key)
-            print(f'Got value in hm_get for hash: {h}, '
-                  f'and key: {key}: {value}')
+            # print(f'Got value in hm_get for hash: {h}, '
+            #       f'and key: {key}: {value}')
             return value
         except Exception as e:
             print(f'Inside hm_get RedisConnector'
