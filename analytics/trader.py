@@ -604,14 +604,19 @@ class Trader:
         black_list = ['BB',
                       'CS',
                       'ROKU',
-                      'YY'
+                      'YY',
+                      'MGY',
+                      'NET',
+                      'CRM',
+                      'ADBE',
+                      'VIPS',
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: NEUTRAL,
-                       CHINA: NEUTRAL}
+                       SEMICONDUCTORS: BEAR,
+                       CHINA: AGG_BEAR}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1 / 2,
