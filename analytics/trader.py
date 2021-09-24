@@ -266,8 +266,9 @@ def get_order(prediction,
     order_data = {}
     delta_long = prediction - pct_ask_net
     delta_short = prediction - pct_bid_net
-    trade_flag = delta_long >= std_err * delta_long_coef or \
-                 delta_short <= -std_err * delta_short_coef
+    # trade_flag = delta_long >= std_err * delta_long_coef or \
+    #              delta_short <= -std_err * delta_short_coef
+    trade_flag = True
     if trade_flag:
         side = BUY if np.sign(delta_long) > 0 else SELL
         order_params = side_params[side]
@@ -728,7 +729,8 @@ class Trader:
                         self.__stocks_l1.get(x)), indicators))
 
                 if INIT_PCT not in factors_l1:
-                    valid_tier = self.__validate_tier(symbol=symbol)
+                    # valid_tier = self.__validate_tier(symbol=symbol)
+                    valid_tier = random.uniform(0, 1) > 0.8
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
