@@ -320,6 +320,7 @@ class Trader:
 
     def update_account_information(self,
                                    acc_info: dict):
+        self.__redis_connector.h_del(h=POSITIONS)
         if acc_info:
             bp_info = self.__get_acc_info()
             bp = float(bp_info[BP_KEY])
