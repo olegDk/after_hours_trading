@@ -37,10 +37,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         elif msg_type == ORDER_RESPONSE:
             pass
         elif msg_type == ORDER_REPORT:
-            print('============================')
-            print(f'Received order report: {json_msg}\n\n')
-            print('============================')
-            await asyncio.sleep(5)
+            handle_order_report(json_msg)
         elif msg_type == SUBSCRIBE:
             pass
 
@@ -60,6 +57,10 @@ async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
         print(orders_data)
         trader.send_order_log_to_mq(log=orders_data)
     trader.send_market_data_to_mq(log=market_data)
+
+
+def handle_order_report(msg: dict):
+    trader.process_order_report(msg)
 
 
 def handle_news(msg: dict):
@@ -144,7 +145,7 @@ async def handle_server(reader: asyncio.StreamReader,
                                        timeout=TIMEOUT_GRACE_PERIOD)
             character = received_byte.decode('utf-8', 'ignore')
             if character == '\n' and prev_character == '\n':
-                # print(f'\n\nReceived: {msg}\n\n')
+                print(f'\n\nReceived: {msg}\n\n')
                 await handle_message(writer, msg)
                 msg = ''
                 prev_character = ''

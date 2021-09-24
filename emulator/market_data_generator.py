@@ -225,7 +225,7 @@ class MarketDataGenerator:
                                                     size=num_positions,
                                                     replace=False,
                                                     p=probs))
-        side_list = [BUY, SELL]
+        side_list = [BUY_CODE, SELL_CODE]
         side_probs = [0.5, 0.5]
         pos_list = []
         orders_list = []

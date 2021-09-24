@@ -13,7 +13,7 @@ logon = False
 subscribe = False
 mdg = MarketDataGenerator()
 md_types = [MARKET_DATA_TYPE, NEWS_TYPE]
-md_prob_dist = [0.1, 0.9]
+md_prob_dist = [0.8, 0.2]
 
 
 def generate_id() -> str:
@@ -37,6 +37,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         logon_response[SESSION_KEY] = session_key
         logon_response[REF] = json_msg[SEQ]
         logon_response[DATA] = mdg.sample_acc_snapshot()
+        print(logon_response)
         await send_to_analytics_server(
             writer,
             json.dumps(logon_response)
@@ -52,10 +53,15 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         sleeping_time = random.randint(1, 10) * 0.1
         await asyncio.sleep(sleeping_time)
         order_report = messages.order_report()
-        order_report[DATA][CID] = json_msg[ORDER][CID]
-        order_report[DATA][SYMBOL] = json_msg[ORDER][DATA][SYMBOL]
-        order_report[DATA][SIZE] = json_msg[ORDER][DATA][SIZE]
-        order_report[DATA][SIDE] = json_msg[ORDER][DATA][SIDE]
+        order_report[CID] = json_msg[ORDER][CID]
+        order_report[SYMBOL] = json_msg[ORDER][DATA][SYMBOL]
+        order_report[SIZE] = json_msg[ORDER][DATA][SIZE]
+        side = json_msg[ORDER][DATA][SIDE]
+        if side == BUY:
+            side = BUY_CODE
+        else:
+            side = SELL_CODE
+        order_report[SIDE] = json_msg[ORDER][DATA][SIDE]
         await send_to_analytics_server(
             writer,
             json.dumps(order_report)

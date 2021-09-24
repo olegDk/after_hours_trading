@@ -75,6 +75,8 @@ STATUS = 'status'
 RESPONSE = 'response'
 CLIENT_ID = 'clientId'
 EXECUTION = 'execution'
+BUY_CODE = '66'
+SELL_CODE = '84'
 
 # Order request-response data
 ORDER = 'order'
@@ -107,10 +109,13 @@ DELTA_COEF = 'delta_coef'
 INIT_BP = 500000
 BP_KEY = 'bp'
 ACCOUNT_INFORMATION = 'account_information'
+INVESTMENT = 'investment'
 BP_USAGE_PCT = 1.0
 BP_USAGE_PCT_KEY = 'bp_usage_key'
 MAX_ORDERS = 16
 BEFORE_8_N_ORDERS = int(MAX_ORDERS/8)
 BEFORE_8_30_N_ORDERS = int(MAX_ORDERS/4)
 BEFORE_9_N_ORDERS = int(MAX_ORDERS/2)
+BEFORE_9_15_ORDERS = BEFORE_9_N_ORDERS + BEFORE_8_30_N_ORDERS
+BEFORE_OPEN_N_ORDERS = MAX_ORDERS
 NEWS_RELEVANCE_KEY = 'news_relevance'

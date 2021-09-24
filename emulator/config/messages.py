@@ -133,11 +133,10 @@ def order_complete() -> dict:
 def order_report() -> dict:
     return {
         MESSAGE_ID: ORDER_REPORT,
-        DATA: {CID: '',
-               ORDER_ID: '',
-               STATUS: EXECUTION,
-               SYMBOL: '',
-               SIZE: 0,
-               SIDE: '',
-               PRICE: ''}
+        CID: '',
+        ORDER_ID: '',
+        SYMBOL: '',
+        SIZE: 0,
+        SIDE: '',
+        PRICE: ''
     }
