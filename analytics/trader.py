@@ -5,7 +5,7 @@ from typing import Tuple
 import uuid
 from pytz import timezone
 from datetime import datetime, timedelta
-import json
+import orjson as json
 import config.messages as messages
 from config.constants import *
 from messaging.rabbit_sender import RabbitSender

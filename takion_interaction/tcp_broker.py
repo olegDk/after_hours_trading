@@ -1,5 +1,5 @@
 import asyncio
-import json
+import orjson as json
 import traceback
 import config.messages as messages
 from analytics.trader import Trader
