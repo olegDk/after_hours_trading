@@ -423,8 +423,8 @@ class Trader:
             self.__update_l1(symbol_dict)
             if sym not in self.__all_indicators:
                 traidable_list = traidable_list + [symbol_dict]
-                print(f'Added {sym} to '
-                      f'further processing')
+                # print(f'Added {sym} to '
+                #       f'further processing')
             else:
                 indicators_names_list = indicators_names_list + [sym]
         finish_update = datetime.now()
@@ -432,7 +432,7 @@ class Trader:
         sum_update_l1_speed = sum_update_l1_speed + delta_update
         count_update_l1_speed = count_update_l1_speed + 1
         average_update_l1_speed = sum_update_l1_speed / count_update_l1_speed
-        print(f'Update l1 time: {delta_update} microseconds')
+        # print(f'Update l1 time: {delta_update} microseconds')
 
         start_predict = datetime.now()
         if traidable_list:
@@ -442,11 +442,12 @@ class Trader:
                     if order:
                         orders.append(order)
                 except Exception as e:
-                    message = f'Process l1 message error: ' \
-                              f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                    print(message)
-                    print(traceback.format_exc())
-                    print(f'Failed to process l1 message')
+                    # message = f'Process l1 message error: ' \
+                    #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                    # print(message)
+                    # print(traceback.format_exc())
+                    # print(f'Failed to process l1 message')
+                    pass
 
         finish = datetime.now()
         delta_predict = (finish - start_predict).microseconds
@@ -457,12 +458,12 @@ class Trader:
         sum_process_speed = sum_process_speed + delta
         count_process_speed = count_process_speed + 1
         average_process_speed = sum_process_speed / count_process_speed
-        print(f'Predict time: {delta_predict} microseconds')
-        print(f'Process time: {delta} microseconds')
-
-        print(f'Average update l1 time: {average_update_l1_speed} microseconds')
-        print(f'Average predict time: {average_predict_speed} microseconds')
-        print(f'Average process time: {average_process_speed} microseconds')
+        # print(f'Predict time: {delta_predict} microseconds')
+        # print(f'Process time: {delta} microseconds')
+        #
+        # print(f'Average update l1 time: {average_update_l1_speed} microseconds')
+        # print(f'Average predict time: {average_predict_speed} microseconds')
+        # print(f'Average process time: {average_process_speed} microseconds')
 
         return orders
 
@@ -507,11 +508,12 @@ class Trader:
                                                     d=news_data_to_save,
                                                     rewrite=True)
         except Exception as e:
-            message = f'Process news: ' \
-                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to process news list: {news_data}')
+            # message = f'Process news: ' \
+            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            # print(message)
+            # print(traceback.format_exc())
+            # print(f'Failed to process news list: {news_data}')
+            pass
 
     def __update_l1(self, symbol_dict: dict):
         try:
@@ -528,17 +530,19 @@ class Trader:
                 self.__stocks_l1[symbol][PCT_BID_NET] = pct_bid_net
                 self.__stocks_l1[symbol][PCT_ASK_NET] = pct_ask_net
         except KeyError as e:
-            message = f'Update l1 KeyError: ' \
-                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to make inference on symbol message: {symbol_dict}')
+            # message = f'Update l1 KeyError: ' \
+            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            # print(message)
+            # print(traceback.format_exc())
+            # print(f'Failed to make inference on symbol message: {symbol_dict}')
+            pass
         except Exception as e:
-            message = f'Update l1 error: ' \
-                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to make inference on symbol message: {symbol_dict}')
+            # message = f'Update l1 error: ' \
+            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            # print(message)
+            # print(traceback.format_exc())
+            # print(f'Failed to make inference on symbol message: {symbol_dict}')
+            pass
 
     def process_order_report(self, msg: dict):
         try:
@@ -586,11 +590,12 @@ class Trader:
                                              key=symbol,
                                              value=symbol_dict_str)
         except Exception as e:
-            message = f'Process order report error: ' \
-                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to process order report: {msg}')
+            # message = f'Process order report error: ' \
+            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            # print(message)
+            # print(traceback.format_exc())
+            # print(f'Failed to process order report: {msg}')
+            pass
 
     def send_order_log_to_mq(self, log: list):
         self.__rabbit_sender.send_message(message=log,
@@ -716,7 +721,7 @@ class Trader:
 
     def __process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
-        print(f'Start processing symbol: {symbol}')
+        # print(f'Start processing symbol: {symbol}')
         symbol_prop = self.__get_tier_prop(symbol=symbol)
         # If the tier proportion is not 0 (stock is in black list)
         if float(symbol_prop):
@@ -786,25 +791,28 @@ class Trader:
                     raise TypeError('One of indicators is not populated yet')
 
             except KeyError as e:
-                message = f'Process symbol dict error: ' \
-                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                print(message)
-                print(traceback.format_exc())
-                print(f'Failed to make inference on symbol message: {symbol_dict}')
+                # message = f'Process symbol dict error: ' \
+                #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                # print(message)
+                # print(traceback.format_exc())
+                # print(f'Failed to make inference on symbol message: {symbol_dict}')
+                pass
 
             except TypeError as e:
-                message = f'Process symbol dict error: ' \
-                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                print(message)
-                print(traceback.format_exc())
-                print(f'Failed to make inference on symbol message: {symbol_dict}')
+                # message = f'Process symbol dict error: ' \
+                #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                # print(message)
+                # print(traceback.format_exc())
+                # print(f'Failed to make inference on symbol message: {symbol_dict}')
+                pass
 
             except Exception as e:
-                message = f'Process symbol dict error: ' \
-                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                print(message)
-                print(traceback.format_exc())
-                print(f'Failed to make inference on symbol message: {symbol_dict}')
+                # message = f'Process symbol dict error: ' \
+                #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                # print(message)
+                # print(traceback.format_exc())
+                # print(f'Failed to make inference on symbol message: {symbol_dict}')
+                pass
 
         return {}
 
