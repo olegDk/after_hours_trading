@@ -702,7 +702,7 @@ class Trader:
         #              delta_short <= -std_err * delta_short_coef
         trade_flag = True
         if trade_flag:
-            side = BUY if np.sign(delta_long) > 0 else SELL
+            side = BUY  # if np.sign(delta_long) > 0 else SELL
             order_params = side_params[side]
             order_related_data_dict = dict(zip(indicators, factors_l1))
             order_related_data_dict.update({POLICY: policy,
