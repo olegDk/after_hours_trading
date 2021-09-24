@@ -544,7 +544,7 @@ class Trader:
             symbol = msg[SYMBOL]
             side = msg[SIDE]
             size = int(msg[SIZE])
-            price = msg[PRICE]
+            price = float(msg[PRICE])
             investment = size * price
             if symbol in self.__positions:
                 pos_size = self.__positions[SYMBOL][SIZE]
@@ -604,10 +604,7 @@ class Trader:
         black_list = ['BB',
                       'CS',
                       'ROKU',
-                      'DADA',
-                      'AKA',
-                      'MDLA',
-                      'CRM'
+                      'YY'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
