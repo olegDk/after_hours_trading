@@ -5,17 +5,14 @@ import socket
 import time
 import traceback
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
 
-
-def connect_redis() -> redis.Redis:
+def connect_redis(host: str, port: int) -> redis.Redis:
     while True:
         try:
             print(f"========================================================="
                   f"===================================================")
             print(f"Connection attempt to redis from Trader...")
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0,
+            r = redis.Redis(host=host, port=port, db=0,
                             decode_responses=True)
             print(f"Connected to redis from Trader successfully...")
             print(f"========================================================="
@@ -37,8 +34,10 @@ def connect_redis() -> redis.Redis:
 
 
 class RedisConnector:
-    def __init__(self):
-        self.__redis = connect_redis()
+    def __init__(self,
+                 host: str,
+                 port: int):
+        self.__redis = connect_redis(host, port)
 
     def get_dict(self, name: str) -> dict:
         try:
@@ -66,8 +65,8 @@ class RedisConnector:
     def hm_get(self, h: str, key: str) -> str:
         try:
             value = self.__redis.hmget(h, key)
-            # print(f'Got value in hm_get for hash: {h}, '
-            #       f'and key: {key}: {value}')
+            print(f'Got value in hm_get for hash: {h}, '
+                  f'and key: {key}: {value}')
             return value
         except Exception as e:
             print(f'Inside hm_get RedisConnector'
@@ -78,8 +77,8 @@ class RedisConnector:
 
     def h_set_int(self, h: str, key: str, value: int):
         try:
-            # print(f'Setting value: {value} for key: {key}, '
-            #       f'in hash: {h}')
+            print(f'Setting value: {value} for key: {key}, '
+                  f'in hash: {h}')
             self.__redis.hset(name=h,
                               key=key,
                               value=value)
@@ -91,8 +90,8 @@ class RedisConnector:
 
     def h_set_float(self, h: str, key: str, value: float):
         try:
-            # print(f'Setting value: {value} for key: {key}, '
-            #       f'in hash: {h}')
+            print(f'Setting value: {value} for key: {key}, '
+                  f'in hash: {h}')
             self.__redis.hset(name=h,
                               key=key,
                               value=value)
@@ -104,8 +103,8 @@ class RedisConnector:
 
     def h_set_str(self, h: str, key: str, value: str):
         try:
-            # print(f'Setting value: {value} for key: {key}, '
-            #       f'in hash: {h}')
+            print(f'Setting value: {value} for key: {key}, '
+                  f'in hash: {h}')
             self.__redis.hset(name=h,
                               key=key,
                               value=value)
@@ -118,7 +117,7 @@ class RedisConnector:
     def h_getall(self, h: str) -> dict:
         try:
             value = self.__redis.hgetall(h)
-            # print(f'Got value in h_getall for hash {h}: {value}')
+            print(f'Got value in h_getall for hash {h}: {value}')
             return value
         except Exception as e:
             print(f'Inside h_getall RedisConnector'

@@ -1,6 +1,8 @@
 # Connection constants
 RABBIT_MQ_HOST = 'localhost'
 RABBIT_MQ_PORT = 5672
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
 CLIENT_VERSION_KEY = 'clientVersion'
 ACCOUNT_ID = 'WBTE'
 VERSION_OF_APP = '1.2.3.4'

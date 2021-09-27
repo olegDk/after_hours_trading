@@ -22,6 +22,7 @@ def reload_connection(host: str,
     channel = connection.channel()
     channel.queue_declare(queue=ORDER_RELATED_DATA)
     channel.queue_declare(queue=MARKET_DATA_TYPE)
+    channel.queue_declare(queue=NEWS_TYPE)
     return connection, channel
 
 

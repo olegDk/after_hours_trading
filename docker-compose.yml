@@ -49,15 +49,35 @@ services:
     networks:
       - redis_network
 
-  inference_runner:
+#  inference_runner:
+#    build:
+#      context: ./scheduled_inference
+#      dockerfile: Dockerfile
+#    depends_on:
+#      - rabbit
+#      - redis
+#    networks:
+#      - elasticsearch_network
+#      - redis_network
+
+  receive_market_data:
+      build:
+        context: ./messaging
+        dockerfile: Dockerfile_market_data
+      depends_on:
+        - rabbit
+        - redis
+      networks:
+        - redis_network
+
+  receive_news:
     build:
-      context: ./scheduled_inference
-      dockerfile: Dockerfile
+      context: ./messaging
+      dockerfile: Dockerfile_news
     depends_on:
       - rabbit
       - redis
     networks:
-      - elasticsearch_network
       - redis_network
 
   receive_order_related_data:
@@ -72,16 +92,6 @@ services:
 #      - kibana
     networks:
       - elasticsearch_network
-
-  receive_market_data:
-    build:
-      context: ./messaging
-      dockerfile: Dockerfile_market_data
-    depends_on:
-      - rabbit
-      - redis
-    networks:
-      - redis_network
 
 networks:
   elasticsearch_network:

@@ -266,9 +266,8 @@ def get_order(prediction,
     order_data = {}
     delta_long = prediction - pct_ask_net
     delta_short = prediction - pct_bid_net
-    # trade_flag = delta_long >= std_err * delta_long_coef or \
-    #              delta_short <= -std_err * delta_short_coef
-    trade_flag = True
+    trade_flag = delta_long >= std_err * delta_long_coef or \
+                 delta_short <= -std_err * delta_short_coef
     if trade_flag:
         side = BUY if np.sign(delta_long) > 0 else SELL
         order_params = side_params[side]
@@ -299,7 +298,7 @@ def get_order(prediction,
 class Trader:
     def __init__(self):
         self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
-        self.__redis_connector = RedisConnector()
+        self.__redis_connector = RedisConnector(REDIS_HOST, REDIS_PORT)
         self.__tickers = get_tickers()
         self.__stocks_l1, self.__all_indicators = init_stocks_data()
         self.__factors, \
@@ -312,7 +311,6 @@ class Trader:
         self.__positions = {}
         self.__orders = {}
         self.__sent_orders_by_ticker = {}
-        self.__news_data = {}
         self.__na = NewsAnalyzer()
 
     def get_subscription_list(self) -> list:
@@ -424,8 +422,8 @@ class Trader:
             self.__update_l1(symbol_dict)
             if sym not in self.__all_indicators:
                 traidable_list = traidable_list + [symbol_dict]
-                # print(f'Added {sym} to '
-                #       f'further processing')
+                print(f'Added {sym} to '
+                      f'further processing')
             else:
                 indicators_names_list = indicators_names_list + [sym]
         finish_update = datetime.now()
@@ -433,21 +431,21 @@ class Trader:
         sum_update_l1_speed = sum_update_l1_speed + delta_update
         count_update_l1_speed = count_update_l1_speed + 1
         average_update_l1_speed = sum_update_l1_speed / count_update_l1_speed
-        # print(f'Update l1 time: {delta_update} microseconds')
+        print(f'Update l1 time: {delta_update} microseconds')
 
         start_predict = datetime.now()
         if traidable_list:
             for symbol_dict in traidable_list:
                 try:
-                    order = self.__process_symbol_dict(symbol_dict)
+                    order = self.process_symbol_dict(symbol_dict)
                     if order:
                         orders.append(order)
                 except Exception as e:
-                    # message = f'Process l1 message error: ' \
-                    #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                    # print(message)
-                    # print(traceback.format_exc())
-                    # print(f'Failed to process l1 message')
+                    message = f'Process l1 message error: ' \
+                              f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                    print(message)
+                    print(traceback.format_exc())
+                    print(f'Failed to process l1 message')
                     pass
 
         finish = datetime.now()
@@ -459,62 +457,14 @@ class Trader:
         sum_process_speed = sum_process_speed + delta
         count_process_speed = count_process_speed + 1
         average_process_speed = sum_process_speed / count_process_speed
-        # print(f'Predict time: {delta_predict} microseconds')
-        # print(f'Process time: {delta} microseconds')
-        #
-        # print(f'Average update l1 time: {average_update_l1_speed} microseconds')
-        # print(f'Average predict time: {average_predict_speed} microseconds')
-        # print(f'Average process time: {average_process_speed} microseconds')
+        print(f'Predict time: {delta_predict} microseconds')
+        print(f'Process time: {delta} microseconds')
+
+        print(f'Average update l1 time: {average_update_l1_speed} microseconds')
+        print(f'Average predict time: {average_predict_speed} microseconds')
+        print(f'Average process time: {average_process_speed} microseconds')
 
         return orders
-
-    def process_news(self, news_data: dict):
-        try:
-            if news_data:
-                content = news_data.get(CONTENT)
-                dt = datetime.strptime(news_data.get(DATETIME),
-                                       DATETIME_FORMAT)
-                dt_hour = dt.hour
-                dt_aligned = datetime(year=dt.year,
-                                      month=dt.month,
-                                      day=dt.day,
-                                      hour=now_init.hour,
-                                      minute=now_init.minute,
-                                      second=now_init.second)
-                # Filter by datetime
-                delta_days = (now_init - dt_aligned).days
-                postmarket_condition = delta_days == 1 and dt_hour >= 16
-                premarket_condition = delta_days == 0
-                if premarket_condition or postmarket_condition:
-                    relevant = self.__na.is_relevant(text=content)
-                    symbol = news_data[SYMBOL]
-                    news_data[NEWS_RELEVANCE_KEY] = relevant
-                    if symbol in self.__news_data:
-                        self.__news_data[symbol][N_NEWS] += 1
-                        # News type is news heading not topic
-                        self.__news_data[symbol][NEWS_TYPE] = \
-                            self.__news_data[symbol][NEWS_TYPE] + [news_data]
-                    else:
-                        self.__news_data[symbol] = {
-                            N_NEWS: 1,
-                            NEWS_TYPE: [news_data]
-                        }
-                    if relevant:
-                        self.__redis_connector.h_set_float(h=STOCK_TO_TIER_PROPORTION,
-                                                           key=symbol, value=0)
-                    news_data_to_save = {}
-                    for key in self.__news_data.keys():
-                        news_data_to_save[key] = json.dumps(self.__news_data[key])
-                    self.__redis_connector.set_dict(name=NEWS_TYPE,
-                                                    d=news_data_to_save,
-                                                    rewrite=True)
-        except Exception as e:
-            # message = f'Process news: ' \
-            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            # print(message)
-            # print(traceback.format_exc())
-            # print(f'Failed to process news list: {news_data}')
-            pass
 
     def __update_l1(self, symbol_dict: dict):
         try:
@@ -531,18 +481,18 @@ class Trader:
                 self.__stocks_l1[symbol][PCT_BID_NET] = pct_bid_net
                 self.__stocks_l1[symbol][PCT_ASK_NET] = pct_ask_net
         except KeyError as e:
-            # message = f'Update l1 KeyError: ' \
-            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            # print(message)
-            # print(traceback.format_exc())
-            # print(f'Failed to make inference on symbol message: {symbol_dict}')
+            message = f'Update l1 KeyError: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to make inference on symbol message: {symbol_dict}')
             pass
         except Exception as e:
-            # message = f'Update l1 error: ' \
-            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            # print(message)
-            # print(traceback.format_exc())
-            # print(f'Failed to make inference on symbol message: {symbol_dict}')
+            message = f'Update l1 error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to make inference on symbol message: {symbol_dict}')
             pass
 
     def process_order_report(self, msg: dict):
@@ -560,7 +510,7 @@ class Trader:
                 # if add
                 if side == pos_side:
                     pos_size = pos_size + size
-                    self.__positions[SYMBOL][SIZE] = pos_size + size
+                    self.__positions[SYMBOL][SIZE] = pos_size
                     pos_investment = pos_investment + investment
                     self.__positions[SYMBOL][INVESTMENT] = pos_investment
                     pos_price = pos_investment / pos_size
@@ -591,12 +541,11 @@ class Trader:
                                              key=symbol,
                                              value=symbol_dict_str)
         except Exception as e:
-            # message = f'Process order report error: ' \
-            #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            # print(message)
-            # print(traceback.format_exc())
-            # print(f'Failed to process order report: {msg}')
-            pass
+            message = f'Process order report error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to process order report: {msg}')
 
     def send_order_log_to_mq(self, log: list):
         self.__rabbit_sender.send_message(message=log,
@@ -606,24 +555,28 @@ class Trader:
         self.__rabbit_sender.send_message(message=log,
                                           routing_key=MARKET_DATA_TYPE)
 
+    def send_news_data_to_mq(self, log: list):
+        self.__rabbit_sender.send_message(message=log,
+                                          routing_key=NEWS_TYPE)
+
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BB',
                       'CS',
-                      'ROKU',
-                      'YY',
-                      'MGY',
-                      'NET',
-                      'CRM',
-                      'ADBE',
-                      'VIPS',
+                      'BOX',
+                      'LAZ',
+                      'JKS',
+                      'CHWY',
+                      'AMZN',
+                      'NOW',
+                      'MU'
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: BEAR,
+        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: BEAR,
-                       CHINA: AGG_BEAR}
+                       SEMICONDUCTORS: NEUTRAL,
+                       CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1 / 2,
@@ -657,7 +610,6 @@ class Trader:
 
     def __get_policy(self, sector: str) -> str:
         policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0]
-        print(policy)
         if not policy:
             return NEUTRAL
         return policy
@@ -668,9 +620,13 @@ class Trader:
             return 1.0, 1.0
         return float(deltas[LONG_COEF]), float(deltas[SHORT_COEF])
 
-    def __get_tier_prop(self, symbol: str) -> float:
-        prop = float(self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
-                                                   key=symbol)[0])
+    def get_tier_prop(self, symbol: str) -> float:
+        prop = self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
+                                             key=symbol)[0]
+        if prop:
+            prop = float(prop)
+        else:
+            prop = 0.0
         return prop
 
     def __get_acc_info(self) -> dict:
@@ -686,7 +642,7 @@ class Trader:
             n = 0
         return n
 
-    def __validate_tier(self, symbol: str) -> bool:
+    def validate_tier(self, symbol: str) -> bool:
         # num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
         num_orders_sent = self.__get_num_orders_sent(symbol=symbol)
         cur_time = datetime.now(EST) + timedelta(hours=1)
@@ -720,10 +676,10 @@ class Trader:
                     return True
         return False
 
-    def __process_symbol_dict(self, symbol_dict: dict) -> dict:
+    def process_symbol_dict(self, symbol_dict: dict) -> dict:
         symbol = symbol_dict[SYMBOL]
-        # print(f'Start processing symbol: {symbol}')
-        symbol_prop = self.__get_tier_prop(symbol=symbol)
+        print(f'Start processing symbol: {symbol}')
+        symbol_prop = self.get_tier_prop(symbol=symbol)
         # If the tier proportion is not 0 (stock is in black list)
         if float(symbol_prop):
             # Make trade decision
@@ -735,8 +691,7 @@ class Trader:
                         self.__stocks_l1.get(x)), indicators))
 
                 if INIT_PCT not in factors_l1:
-                    # valid_tier = self.__validate_tier(symbol=symbol)
-                    valid_tier = random.uniform(0, 1) > 0.8
+                    valid_tier = self.validate_tier(symbol=symbol)
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
@@ -792,31 +747,29 @@ class Trader:
                     raise TypeError('One of indicators is not populated yet')
 
             except KeyError as e:
-                # message = f'Process symbol dict error: ' \
-                #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                # print(message)
-                # print(traceback.format_exc())
-                # print(f'Failed to make inference on symbol message: {symbol_dict}')
+                message = f'Process symbol dict error: ' \
+                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to make inference on symbol message: {symbol_dict}')
                 pass
 
             except TypeError as e:
-                # message = f'Process symbol dict error: ' \
-                #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                # print(message)
-                # print(traceback.format_exc())
-                # print(f'Failed to make inference on symbol message: {symbol_dict}')
+                message = f'Process symbol dict error: ' \
+                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to make inference on symbol message: {symbol_dict}')
                 pass
 
             except Exception as e:
-                # message = f'Process symbol dict error: ' \
-                #           f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-                # print(message)
-                # print(traceback.format_exc())
-                # print(f'Failed to make inference on symbol message: {symbol_dict}')
-                pass
+                message = f'Process symbol dict error: ' \
+                          f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to make inference on symbol message: {symbol_dict}')
 
         return {}
-
 
 # trader = Trader()
 # print(trader.get_subscription_list())

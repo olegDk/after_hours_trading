@@ -4,6 +4,7 @@ import traceback
 import config.messages as messages
 from analytics.trader import Trader
 from config.constants import *
+import cProfile
 
 trader = Trader()
 seq_counter = 1
@@ -16,7 +17,6 @@ async def send_future(writer: asyncio.StreamWriter, msg: dict):
     msg[SEQ] = seq_counter
     seq_counter += 1
     writer.write(f'{json.dumps(msg)}\n\n'.encode('utf8'))
-    # print(f'Sent message: {msg}')
     await writer.drain()
 
 
@@ -43,6 +43,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
 
 
 async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
+
     orders_data = trader.process_md_message(msg)
     market_data = msg[DATA]
     if orders_data:
@@ -54,7 +55,6 @@ async def handle_market_data(writer: asyncio.StreamWriter, msg: dict):
                 writer,
                 order
             )
-        # print(orders_data)
         trader.send_order_log_to_mq(log=orders_data)
     trader.send_market_data_to_mq(log=market_data)
 
@@ -64,7 +64,7 @@ def handle_order_report(msg: dict):
 
 
 def handle_news(msg: dict):
-    trader.process_news(msg)
+    trader.send_news_data_to_mq(log=[msg])
 
 
 def handle_logon(msg: dict):
@@ -145,7 +145,7 @@ async def handle_server(reader: asyncio.StreamReader,
                                        timeout=TIMEOUT_GRACE_PERIOD)
             character = received_byte.decode('utf-8', 'ignore')
             if character == '\n' and prev_character == '\n':
-                # print(f'\n\nReceived: {msg}\n\n')
+                print(f'\n\nReceived: {msg}\n\n')
                 await handle_message(writer, msg)
                 msg = ''
                 prev_character = ''

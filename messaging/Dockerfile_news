@@ -9,14 +9,17 @@ RUN apt-get update && \
 ENV PYTHONUNBUFFERED 1
 ENV PROJECT_DIR /messaging
 
-ARG REQUIREMENTS_FILE=requirements_md.txt
+ARG REQUIREMENTS_FILE=requirements_news.txt
 
 ADD requirements*.txt $PROJECT_DIR/
 
 RUN pip --no-cache-dir install -r $PROJECT_DIR/$REQUIREMENTS_FILE
 
+RUN python -m spacy download en_core_web_lg
+
 ADD . $PROJECT_DIR/
 
 WORKDIR $PROJECT_DIR
 
-CMD ["python", "receive_market_data.py"]
+CMD ["python", "receive_news.py"]
+

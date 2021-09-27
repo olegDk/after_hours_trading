@@ -1,0 +1,5 @@
+elasticsearch==7.13.4
+  - certifi [required: Any, installed: 2021.5.30]
+  - urllib3 [required: >=1.21.1,<2, installed: 1.26.6]
+pika==1.2.0
+pytz==2021.1

@@ -62,11 +62,12 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
         else:
             side = SELL_CODE
         order_report[SIDE] = json_msg[ORDER][DATA][SIDE]
+        order_report[PRICE] = json_msg[ORDER][DATA][LIMIT]
         await send_to_analytics_server(
             writer,
             json.dumps(order_report)
         )
-        sleeping_time = random.randint(1, 10) * 0.1
+        sleeping_time = random.randint(1, 10) * 0.01
         await asyncio.sleep(sleeping_time)
     elif msg_type == SUBSCRIBE:
         print('Received subscribe\n\n')
@@ -106,7 +107,7 @@ async def emulate_market_data(writer: asyncio.StreamWriter):
                 await send_to_analytics_server(writer, msg)
                 print('Sent l1:')
                 print(f'{msg}\n\n')
-                sleeping_time = random.randint(1, 10) * 0.1
+                sleeping_time = random.randint(1, 10) * 0.01
                 await asyncio.sleep(sleeping_time)
         else:
             await asyncio.sleep(1)

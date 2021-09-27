@@ -9,7 +9,7 @@ RUN apt-get update && \
 ENV PYTHONUNBUFFERED 1
 ENV PROJECT_DIR /messaging
 
-ARG REQUIREMENTS_FILE=requirements.txt
+ARG REQUIREMENTS_FILE=requirements_orders.txt
 
 ADD requirements*.txt $PROJECT_DIR/
 
