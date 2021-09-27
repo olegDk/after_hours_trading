@@ -13,21 +13,10 @@ from config.constants import *
 from news_analyzer.news_analyzer import NewsAnalyzer
 from redis_connector import RedisConnector
 
-
-# For testing
-# REDIS_HOST = 'localhost'
-# RABBIT_MQ_HOST = 'localhost'
-
 EST = timezone('EST')
-REDIS_HOST = 'redis'
-REDIS_PORT = 6379
-RABBIT_MQ_HOST = 'rabbit'
-RABBIT_MQ_PORT = 5672
-NEWS_TYPE = 'news'
-SYMBOL = 'symbol'
 now_init = datetime.now()
 na = NewsAnalyzer()
-rc = RedisConnector(REDIS_HOST, REDIS_PORT)
+rc = RedisConnector(REDIS_EXT_HOST, REDIS_PORT)
 
 
 def process_news(news_data: dict):
@@ -95,35 +84,35 @@ def connect_rabbit() -> Tuple[pika.BlockingConnection,
             print(f"========================================================="
                   f"===================================================")
             print(f"Connection attempt to rabbit from receive "
-                  f"market data...")
+                  f"news...")
             connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=RABBIT_MQ_HOST,
+                pika.ConnectionParameters(host=RABBIT_MQ_EXT_HOST,
                                           port=RABBIT_MQ_PORT))
             channel = connection.channel()
 
             channel.queue_declare(queue=NEWS_TYPE)
             print(f"Connected to rabbit from receive "
-                  f"market data successfully")
+                  f"news successfully")
             print(f"========================================================="
                   f"===================================================")
             return connection, channel
         except socket.gaierror:
             print(f"Failed connecting to rabbit from receive "
-                  f"market data, maybe it didn't start yet "
+                  f"news, maybe it didn't start yet "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
         except ConnectionError:
             print(f"Failed connecting to rabbit from receive "
-                  f"market data, ConnectionError "
+                  f"news, ConnectionError "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")
             time.sleep(1)
         except AMQPConnectionError:
             print(f"Failed connecting to rabbit from receive "
-                  f"market data, AMQPConnectionError "
+                  f"news, AMQPConnectionError "
                   f"sleeping for 1 second")
             print(f"========================================================="
                   f"===================================================")

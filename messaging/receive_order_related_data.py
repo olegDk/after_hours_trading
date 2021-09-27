@@ -9,36 +9,16 @@ from typing import Tuple
 from pytz import timezone
 import logging
 from datetime import datetime, timedelta
-# from pymongo import MongoClient
 from elasticsearch import Elasticsearch, ConnectionError
-
-
-# For testing
-# RABBIT_MQ_HOST = 'localhost'
-# ES_HOST = 'localhost'
+from config.constants import *
 
 logging.basicConfig(filename=f"/messaging/order_logs/"
                              f"{datetime.now().strftime('order_logs_%d_%m_%Y.log')}",
                     level=logging.INFO)
 EST = timezone('EST')
-DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-RABBIT_MQ_HOST = 'rabbit'
-RABBIT_MQ_PORT = 5672
-ORDER_RELATED_DATA = 'orderRelatedData'
 ES_HOST = 'elasticsearch'
 ES_PORT = 9200
-ORDERS_INDEX = 'orders'
-ORDERS_SENT_DOC_TYPE = 'ordersSent'
 
-
-# To save logs in MongoDB Atlas
-# client = MongoClient(f"mongodb+srv://olegDk"
-#                      f":fy51gl38@cluster0.17cyv.mongodb.net/"
-#                      f"myFirstDatabase?retryWrites=true&w=majority")
-# db = client.test
-# docs = db.docs
-
-# To save logs in Elasticsearch
 
 def connect_es() -> Elasticsearch:
     while True:
@@ -80,7 +60,7 @@ def connect_rabbit() -> Tuple[pika.BlockingConnection,
             print(f"Connection attempt to rabbit from receive "
                   f"order data...")
             connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=RABBIT_MQ_HOST,
+                pika.ConnectionParameters(host=RABBIT_MQ_EXT_HOST,
                                           port=RABBIT_MQ_PORT))
             channel = connection.channel()
 
@@ -115,7 +95,7 @@ def connect_rabbit() -> Tuple[pika.BlockingConnection,
 
 def insert_orders(orders_list: list, es: Elasticsearch):
     current_time = (datetime.now(EST) +
-                    timedelta(hours=1)).strftime(DATE_TIME_FORMAT)
+                    timedelta(hours=1)).strftime(DATETIME_FORMAT)
     for order_dict in orders_list:
         order_dict.update({'datetime_est': current_time})
         # print(f"\n Received order {order_dict}")
@@ -131,7 +111,7 @@ def insert_orders(orders_list: list, es: Elasticsearch):
 
 def save_on_disc(orders_list: list):
     current_time = (datetime.now(EST) +
-                    timedelta(hours=1)).strftime(DATE_TIME_FORMAT)
+                    timedelta(hours=1)).strftime(DATETIME_FORMAT)
     for order_dict in orders_list:
         order_dict.update({'datetime_est': current_time})
         print(f"\n Received order {order_dict}")

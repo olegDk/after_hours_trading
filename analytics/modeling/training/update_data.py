@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pandas as pd
 import yfinance as yfinance
@@ -9,9 +11,12 @@ import pickle
 
 cwd = os.getcwd()
 
-sector_stocks = \
-    pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling'
-                                   f'/training/bloomberg_sectors_filtered.csv')
+if not sys.gettrace():
+    sector_stocks = \
+        pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling/training/bloomberg_sectors_filtered.csv')
+else:
+    sector_stocks = \
+        pd.read_csv(filepath_or_buffer=f'{cwd}/bloomberg_sectors_filtered.csv')
 
 ETFs = ['SPY', 'QQQ', 'CLOU', 'DIA', 'GDX', 'IWM', 'JETS',
         'SMH', 'TAN', 'XBI', 'XLE', 'XLF', 'XLK', 'XLP',
@@ -19,10 +24,16 @@ ETFs = ['SPY', 'QQQ', 'CLOU', 'DIA', 'GDX', 'IWM', 'JETS',
         'IEFA', 'IEF', 'EEM', 'EFA', 'IEMG', 'VXX', 'TLT', 'SOXL',
         'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI', 'BAC']
 
-with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
-    pickle.dump(ETFs, o)
-with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'rb') as i:
-    ETFs_test = pickle.load(i)
+if not sys.gettrace():
+    with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
+        pickle.dump(ETFs, o)
+    with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'rb') as i:
+        ETFs_test = pickle.load(i)
+else:
+    with open(f'{cwd}/../all_indicators.pkl', 'wb') as o:
+        pickle.dump(ETFs, o)
+    with open(f'{cwd}/../all_indicators.pkl', 'rb') as i:
+        ETFs_test = pickle.load(i)
 
 print(ETFs_test)
 
@@ -42,12 +53,16 @@ for i, row in tqdm(sector_stocks.iterrows()):
         stocks_df.loc[index] = [stock, sector]
         index += 1
 
-stocks_df.to_csv(path_or_buf=f'{cwd}/analytics/modeling/'
-                             f'/training/stocks_filtered.csv',
-                 index=None)
-
-stocks_df = pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling/'
-                                           f'/training/stocks_filtered.csv')
+if not sys.gettrace():
+    stocks_df.to_csv(path_or_buf=f'{cwd}/analytics/modeling/'
+                                 f'/training/stocks_filtered.csv',
+                     index=None)
+    stocks_df = pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling/'
+                                               f'/training/stocks_filtered.csv')
+else:
+    stocks_df.to_csv(path_or_buf=f'{cwd}/stocks_filtered.csv',
+                     index=None)
+    stocks_df = pd.read_csv(filepath_or_buffer=f'{cwd}/stocks_filtered.csv')
 
 STOCKs = stocks_df['stock'].to_list()
 
@@ -126,12 +141,16 @@ def get_data_for_tickers(tickers: list,
                          calculate_gaps: bool = True,
                          calculate_liquidity: bool = True,
                          filter_tickers: bool = True) -> dict:
+
     if not file_path[-1:] == '/':
         # include / at the end
         file_path = file_path + '/'
 
-    result = {}
+    if sys.gettrace():
+        file_path = 'ticker_data/'
 
+    result = {}
+    last_possible_date = datetime.now() - timedelta(days=5)  # filter possibly delisted tickers
     for ticker in tqdm(tickers):
         try:
             data = pd.read_csv(filepath_or_buffer=f'{file_path}{file_prefix}{ticker}.csv')
@@ -159,6 +178,10 @@ def get_data_for_tickers(tickers: list,
                     continue
             except Exception as e:
                 print(f'No market cap data for ticker {ticker}')
+                continue
+            last_df_date = data['Date'].tail(1).values[0]
+            last_df_date = datetime.strptime(last_df_date, '%Y-%m-%d')
+            if last_df_date < last_possible_date:
                 continue
 
         if calculate_gaps:
@@ -301,4 +324,6 @@ def create_gaps_data(sectors_names: list):
 
 
 run_data_update()
-create_gaps_data(sectors_names=all_sectors)
+# create_gaps_data(sectors_names=all_sectors)
+
+# get_data_for_tickers(tickers=['C'])

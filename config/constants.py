@@ -1,7 +1,9 @@
 # Connection constants
 RABBIT_MQ_HOST = 'localhost'
+RABBIT_MQ_EXT_HOST = 'rabbit'
 RABBIT_MQ_PORT = 5672
 REDIS_HOST = 'localhost'
+REDIS_EXT_HOST = 'redis'
 REDIS_PORT = 6379
 CLIENT_VERSION_KEY = 'clientVersion'
 ACCOUNT_ID = 'WBTE'
@@ -53,6 +55,8 @@ TARGET = 'target'
 DATETIME = "datetime"
 PCT_NET = 'pct_net'
 ORDERS = 'orders'
+ORDERS_INDEX = 'orders'
+ORDERS_SENT_DOC_TYPE = 'ordersSent'
 POSITIONS = 'positions'
 SENT_ORDERS_BY_TICKER = 'sent_orders_by_ticker'
 DATETIME_FORMAT = '%m-%d-%y %H:%M:%S'

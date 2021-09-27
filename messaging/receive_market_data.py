@@ -3,35 +3,14 @@ from pika.exceptions import AMQPConnectionError
 import socket
 import sys
 import os
-import copy
 import json
 import time
 from pytz import timezone
-from datetime import datetime, timedelta
 from typing import Tuple
 import redis
-
-
-# For testing
-# REDIS_HOST = 'localhost'
-# RABBIT_MQ_HOST = 'localhost'
+from config.constants import *
 
 EST = timezone('EST')
-DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-REDIS_HOST = 'redis'
-REDIS_PORT = 6379
-RABBIT_MQ_HOST = 'rabbit'
-RABBIT_MQ_PORT = 5672
-MARKET_DATA_TYPE = 'marketData'
-L1 = 'l1'
-CLOSE = 'close'
-SYMBOL = 'symbol'
-PCT_BID_NET = 'pctBidNet'
-PCT_ASK_NET = 'pctAskNet'
-BID = 'bid'
-ASK = 'ask'
-BID_VENUE = 'bidVenue'
-ASK_VENUE = 'askVenue'
 L1_KEYS = [PCT_BID_NET, PCT_ASK_NET, BID, ASK,
            BID_VENUE, ASK_VENUE, CLOSE]
 
@@ -56,7 +35,7 @@ def connect_redis() -> redis.Redis:
                   f"===================================================")
             print(f"Connection attempt to redis from receive "
                   f"market data...")
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+            r = redis.Redis(host=REDIS_EXT_HOST, port=REDIS_PORT)
             print(f"Connected to redis from receive "
                   f"market data successfully")
             print(f"========================================================="
@@ -87,7 +66,7 @@ def connect_rabbit() -> Tuple[pika.BlockingConnection,
             print(f"Connection attempt to rabbit from receive "
                   f"market data...")
             connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=RABBIT_MQ_HOST,
+                pika.ConnectionParameters(host=RABBIT_MQ_EXT_HOST,
                                           port=RABBIT_MQ_PORT))
             channel = connection.channel()
 

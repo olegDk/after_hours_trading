@@ -3,5 +3,5 @@ docker rm $(docker ps -a -q)
 docker image rm algotrading_receive_market_data
 docker image rm algotrading_receive_order_related_data
 docker image rm algotrading_inference_runner
-#docker image rm algotrading_receive_news
+docker image rm algotrading_receive_news
 docker image rm redis
