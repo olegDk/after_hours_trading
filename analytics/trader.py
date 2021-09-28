@@ -592,19 +592,20 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['BB',
                       'CS',
-                      'BOX',
-                      'LAZ',
-                      'JKS',
+                      'CRK',
                       'CHWY',
-                      'AMZN',
-                      'NOW',
-                      'MU'
+                      'OKTA',
+                      'MS',
+                      'WFC',
+                      'AMAT',
+                      'MCHP',
+
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
-                       BANKS: BULL,
-                       OIL: BULL,
+                       BANKS: NEUTRAL,
+                       OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
-                       SEMICONDUCTORS: BEAR,
+                       SEMICONDUCTORS: NEUTRAL,
                        CHINA: NEUTRAL}
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
