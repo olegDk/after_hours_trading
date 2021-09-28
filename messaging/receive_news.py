@@ -34,7 +34,7 @@ def process_news(news_data: dict):
                                   second=now_init.second)
             # Filter by datetime
             delta_days = (now_init - dt_aligned).days
-            postmarket_condition = delta_days == 3 and dt_hour >= 16  # Automate monday detection
+            postmarket_condition = delta_days == 1 and dt_hour >= 16  # Automate monday detection
             premarket_condition = delta_days == 0
             if premarket_condition or postmarket_condition:
                 relevant = na.is_relevant(text=content)
