@@ -599,7 +599,7 @@ class Trader:
                       'WFC',
                       'AMAT',
                       'MCHP',
-
+                      'CRK'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        BANKS: NEUTRAL,
