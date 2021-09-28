@@ -51,6 +51,7 @@ N_NEWS = 'n_news'
 
 # Plain constants to use in code
 MODEL = 'model'
+MODEL_MAIN_ETF = 'model_main_etf'
 TARGET = 'target'
 DATETIME = "datetime"
 PCT_NET = 'pct_net'
@@ -125,3 +126,11 @@ BEFORE_9_N_ORDERS = int(MAX_ORDERS/2)
 BEFORE_9_15_ORDERS = BEFORE_9_N_ORDERS + BEFORE_8_30_N_ORDERS
 BEFORE_OPEN_N_ORDERS = MAX_ORDERS
 NEWS_RELEVANCE_KEY = 'news_relevance'
+MAE = 'mae'
+MAE_MAIN_ETF = 'mae_main_etf'
+STOCK_STD = 'stock_std'
+MEAN = 'mean'
+LOWER_SIGMA = 'lower_sigma'
+UPPER_SIGMA = 'upper_sigma'
+LOWER_TWO_SIGMA = 'lower_two_sigma'
+UPPER_TWO_SIGMA = 'upper_two_sigma'

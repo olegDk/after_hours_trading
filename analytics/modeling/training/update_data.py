@@ -151,6 +151,9 @@ def get_data_for_tickers(tickers: list,
 
     result = {}
     last_possible_date = datetime.now() - timedelta(days=5)  # filter possibly delisted tickers
+    first_possible_date = datetime(year=2020,
+                                   month=1,
+                                   day=1)
     for ticker in tqdm(tickers):
         try:
             data = pd.read_csv(filepath_or_buffer=f'{file_path}{file_prefix}{ticker}.csv')
@@ -179,9 +182,12 @@ def get_data_for_tickers(tickers: list,
             except Exception as e:
                 print(f'No market cap data for ticker {ticker}')
                 continue
+
             last_df_date = data['Date'].tail(1).values[0]
             last_df_date = datetime.strptime(last_df_date, '%Y-%m-%d')
-            if last_df_date < last_possible_date:
+            first_df_date = data['Date'].head(1).values[0]
+            first_df_date = datetime.strptime(first_df_date, '%Y-%m-%d')
+            if last_df_date < last_possible_date or first_df_date > first_possible_date:
                 continue
 
         if calculate_gaps:
@@ -324,6 +330,4 @@ def create_gaps_data(sectors_names: list):
 
 
 run_data_update()
-# create_gaps_data(sectors_names=all_sectors)
-
-# get_data_for_tickers(tickers=['C'])
+create_gaps_data(sectors_names=all_sectors)

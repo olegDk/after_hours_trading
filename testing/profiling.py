@@ -11,9 +11,9 @@ trader = Trader()
 
 test_md_json = {"messageId": "marketData",
                 "data": [
-                    {"symbol": "MSFT", "close": 1001.85, "pctBidNet": -0.3430278491120655,
+                    {"symbol": "SWKS", "close": 1001.85, "pctBidNet": -0.3430278491120655,
                      "pctAskNet": 0.7819032687719016, "bid": 1000.0, "ask": 1001.5, "bidVenue": 1, "askVenue": 1},
-                    {"symbol": "ATVI", "close": 1009.51, "pctBidNet": -0.5733179612383288,
+                    {"symbol": "COP", "close": 1009.51, "pctBidNet": -0.5733179612383288,
                      "pctAskNet": 0.15487884355065562, "bid": 1000.0, "ask": 1001.5, "bidVenue": 1, "askVenue": 1},
                     {"symbol": "OXY", "close": 995.85, "pctBidNet": -0.44386369725636365,
                      "pctAskNet": 0.8218819164979141, "bid": 1000.0, "ask": 1001.5, "bidVenue": 1, "askVenue": 1},
@@ -43,13 +43,6 @@ def test_process_symbol_dict():
     lp.print_stats()
 
 
-def test_process_news_dict():
-    lp = LineProfiler()
-    lp_wrapper = lp(trader.process_news)
-    lp_wrapper(test_news_json)
-    lp.print_stats()
-
-
 def test_get_tier_prop():
     lp = LineProfiler()
     lp_wrapper = lp(trader.get_tier_prop)
@@ -72,8 +65,7 @@ def test_send_md_to_mq():
 
 
 # test_process_md_message()
-# test_process_symbol_dict()
-# test_process_news_dict()
+test_process_symbol_dict()
 # test_get_tier_prop()
 # test_validate_tier()
 # test_send_md_to_mq()

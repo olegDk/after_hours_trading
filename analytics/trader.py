@@ -50,8 +50,19 @@ def generate_cid() -> int:
 def get_position_size(price: float,
                       bp: float,
                       bp_usage_pct: float,
-                      prop: float) -> int:
-    return int((bp * bp_usage_pct * 0.1 * 0.0625 * prop) / (price + 1e-7))
+                      prop: float,
+                      prediction,
+                      lower_sigma,
+                      upper_sigma,
+                      lower_two_sigma,
+                      upper_two_sigma
+                      ) -> int:
+    size = int((bp * bp_usage_pct * 0.1 * 0.0625 * prop) / (price + 1e-7))
+    if prediction <= lower_two_sigma or prediction >= upper_two_sigma:
+        size = int(0.5*size)
+    if prediction <= lower_sigma or prediction >= upper_sigma:
+        size = int(0.75*size)
+    return size
 
 
 def current_percentage(l1_dict: dict) -> float:
@@ -144,8 +155,8 @@ def init_stocks_data() -> Tuple[dict, list]:
         indicators_list = pickle.load(i)
 
     # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: 0,
-                                   PCT_ASK_NET: 0}
+    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
+                                   PCT_ASK_NET: INIT_PCT}
                        for indicator in indicators_list}
 
     print(indicators_dict)
@@ -182,13 +193,14 @@ def init_models() -> dict:
     return models_dict
 
 
-def init_factors() -> Tuple[dict, dict, dict, dict, dict]:
+def init_factors() -> Tuple[dict, dict, dict, dict, dict, dict]:
     print('Initializing factors...')
     sectors_path = 'analytics/modeling/sectors'
     sectors_dirs = \
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
     factors_dict = {}
+    main_etfs_dict = {}
     stock_to_sector = {}
     sector_to_indicators = {}
     sector_to_stocks = {}
@@ -198,10 +210,14 @@ def init_factors() -> Tuple[dict, dict, dict, dict, dict]:
         print(f'Sector: {sector}...')
         tickers_indicators_filtered_path \
             = f'{sector_dir}/models/tickers_indicators_filtered.pkl'
+        main_etfs_filtered_path = f'{sector_dir}/models/tickers_main_etf_filtered.pkl'
         try:
             with open(tickers_indicators_filtered_path, 'rb') as i:
                 tickers_indicators_filtered = pickle.load(i)
             factors_dict.update(tickers_indicators_filtered)
+            with open(main_etfs_filtered_path, 'rb') as i:
+                main_etfs_filtered = pickle.load(i)
+            main_etfs_dict.update(main_etfs_filtered)
             current_sector_stocks = list(tickers_indicators_filtered.keys())
             key = current_sector_stocks[0]
             current_sector_indicators = tickers_indicators_filtered[key]
@@ -228,10 +244,12 @@ def init_factors() -> Tuple[dict, dict, dict, dict, dict]:
     indicator_to_sectors = invert_dict(d=sector_to_indicators)
     indicator_to_stocks = extend_dict(fr=indicator_to_sectors, to=sector_to_stocks)
 
-    return factors_dict, stock_to_sector, sector_to_indicators, indicator_to_sectors, indicator_to_stocks
+    return factors_dict, main_etfs_dict, stock_to_sector, \
+           sector_to_indicators, indicator_to_sectors, indicator_to_stocks
 
 
 def get_order(prediction,
+              prediction_main_etf,
               pct_bid_net,
               pct_ask_net,
               indicators,
@@ -243,6 +261,11 @@ def get_order(prediction,
               bid_venue,
               ask_venue,
               std_err,
+              std_err_main_etf,
+              lower_sigma,
+              upper_sigma,
+              lower_two_sigma,
+              upper_two_sigma,
               policy,
               prop,
               delta_long_coef,
@@ -268,7 +291,6 @@ def get_order(prediction,
     delta_short = prediction - pct_bid_net
     trade_flag = delta_long >= std_err * delta_long_coef or \
                  delta_short <= -std_err * delta_short_coef
-    trade_flag = True
     if trade_flag:
         side = BUY if np.sign(delta_long) > 0 else SELL
         order_params = side_params[side]
@@ -287,7 +309,12 @@ def get_order(prediction,
         order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
                                                      bp=bp,
                                                      bp_usage_pct=bp_usage_pct,
-                                                     prop=prop)
+                                                     prop=prop,
+                                                     prediction=prediction,
+                                                     lower_sigma=lower_sigma,
+                                                     upper_sigma=upper_sigma,
+                                                     lower_two_sigma=lower_two_sigma,
+                                                     upper_two_sigma=upper_two_sigma)
         order[ORDER][DATA][VENUE] = order_params[VENUE]
         order[ORDER][DATA][TARGET] = target
         order[ORDER][CID] = generate_cid()
@@ -303,6 +330,7 @@ class Trader:
         self.__tickers = get_tickers()
         self.__stocks_l1, self.__all_indicators = init_stocks_data()
         self.__factors, \
+        self.__main_etfs, \
         self.__stock_to_sector, \
         self.__sector_to_indicators, \
         self.__indicator_to_sectors, \
@@ -687,16 +715,18 @@ class Trader:
             try:
                 # Get indicators
                 indicators = self.__factors[symbol]
+                main_etf = self.__main_etfs[symbol]
                 factors_l1 = list(
                     map(lambda x: current_percentage(
                         self.__stocks_l1.get(x)), indicators))
+                main_etf = [current_percentage(self.__stocks_l1.get(main_etf))]
 
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
-                    valid_tier = True
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
+                        model_main_etf = model_dict[MODEL_MAIN_ETF]
                         pct_bid_net = symbol_dict[PCT_BID_NET]
                         pct_ask_net = symbol_dict[PCT_ASK_NET]
                         bid_l1 = symbol_dict[BID]
@@ -707,8 +737,15 @@ class Trader:
                         # ask_venue = 1
                         close = symbol_dict[CLOSE]
                         pred_array = np.array(factors_l1).reshape(1, -1)
+                        main_etf_pred_array = np.array(main_etf).reshape(1, -1)
                         prediction = model.predict(pred_array)[0]
-                        std_err = model_dict['mae']
+                        prediction_main_etf = model_main_etf.predict(main_etf_pred_array)[0]
+                        std_err = model_dict[MAE]
+                        std_err_main_etf = model_dict[MAE_MAIN_ETF]
+                        lower_sigma = model_dict[LOWER_SIGMA]
+                        upper_sigma = model_dict[UPPER_SIGMA]
+                        lower_two_sigma = model_dict[LOWER_TWO_SIGMA]
+                        upper_two_sigma = model_dict[UPPER_TWO_SIGMA]
 
                         # Check for trade opportunity
                         symbol_sector = self.__stock_to_sector[symbol]
@@ -718,6 +755,7 @@ class Trader:
                         bp = float(acc_info[BP_KEY])
                         bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
                         order_data = get_order(prediction=prediction,
+                                               prediction_main_etf=prediction_main_etf,
                                                pct_bid_net=pct_bid_net,
                                                pct_ask_net=pct_ask_net,
                                                indicators=indicators,
@@ -729,6 +767,11 @@ class Trader:
                                                bid_venue=bid_venue,
                                                ask_venue=ask_venue,
                                                std_err=std_err,
+                                               std_err_main_etf=std_err_main_etf,
+                                               lower_sigma=lower_sigma,
+                                               upper_sigma=upper_sigma,
+                                               lower_two_sigma=lower_two_sigma,
+                                               upper_two_sigma=upper_two_sigma,
                                                policy=symbol_policy,
                                                prop=symbol_prop,
                                                delta_long_coef=delta_long_coef,
