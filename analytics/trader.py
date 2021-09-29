@@ -533,30 +533,30 @@ class Trader:
             price = float(msg[PRICE])
             investment = size * price
             if symbol in self.__positions:
-                pos_size = self.__positions[SYMBOL][SIZE]
-                pos_side = self.__positions[SYMBOL][SIDE]
-                pos_price = self.__positions[SYMBOL][PRICE]
-                pos_investment = self.__positions[SYMBOL][INVESTMENT]
+                pos_size = self.__positions[symbol][SIZE]
+                pos_side = self.__positions[symbol][SIDE]
+                pos_price = self.__positions[symbol][PRICE]
+                pos_investment = self.__positions[symbol][INVESTMENT]
                 # if add
                 if side == pos_side:
                     pos_size = pos_size + size
-                    self.__positions[SYMBOL][SIZE] = pos_size
+                    self.__positions[symbol][SIZE] = pos_size
                     pos_investment = pos_investment + investment
-                    self.__positions[SYMBOL][INVESTMENT] = pos_investment
+                    self.__positions[symbol][INVESTMENT] = pos_investment
                     pos_price = pos_investment / pos_size
-                    self.__positions[SYMBOL][PRICE] = pos_price
+                    self.__positions[symbol][PRICE] = pos_price
                 # if cover
                 elif size <= pos_size:
                     pos_size = pos_size - size
-                    self.__positions[SYMBOL][SIZE] = pos_size
-                    self.__positions[SYMBOL][INVESTMENT] = pos_size * pos_price
+                    self.__positions[symbol][SIZE] = pos_size
+                    self.__positions[symbol][INVESTMENT] = pos_size * pos_price
                 # if flip
                 elif size > pos_size:
                     pos_size = np.abs(pos_size - size)
-                    self.__positions[SYMBOL][SIZE] = pos_size
-                    self.__positions[SYMBOL][SIDE] = pos_side
-                    self.__positions[SYMBOL][PRICE] = price
-                    self.__positions[SYMBOL][INVESTMENT] = pos_size * price
+                    self.__positions[symbol][SIZE] = pos_size
+                    self.__positions[symbol][SIDE] = pos_side
+                    self.__positions[symbol][PRICE] = price
+                    self.__positions[symbol][INVESTMENT] = pos_size * price
             # If there is no position for current symbol
             else:
                 self.__positions[symbol] = {
@@ -726,7 +726,7 @@ class Trader:
                 if INIT_PCT not in factors_l1:
                     # valid_tier = self.validate_tier(symbol=symbol)
                     valid_tier = True
-                    
+
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
