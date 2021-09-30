@@ -38,7 +38,6 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
             pass
         elif msg_type == ORDER_REPORT:
             handle_order_report(json_msg)
-            time.sleep(10)
         elif msg_type == SUBSCRIBE:
             pass
 
