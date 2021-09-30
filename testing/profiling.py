@@ -28,6 +28,14 @@ test_news_json = {"messageId": "news", "symbol": "PDCE",
                              "neutral Q3", "relevance": 9, "isYesterdaysAMC": 0,
                   "datetime": "09-25-21 20:48:21"}
 
+test_order_report_json = {"cid": 1042,
+                          "id": 3314487761576189735,
+                          "messageId": "orderReport",
+                          "price": "166.670",
+                          "side": 84,
+                          "size": 760,
+                          "symbol": "SWKS"}
+
 
 def test_process_md_message():
     lp = LineProfiler()
@@ -64,8 +72,16 @@ def test_send_md_to_mq():
     lp.print_stats()
 
 
+def test_process_order_report():
+    lp = LineProfiler()
+    lp_wrapper = lp(trader.process_order_report)
+    lp_wrapper(test_order_report_json)
+    lp.print_stats()
+
+
 # test_process_md_message()
-test_process_symbol_dict()
+# test_process_symbol_dict()
 # test_get_tier_prop()
 # test_validate_tier()
 # test_send_md_to_mq()
+test_process_order_report()

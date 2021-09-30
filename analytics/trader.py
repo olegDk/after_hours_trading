@@ -338,7 +338,7 @@ class Trader:
         self.__indicators_to_stocks = init_factors()
         self.__init_policy()
         self.__models = init_models()
-        self.__positions = {}
+        self.positions = {}
         self.__orders = {}
         self.__sent_orders_by_ticker = {}
         self.__na = NewsAnalyzer()
@@ -362,21 +362,21 @@ class Trader:
                     pos_side = pos_dict[SIDE]
                     pos_price = pos_dict[PRICE]
                     pos_investment = pos_size * pos_price
-                    if symbol and symbol in self.__positions:
-                        self.__positions[symbol][SIZE] = pos_size
-                        self.__positions[symbol][SIDE] = pos_side
-                        self.__positions[symbol][PRICE] = pos_price
-                        self.__positions[symbol][INVESTMENT] = pos_investment
+                    if symbol and symbol in self.positions:
+                        self.positions[symbol][SIZE] = pos_size
+                        self.positions[symbol][SIDE] = pos_side
+                        self.positions[symbol][PRICE] = pos_price
+                        self.positions[symbol][INVESTMENT] = pos_investment
                     elif symbol:
-                        self.__positions[symbol] = {
+                        self.positions[symbol] = {
                             SIZE: pos_size,
                             SIDE: pos_side,
                             PRICE: pos_price,
                             INVESTMENT: pos_investment
                         }
                 positions_to_save = {}
-                for key in self.__positions.keys():
-                    positions_to_save[key] = json.dumps(self.__positions[key])
+                for key in self.positions.keys():
+                    positions_to_save[key] = json.dumps(self.positions[key])
                 self.__redis_connector.set_dict(name=POSITIONS,
                                                 d=positions_to_save,
                                                 rewrite=True)
@@ -397,10 +397,10 @@ class Trader:
                                                 rewrite=True)
 
             # Calculate number of sent tiers by symbol if exist
-            if self.__positions:
-                for symbol in self.__positions.keys():
-                    bp_symbol = self.__positions[symbol][SIZE] * \
-                                self.__positions[symbol][PRICE]
+            if self.positions:
+                for symbol in self.positions.keys():
+                    bp_symbol = self.positions[symbol][SIZE] * \
+                                self.positions[symbol][PRICE]
                     print(f'BP symbol: {symbol}: {bp_symbol}')
                     n_tiers_symbol = int(bp_symbol / cur_bp_per_tier)
                     print(f'cur_bp_per_tier: {cur_bp_per_tier}')
@@ -414,8 +414,8 @@ class Trader:
                 for symbol in self.__orders:
                     n_tiers_symbol = 0
                     side = None
-                    if symbol in self.__positions:
-                        side = self.__positions[symbol][SIDE]
+                    if symbol in self.positions:
+                        side = self.positions[symbol][SIDE]
                     for order in self.__orders[symbol]:
                         order_side = order[SIDE]
                         if not side or side == order_side:
@@ -532,41 +532,44 @@ class Trader:
             size = int(msg[SIZE])
             price = float(msg[PRICE])
             investment = size * price
-            if symbol in self.__positions:
-                pos_size = self.__positions[symbol][SIZE]
-                pos_side = self.__positions[symbol][SIDE]
-                pos_price = self.__positions[symbol][PRICE]
-                pos_investment = self.__positions[symbol][INVESTMENT]
+            if symbol in self.positions:
+                pos_size = self.positions[symbol][SIZE]
+                pos_side = self.positions[symbol][SIDE]
+                pos_price = self.positions[symbol][PRICE]
+                pos_investment = self.positions[symbol][INVESTMENT]
                 # if add
                 if side == pos_side:
                     pos_size = pos_size + size
-                    self.__positions[symbol][SIZE] = pos_size
+                    self.positions[symbol][SIZE] = pos_size
                     pos_investment = pos_investment + investment
-                    self.__positions[symbol][INVESTMENT] = pos_investment
+                    self.positions[symbol][INVESTMENT] = pos_investment
                     pos_price = pos_investment / pos_size
-                    self.__positions[symbol][PRICE] = pos_price
+                    self.positions[symbol][PRICE] = pos_price
                 # if cover
                 elif size <= pos_size:
                     pos_size = pos_size - size
-                    self.__positions[symbol][SIZE] = pos_size
-                    self.__positions[symbol][INVESTMENT] = pos_size * pos_price
+                    self.positions[symbol][SIZE] = pos_size
+                    self.positions[symbol][INVESTMENT] = pos_size * pos_price
                 # if flip
                 elif size > pos_size:
-                    pos_size = np.abs(pos_size - size)
-                    self.__positions[symbol][SIZE] = pos_size
-                    self.__positions[symbol][SIDE] = pos_side
-                    self.__positions[symbol][PRICE] = price
-                    self.__positions[symbol][INVESTMENT] = pos_size * price
+                    pos_size = int(np.abs(pos_size - size))
+                    print(pos_size)
+                    print(type(pos_size))
+                    self.positions[symbol][SIZE] = pos_size
+                    self.positions[symbol][SIDE] = side
+                    self.positions[symbol][PRICE] = price
+                    self.positions[symbol][INVESTMENT] = pos_size * price
             # If there is no position for current symbol
             else:
-                self.__positions[symbol] = {
+                self.positions[symbol] = {
                     SIZE: size,
                     SIDE: side,
                     PRICE: price,
                     INVESTMENT: investment
                 }
             # Redis update for current symbol
-            symbol_dict_str = json.dumps(self.__positions[symbol])
+            print(self.positions[symbol])
+            symbol_dict_str = json.dumps(self.positions[symbol])
             self.__redis_connector.h_set_str(h=POSITIONS,
                                              key=symbol,
                                              value=symbol_dict_str)
