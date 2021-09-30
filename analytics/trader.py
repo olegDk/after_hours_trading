@@ -344,8 +344,7 @@ class Trader:
         self.__na = NewsAnalyzer()
 
     def get_subscription_list(self) -> list:
-        # return self.__tickers
-        return ['SSFI']
+        return self.__tickers
 
     def update_account_information(self,
                                    acc_info: dict):
