@@ -291,7 +291,7 @@ def get_order(prediction,
     delta_short = prediction - pct_bid_net
     # trade_flag = delta_long >= std_err * delta_long_coef or \
     #              delta_short <= -std_err * delta_short_coef
-    trade_flag = np.random.uniform() > 0.8
+    trade_flag = np.random.uniform() > 0.95
     if trade_flag:
         side = BUY if np.sign(delta_long) > 0 else SELL
         order_params = side_params[side]
