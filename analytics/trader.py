@@ -553,8 +553,6 @@ class Trader:
                 # if flip
                 elif size > pos_size:
                     pos_size = int(np.abs(pos_size - size))
-                    print(pos_size)
-                    print(type(pos_size))
                     self.positions[symbol][SIZE] = pos_size
                     self.positions[symbol][SIDE] = side
                     self.positions[symbol][PRICE] = price

@@ -4,7 +4,7 @@ import traceback
 import config.messages as messages
 from analytics.trader import Trader
 from config.constants import *
-import cProfile
+import time
 
 trader = Trader()
 seq_counter = 1
@@ -38,6 +38,7 @@ async def reply(writer: asyncio.StreamWriter, json_msg: dict):
             pass
         elif msg_type == ORDER_REPORT:
             handle_order_report(json_msg)
+            time.sleep(10)
         elif msg_type == SUBSCRIBE:
             pass
 
