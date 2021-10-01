@@ -50,18 +50,9 @@ def generate_cid() -> int:
 def get_position_size(price: float,
                       bp: float,
                       bp_usage_pct: float,
-                      prop: float,
-                      prediction,
-                      lower_sigma,
-                      upper_sigma,
-                      lower_two_sigma,
-                      upper_two_sigma
+                      prop: float
                       ) -> int:
     size = int((bp * bp_usage_pct * 0.1 * 0.0625 * prop) / (price + 1e-7))
-    if prediction <= lower_two_sigma or prediction >= upper_two_sigma:
-        size = int(0.5*size)
-    if prediction <= lower_sigma or prediction >= upper_sigma:
-        size = int(0.75*size)
     return size
 
 
@@ -248,6 +239,46 @@ def init_factors() -> Tuple[dict, dict, dict, dict, dict, dict]:
            sector_to_indicators, indicator_to_sectors, indicator_to_stocks
 
 
+def adjust_limit_price(side,
+                       l1_price,
+                       target,
+                       prem_low,
+                       prem_high,
+                       vwap) -> float:
+
+    if vwap and (prem_low <= vwap <= prem_high):  # if there were another trades
+
+        if side == SELL:
+            # short logic
+            if prem_low <= l1_price <= prem_high:
+                if l1_price >= vwap:
+                    return l1_price
+                else:
+                    adjusted_price = vwap - float(np.abs(vwap-target))
+                    return adjusted_price if adjusted_price >= l1_price else l1_price
+            elif l1_price >= prem_high:
+                return l1_price
+            elif l1_price <= prem_low:
+                adjusted_price = vwap - float(np.abs(vwap - target))
+                return adjusted_price if adjusted_price >= l1_price else l1_price
+
+        elif side == BUY:
+            # long logic
+            if prem_low <= l1_price <= prem_high:
+                if l1_price <= vwap:
+                    return l1_price
+                else:
+                    adjusted_price = vwap + float(np.abs(vwap-target))
+                    return adjusted_price if adjusted_price <= l1_price else l1_price
+            elif l1_price <= prem_low:
+                return l1_price
+            elif l1_price >= prem_high:
+                adjusted_price = vwap + float(np.abs(vwap - target))
+                return adjusted_price if adjusted_price <= l1_price else l1_price
+
+    return l1_price
+
+
 def get_order(prediction,
               prediction_main_etf,
               pct_bid_net,
@@ -260,6 +291,11 @@ def get_order(prediction,
               ask_l1,
               bid_venue,
               ask_venue,
+              vwap,
+              prem_high,
+              prem_low,
+              imb,
+              vol,
               std_err,
               std_err_main_etf,
               lower_sigma,
@@ -305,17 +341,18 @@ def get_order(prediction,
         order = messages.order_request()
         order[ORDER][DATA][SYMBOL] = symbol
         price = order_params[PRICE]
-        order[ORDER][DATA][LIMIT] = price
+        order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
+                                                       l1_price=price,
+                                                       target=target,
+                                                       prem_low=prem_low,
+                                                       prem_high=prem_high,
+                                                       vwap=vwap
+                                                       )
         order[ORDER][DATA][SIDE] = side
         order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
                                                      bp=bp,
                                                      bp_usage_pct=bp_usage_pct,
-                                                     prop=prop,
-                                                     prediction=prediction,
-                                                     lower_sigma=lower_sigma,
-                                                     upper_sigma=upper_sigma,
-                                                     lower_two_sigma=lower_two_sigma,
-                                                     upper_two_sigma=upper_two_sigma)
+                                                     prop=prop)
         order[ORDER][DATA][VENUE] = order_params[VENUE]
         order[ORDER][DATA][TARGET] = target
         order[ORDER][CID] = generate_cid()
@@ -741,6 +778,11 @@ class Trader:
                         ask_venue = symbol_dict[ASK_VENUE]
                         # ask_venue = 1
                         close = symbol_dict[CLOSE]
+                        vwap = symbol_dict[VWAP]
+                        prem_high = symbol_dict[PREM_HIGH]
+                        prem_low = symbol_dict[PREM_LOW]
+                        imb = symbol_dict[IMB]
+                        vol = symbol_dict[VOL]
                         pred_array = np.array(factors_l1).reshape(1, -1)
                         main_etf_pred_array = np.array(main_etf).reshape(1, -1)
                         prediction = model.predict(pred_array)[0]
@@ -771,6 +813,11 @@ class Trader:
                                                ask_l1=ask_l1,
                                                bid_venue=bid_venue,
                                                ask_venue=ask_venue,
+                                               vwap=vwap,
+                                               prem_high=prem_high,
+                                               prem_low=prem_low,
+                                               imb=imb,
+                                               vol=vol,
                                                std_err=std_err,
                                                std_err_main_etf=std_err_main_etf,
                                                lower_sigma=lower_sigma,

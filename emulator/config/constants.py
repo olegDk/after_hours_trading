@@ -36,6 +36,12 @@ CONTENT = 'content'
 RELEVANCE = 'relevance'
 AMC_KEY = 'isYesterdaysAMC'
 BP_POS = 'BP_POS'
+IMB = 'imb'
+OPEN_CUR_REF_PRICE = 'openingCurrentReferencePrice'
+VOL = 'vol'
+PREM_HIGH = 'premarketHigh'
+PREM_LOW = 'premarketLow'
+VWAP = 'vwap'
 
 # Message types
 MESSAGE_ID = 'messageId'

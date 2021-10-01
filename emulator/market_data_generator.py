@@ -162,15 +162,28 @@ def get_uniform_tickers() -> dict:
 
 def sample_stock_l1(ticker: str) -> dict:
     close = round(np.random.uniform(990.0, 1010.0), 2)
+    vwap = round(np.random.uniform(990.0, 1010.0), 2)
+    open_cur_ref_price = round(np.random.uniform(990.0, 1010.0), 2)
+    premarket_high = 1010.0
+    premarket_low = 990.0
+    imb = np.random.randint(1000, 1000000)
+    vol = np.random.randint(1000, 1000000)
     sample_dict = {SYMBOL: ticker, CLOSE: close}
     bid_net = uniform(-1, 1)
     ask_net = uniform(bid_net, 1)
     sample_dict[PCT_BID_NET] = bid_net
     sample_dict[PCT_ASK_NET] = ask_net
-    sample_dict[BID] = 1000.0
-    sample_dict[ASK] = 1001.5
+    sample_dict[BID] = (bid_net * close) / 100 + close
+    sample_dict[ASK] = (ask_net * close) / 100 + close
     sample_dict[BID_VENUE] = 1
     sample_dict[ASK_VENUE] = 1
+    sample_dict[CLOSE] = close
+    sample_dict[VWAP] = vwap
+    sample_dict[OPEN_CUR_REF_PRICE] = open_cur_ref_price
+    sample_dict[PREM_HIGH] = premarket_high
+    sample_dict[PREM_LOW] = premarket_low
+    sample_dict[IMB] = imb
+    sample_dict[VOL] = vol
     return sample_dict
 
 
