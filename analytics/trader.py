@@ -246,7 +246,7 @@ def adjust_limit_price(side,
                        prem_high,
                        vwap) -> float:
 
-    if vwap and (prem_low <= vwap <= prem_high):  # if there were another trades
+    if vwap:  # and (prem_low <= vwap <= prem_high):  # if there were another trades
 
         if side == SELL:
             # short logic
@@ -254,12 +254,12 @@ def adjust_limit_price(side,
                 if l1_price >= vwap:
                     return l1_price
                 else:
-                    adjusted_price = vwap - float(np.abs(vwap-target))
+                    adjusted_price = round(vwap - float(np.abs(vwap-target)), 2)
                     return adjusted_price if adjusted_price >= l1_price else l1_price
             elif l1_price >= prem_high:
                 return l1_price
             elif l1_price <= prem_low:
-                adjusted_price = vwap - float(np.abs(vwap - target))
+                adjusted_price = round(vwap - float(np.abs(vwap-target)), 2)
                 return adjusted_price if adjusted_price >= l1_price else l1_price
 
         elif side == BUY:
@@ -268,12 +268,12 @@ def adjust_limit_price(side,
                 if l1_price <= vwap:
                     return l1_price
                 else:
-                    adjusted_price = vwap + float(np.abs(vwap-target))
+                    adjusted_price = round(vwap + float(np.abs(vwap-target)), 2)
                     return adjusted_price if adjusted_price <= l1_price else l1_price
             elif l1_price <= prem_low:
                 return l1_price
             elif l1_price >= prem_high:
-                adjusted_price = vwap + float(np.abs(vwap - target))
+                adjusted_price = round(vwap + float(np.abs(vwap-target)), 2)
                 return adjusted_price if adjusted_price <= l1_price else l1_price
 
     return l1_price
