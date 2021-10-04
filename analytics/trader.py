@@ -244,7 +244,6 @@ def adjust_limit_price(side,
                        target,
                        prem_low,
                        prem_high,
-                       prediction_main_etf,
                        vwap) -> float:
 
     if vwap:  # and (prem_low <= vwap <= prem_high):  # if there were another trades
