@@ -244,37 +244,41 @@ def adjust_limit_price(side,
                        target,
                        prem_low,
                        prem_high,
-                       vwap) -> float:
+                       vwap,
+                       prediction_main_etf,
+                       std_err_main_etf) -> float:
 
     if vwap:  # and (prem_low <= vwap <= prem_high):  # if there were another trades
 
         # short logic
         if side == SELL:
+            short_bound = prediction_main_etf + std_err_main_etf / 3
             if prem_low <= l1_price <= prem_high:
                 if l1_price >= vwap:
-                    return l1_price
+                    return max([l1_price, short_bound])
                 else:
-                    adjusted_price = round(vwap - float(np.abs(vwap-target))/3, 2)
-                    return adjusted_price if adjusted_price >= l1_price else l1_price
+                    adjusted_price = round(vwap - float(np.abs(vwap-target)) / 3, 2)
+                    return max([adjusted_price, l1_price, short_bound])
             elif l1_price >= prem_high:
-                return l1_price
+                return max([l1_price, short_bound])
             elif l1_price <= prem_low:
-                adjusted_price = round(vwap - float(np.abs(vwap-target))/3, 2)
-                return adjusted_price if adjusted_price >= l1_price else l1_price
+                adjusted_price = round(vwap - float(np.abs(vwap-target)) / 3, 2)
+                return max([adjusted_price, l1_price, short_bound])
 
         # long logic
         elif side == BUY:
+            long_bound = prediction_main_etf - std_err_main_etf / 3
             if prem_low <= l1_price <= prem_high:
                 if l1_price <= vwap:
-                    return l1_price
+                    return min([l1_price, long_bound])
                 else:
-                    adjusted_price = round(vwap + float(np.abs(vwap-target))/3, 2)
-                    return adjusted_price if adjusted_price <= l1_price else l1_price
+                    adjusted_price = round(vwap + float(np.abs(vwap-target)) / 3, 2)
+                    return min([adjusted_price, l1_price, long_bound])
             elif l1_price <= prem_low:
-                return l1_price
+                return min([l1_price, long_bound])
             elif l1_price >= prem_high:
-                adjusted_price = round(vwap + float(np.abs(vwap-target))/3, 2)
-                return adjusted_price if adjusted_price <= l1_price else l1_price
+                adjusted_price = round(vwap + float(np.abs(vwap-target)) / 3, 2)
+                return min([adjusted_price, l1_price, long_bound])
 
     return l1_price
 
@@ -345,7 +349,9 @@ def get_order(prediction,
                                                        target=target,
                                                        prem_low=prem_low,
                                                        prem_high=prem_high,
-                                                       vwap=vwap
+                                                       vwap=vwap,
+                                                       prediction_main_etf=prediction_main_etf,
+                                                       std_err_main_etf=std_err_main_etf
                                                        )
         order[ORDER][DATA][SIDE] = side
         order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],

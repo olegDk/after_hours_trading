@@ -210,9 +210,8 @@ def get_data_for_tickers(tickers: list,
             data['Prev Close'] = data['Adj Close'].shift(1)
             data['PrevPrev Close'] = data['Adj Close'].shift(2)
             data['%Gain'] = (data['Adj Close'] - data['Prev Close']) / data['Prev Close'] * 100
-            data['%PrevGain'] = (data['Adj Close'] - data['PrevPrev Close']) / data['PrevPrev Close'] * 100
             data['%YesterdaysGain'] = data['%Gain'].shift(1)
-            data['%2DaysGain'] = data['%PrevGain'].shift(1)
+            data['%2DaysGain'] = (data['Adj Close'] - data['PrevPrev Close']) / data['PrevPrev Close'] * 100
             data['%Gap'] = (data['Open'] - data['Prev Close']) / data['Prev Close'] * 100
 
         if calculate_liquidity:
