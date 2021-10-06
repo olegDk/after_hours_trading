@@ -138,10 +138,9 @@ def run_data_update():
 def get_data_for_tickers(tickers: list,
                          file_path: str = f'{cwd}/analytics/modeling/training/ticker_data/',
                          file_prefix: str = 'ticker_',
-                         calculate_gaps: bool = True,
+                         calculate_technicals: bool = True,
                          calculate_liquidity: bool = True,
                          filter_tickers: bool = True) -> dict:
-
     if not file_path[-1:] == '/':
         # include / at the end
         file_path = file_path + '/'
@@ -181,7 +180,6 @@ def get_data_for_tickers(tickers: list,
                     continue
             except Exception as e:
                 print(f'No market cap data for ticker {ticker}')
-                continue
 
             last_df_date = data['Date'].tail(1).values[0]
             last_df_date = datetime.strptime(last_df_date, '%Y-%m-%d')
@@ -190,7 +188,7 @@ def get_data_for_tickers(tickers: list,
             if last_df_date < last_possible_date or first_df_date > first_possible_date:
                 continue
 
-        if calculate_gaps:
+        if calculate_technicals:
             stock_info = None
             if ticker == 'BTC-USD-NY':
                 stock_info = yfinance.Ticker(ticker='BTC-USD')
@@ -213,6 +211,47 @@ def get_data_for_tickers(tickers: list,
             data['%YesterdaysGain'] = data['%Gain'].shift(1)
             data['%2DaysGain'] = (data['Adj Close'] - data['PrevPrev Close']) / data['PrevPrev Close'] * 100
             data['%Gap'] = (data['Open'] - data['Prev Close']) / data['Prev Close'] * 100
+            data['SMA_20'] = data['Adj Close'].rolling(window=20).mean()
+            data['SMA_8'] = data['Adj Close'].rolling(window=8).mean()
+            rolling_std_20 = data['Adj Close'].rolling(window=20).std()
+            rolling_std_8 = data['Adj Close'].rolling(window=8).std()
+            data['SMA_20_upper_sigma'] = data['SMA_20'] + rolling_std_20
+            data['SMA_20_lower_sigma'] = data['SMA_20'] - rolling_std_20
+            data['SMA_8_upper_sigma'] = data['SMA_8'] + rolling_std_8
+            data['SMA_8_lower_sigma'] = data['SMA_8'] - rolling_std_8
+            data['SMA_20_upper_two_sigma'] = data['SMA_20'] + 2 * rolling_std_20
+            data['SMA_20_lower_two_sigma'] = data['SMA_20'] - 2 * rolling_std_20
+            data['SMA_8_upper_two_sigma'] = data['SMA_8'] + 2 * rolling_std_8
+            data['SMA_8_lower_two_sigma'] = data['SMA_8'] - 2 * rolling_std_8
+            gap_mean = data['%Gap'].mean()
+            gap_std = data['%Gap'].std()
+            data['Above_upper_sigma'] = (data['%Gap'] > gap_mean + gap_std).astype(int)
+            data['Below_lower_sigma'] = (data['%Gap'] < gap_mean - gap_std).astype(int)
+            data['Above_upper_two_sigma'] = (data['%Gap'] > gap_mean + 2 * gap_std).astype(int)
+            data['Below_lower_two_sigma'] = (data['%Gap'] < gap_mean - 2 * gap_std).astype(int)
+            data['%SMA_20_upper_sigma_from_close'] = \
+                ((data['SMA_20_upper_sigma'] - data['Adj Close']) / data['Adj Close'] * 100).shift(1)
+            data['%SMA_20_lower_sigma_from_close'] = \
+                ((data['SMA_20_lower_sigma'] - data['Adj Close']) / data['Adj Close'] * 100).shift(1)
+            data['%SMA_20_upper_two_sigma_from_close'] = \
+                ((data['SMA_20_upper_two_sigma'] - data['Adj Close']) / data['Adj Close'] * 100).shift(1)
+            data['%SMA_20_lower_two_sigma_from_close'] = \
+                ((data['SMA_20_lower_two_sigma'] - data['Adj Close']) / data['Adj Close'] * 100).shift(1)
+
+            data['%SMA_20_sigma_interval'] = data['%SMA_20_upper_sigma_from_close'] - \
+                                             data['%SMA_20_lower_sigma_from_close']
+            data['%SMA_20_two_sigma_interval'] = data['%SMA_20_upper_two_sigma_from_close'] - \
+                                                 data['%SMA_20_lower_two_sigma_from_close']
+
+            data['NearBollingerBandsFlag'] = \
+                data.apply(lambda r:
+                           get_bollinger_flag(r['%Gap'],
+                                              r['%SMA_20_upper_sigma_from_close'],
+                                              r['%SMA_20_lower_sigma_from_close'],
+                                              r['%SMA_20_upper_two_sigma_from_close'],
+                                              r['%SMA_20_lower_two_sigma_from_close'],
+                                              r['%SMA_20_sigma_interval'],
+                                              r['%SMA_20_two_sigma_interval']), axis=1)
 
         if calculate_liquidity:
             data['Liquidity'] = np.log((data['Volume'] * data['Adj Close']) / (data['High'] - data['Low']))
@@ -222,6 +261,58 @@ def get_data_for_tickers(tickers: list,
         result[ticker] = data
 
     return result
+
+
+def get_bollinger_flag(gap,
+                       pct_sma_20_upper_sigma,
+                       pct_sma_20_lower_sigma,
+                       pct_sma_20_upper_two_sigma,
+                       pct_sma_20_lower_two_sigma,
+                       pct_sma_20_sigma_interval,
+                       pct_sma_20_two_sigma_interval) -> str:
+    compare_list = [pct_sma_20_upper_sigma,
+                    pct_sma_20_lower_sigma,
+                    pct_sma_20_upper_two_sigma,
+                    pct_sma_20_lower_two_sigma]
+    closest = min(compare_list, key=lambda x: abs(x - gap))
+    near_interval_fraction = 1 / 5
+    near_sigma_interval = pct_sma_20_sigma_interval * near_interval_fraction
+    near_two_sigma_interval = pct_sma_20_two_sigma_interval * near_interval_fraction
+    if closest == pct_sma_20_upper_sigma:
+        delta_abs = abs(gap - pct_sma_20_upper_sigma)
+        if delta_abs <= near_sigma_interval:
+            return 'NearSMA20UpperSigma'
+        elif gap < pct_sma_20_upper_sigma:
+            return 'BelowSMA20UpperSigma'
+        elif gap >= pct_sma_20_upper_sigma:
+            return 'AboveSMA20UpperSigma'
+
+    elif closest == pct_sma_20_lower_sigma:
+        delta_abs = abs(gap - pct_sma_20_lower_sigma)
+        if delta_abs <= near_sigma_interval:
+            return 'NearSMA20LowerSigma'
+        elif gap < pct_sma_20_lower_sigma:
+            return 'BelowSMA20LowerSigma'
+        elif gap >= pct_sma_20_lower_sigma:
+            return 'AboveSMA20LowerSigma'
+
+    elif closest == pct_sma_20_upper_two_sigma:
+        delta_abs = abs(gap - pct_sma_20_upper_two_sigma)
+        if delta_abs <= near_two_sigma_interval:
+            return 'NearSMA20UpperTwoSigma'
+        elif gap < pct_sma_20_upper_two_sigma:
+            return 'BelowSMA20UpperTwoSigma'
+        elif gap >= pct_sma_20_upper_two_sigma:
+            return 'AboveSMA20UpperTwoSigma'
+
+    elif closest == pct_sma_20_lower_two_sigma:
+        delta_abs = abs(gap - pct_sma_20_lower_two_sigma)
+        if delta_abs <= near_two_sigma_interval:
+            return 'NearSMA20LowerTwoSigma'
+        elif gap < pct_sma_20_lower_two_sigma:
+            return 'BelowSMA20LowerTwoSigma'
+        elif gap >= pct_sma_20_lower_two_sigma:
+            return 'AboveSMA20LowerTwoSigma'
 
 
 banks_stocks = sector_to_stocks['Banks']
@@ -288,13 +379,14 @@ def create_gaps_dataset(targets: list,
 
     dfs_list = []
 
+    features = ['Date', '%Gap', '%Gain', '%YesterdaysGain', '%2DaysGain']
+
     for key in list(targets_dict):
-        df = targets_dict[key][['Date', '%Gap',
-                                '%Gain', '%YesterdaysGain', '%2DaysGain']]
-        df.rename(columns={'%Gap': f'%Gap_{key}',
-                           '%Gain': f'%Gain_{key}',
-                           '%YesterdaysGain': f'%YesterdaysGain_{key}',
-                           '%2DaysGain': f'%2DaysGain_{key}'}, inplace=True)
+        df = targets_dict[key][features]
+        rename_columns_dict = {
+            feature: f'{feature}_{key}' for feature in features
+        }
+        df.rename(columns=rename_columns_dict, inplace=True)
         dfs_list.append(df)
 
     df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'], how='inner'), dfs_list)
