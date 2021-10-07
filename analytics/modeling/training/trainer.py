@@ -15,7 +15,9 @@ main_etf = {
     'China': 'KWEB',
     'Oil': 'XOP',
     'RenewableEnergy': 'TAN',
-    'Semiconductors': 'SOXL'
+    'Semiconductors': 'SOXL',
+    'Gold': 'GDX',
+    'DowJones': 'DIA'
 }
 
 
@@ -114,8 +116,8 @@ def train_all_models():
         intersection = \
             list(set(traidable_tickers).intersection(set(indicators)))
 
-        traidable_tickers = [ticker for ticker in traidable_tickers
-                             if ticker not in intersection]
+        traidable_tickers = list(set([ticker for ticker in traidable_tickers
+                                      if ticker not in intersection]))
 
         try:
             run_sector_regression(sector_dir=sector_dir,

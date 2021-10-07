@@ -636,13 +636,18 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
+        print('Traidable stocks:'
+              '')
         black_list = []  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        BANKS: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
-                       CHINA: NEUTRAL}
+                       CHINA: NEUTRAL,
+                       GOLD: NEUTRAL,
+                       DOW_JONES: NEUTRAL
+                       }
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
                       BULL: {LONG_COEF: 1 / 2,
@@ -863,6 +868,7 @@ class Trader:
                 print(f'Failed to make inference on symbol message: {symbol_dict}')
 
         return {}
+
 
 # trader = Trader()
 # print(trader.get_subscription_list())

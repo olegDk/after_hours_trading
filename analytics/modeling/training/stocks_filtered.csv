@@ -121,13 +121,112 @@ AMZN,Application Software
 EBAY,Application Software
 MELI,Application Software
 CHWY,Application Software
-W,Application Software
 ETSY,Application Software
 FTCH,Application Software
 SFIX,Application Software
 REAL,Application Software
 RVLV,Application Software
 SQ,Application Software
+ACN,Application Software
+AFRM,Application Software
+AI,Application Software
+CTSH,Application Software
+DNB,Application Software
+DXC,Application Software
+FIS,Application Software
+FISV,Application Software
+IBM,Application Software
+NCR,Application Software
+SABR,Application Software
+SWCH,Application Software
+TWKS,Application Software
+XRX,Application Software
+EPAM,Application Software
+EXLS,Application Software
+FLT,Application Software
+FLYW,Application Software
+ADBE,Application Software
+AKAM,Application Software
+BOX,Application Software
+CFLT,Application Software
+CRWD,Application Software
+DBX,Application Software
+DOCN,Application Software
+ETWO,Application Software
+FEYE,Application Software
+FIVN,Application Software
+FORG,Application Software
+FOUR,Application Software
+GDDY,Application Software
+GSKY,Application Software
+HOOD,Application Software
+MQ,Application Software
+MSFT,Application Software
+NET,Application Software
+NLOK,Application Software
+NTNX,Application Software
+OKTA,Application Software
+ORCL,Application Software
+PANW,Application Software
+PATH,Application Software
+PAYO,Application Software
+PLAN,Application Software
+PLTR,Application Software
+RXT,Application Software
+S,Application Software
+SPLK,Application Software
+SQ,Application Software
+STEM,Application Software
+TOST,Application Software
+VMW,Application Software
+ZS,Application Software
+ACVA,Application Software
+ADSK,Application Software
+ALIT,Application Software
+APP,Application Software
+APPS,Application Software
+ASAN,Application Software
+BIGC,Application Software
+BILL,Application Software
+BMBL,Application Software
+BSY,Application Software
+CDAY,Application Software
+CDNS,Application Software
+CLDR,Application Software
+COIN,Application Software
+COMP,Application Software
+COUP,Application Software
+CRM,Application Software
+CSOD,Application Software
+CTXS,Application Software
+CWAN,Application Software
+DDOG,Application Software
+DOCU,Application Software
+DT,Application Software
+FRSH,Application Software
+FSLY,Application Software
+INTU,Application Software
+LAZR,Application Software
+LYFT,Application Software
+MCFE,Application Software
+MDLA,Application Software
+MTTR,Application Software
+NOW,Application Software
+NUAN,Application Software
+PD,Application Software
+PWSC,Application Software
+RIOT,Application Software
+RNG,Application Software
+SNOW,Application Software
+SSNC,Application Software
+TTD,Application Software
+U,Application Software
+UBER,Application Software
+VMEO,Application Software
+WDAY,Application Software
+XM,Application Software
+ZEN,Application Software
+ZI,Application Software
 JPM,Banks
 C,Banks
 RY,Banks
@@ -353,3 +452,33 @@ ERF,Oil
 PDCE,Oil
 CRK,Oil
 LPI,Oil
+AEM,Gold
+AGI,Gold
+AU,Gold
+CDE,Gold
+EGO,Gold
+EQX,Gold
+HL,Gold
+KGC,Gold
+KL,Gold
+NEM,Gold
+PVG,Gold
+SAND,Gold
+SSRM,Gold
+WPM,Gold
+AXP,Dow Jones
+BA,Dow Jones
+DIS,Dow Jones
+DOW,Dow Jones
+HD,Dow Jones
+HON,Dow Jones
+JNJ,Dow Jones
+KO,Dow Jones
+MCD,Dow Jones
+MMM,Dow Jones
+GE,Dow Jones
+PG,Dow Jones
+TRV,Dow Jones
+V,Dow Jones
+MA,Dow Jones
+VZ,Dow Jones

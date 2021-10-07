@@ -17,7 +17,9 @@ main_etf = {
     'China': 'KWEB',
     'Oil': 'XOP',
     'RenewableEnergy': 'TAN',
-    'Semiconductors': 'SOXL'
+    'Semiconductors': 'SOXL',
+    'Gold': 'GDX',
+    'DowJones': 'DIA'
 }
 
 

@@ -22,7 +22,8 @@ ETFs = ['SPY', 'QQQ', 'CLOU', 'DIA', 'GDX', 'IWM', 'JETS',
         'SMH', 'TAN', 'XBI', 'XLE', 'XLF', 'XLK', 'XLP',
         'XLU', 'XLV', 'XOP', 'ARKG', 'ARKK', 'EWZ', 'FXI', 'HYG',
         'IEFA', 'IEF', 'EEM', 'EFA', 'IEMG', 'VXX', 'TLT', 'SOXL',
-        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI', 'BAC']
+        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI', 'BAC',
+        'GLD']
 
 if not sys.gettrace():
     with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
@@ -87,8 +88,11 @@ semi_stocks = sector_to_stocks['Semiconductors']
 oil_stocks = sector_to_stocks['Oil']
 china_stocks = sector_to_stocks['China']
 renew_stocks = sector_to_stocks['Renewable Energy']
+dow_stocks = sector_to_stocks['Dow Jones']
+gold_stocks = sector_to_stocks['Gold']
 
-tickers_to_update = banks_stocks + app_stocks + semi_stocks + oil_stocks + renew_stocks + china_stocks + ETFs
+tickers_to_update = banks_stocks + app_stocks + semi_stocks + oil_stocks + renew_stocks + china_stocks + \
+                    dow_stocks + gold_stocks + ETFs
 print(f'Num symbols to update: '
       f'{len(tickers_to_update)}')
 
@@ -138,7 +142,8 @@ def run_data_update():
 def get_data_for_tickers(tickers: list,
                          file_path: str = f'{cwd}/analytics/modeling/training/ticker_data/',
                          file_prefix: str = 'ticker_',
-                         calculate_technicals: bool = True,
+                         calculate_gaps: bool = True,
+                         calculate_technicals: bool = False,
                          calculate_liquidity: bool = True,
                          filter_tickers: bool = True) -> dict:
     if not file_path[-1:] == '/':
@@ -181,14 +186,7 @@ def get_data_for_tickers(tickers: list,
             except Exception as e:
                 print(f'No market cap data for ticker {ticker}')
 
-            last_df_date = data['Date'].tail(1).values[0]
-            last_df_date = datetime.strptime(last_df_date, '%Y-%m-%d')
-            first_df_date = data['Date'].head(1).values[0]
-            first_df_date = datetime.strptime(first_df_date, '%Y-%m-%d')
-            if last_df_date < last_possible_date or first_df_date > first_possible_date:
-                continue
-
-        if calculate_technicals:
+        if calculate_gaps:
             stock_info = None
             if ticker == 'BTC-USD-NY':
                 stock_info = yfinance.Ticker(ticker='BTC-USD')
@@ -211,6 +209,8 @@ def get_data_for_tickers(tickers: list,
             data['%YesterdaysGain'] = data['%Gain'].shift(1)
             data['%2DaysGain'] = (data['Adj Close'] - data['PrevPrev Close']) / data['PrevPrev Close'] * 100
             data['%Gap'] = (data['Open'] - data['Prev Close']) / data['Prev Close'] * 100
+
+        if calculate_technicals:
             data['SMA_20'] = data['Adj Close'].rolling(window=20).mean()
             data['SMA_8'] = data['Adj Close'].rolling(window=8).mean()
             rolling_std_20 = data['Adj Close'].rolling(window=20).std()
@@ -257,6 +257,18 @@ def get_data_for_tickers(tickers: list,
             data['Liquidity'] = np.log((data['Volume'] * data['Adj Close']) / (data['High'] - data['Low']))
 
         data.dropna(inplace=True)
+
+        last_df_date = data['Date'].tail(1).values[0]
+        last_df_date = datetime.strptime(last_df_date, '%Y-%m-%d')
+        first_df_date = data['Date'].head(1).values[0]
+        first_df_date = datetime.strptime(first_df_date, '%Y-%m-%d')
+        print(f'Stock: {ticker}')
+        print(first_df_date)
+        print(last_df_date)
+
+        if last_df_date < last_possible_date or first_df_date > first_possible_date:
+            print(f'Removing {ticker} because of missing data')
+            continue
 
         result[ticker] = data
 
@@ -315,54 +327,62 @@ def get_bollinger_flag(gap,
             return 'AboveSMA20LowerTwoSigma'
 
 
-banks_stocks = sector_to_stocks['Banks']
 banks_etfs = ['XLF', 'DIA', 'XLI', 'XLE', 'SPY', 'TLT', 'QQQ']
-app_stocks = sector_to_stocks['Application Software']
 app_etfs = ['QQQ', 'XLK', 'DIA', 'XLF', 'SPY', 'TLT']
-semi_stocks = sector_to_stocks['Semiconductors']
 semi_etfs = ['QQQ', 'SPY', 'SOXL', 'TLT']
-oil_stocks = sector_to_stocks['Oil']
 oil_etfs = ['XOP', 'XLE', 'XLF', 'DIA', 'SPY']
-renew_stocks = sector_to_stocks['Renewable Energy']
 renew_etfs = ['TAN', 'XOP', 'SPY']
-china_stocks = sector_to_stocks['China']
 china_etfs = ['QQQ', 'KWEB', 'MCHI']
+dow_etfs = ['DIA', 'SPY']
+gold_etfs = ['GDX', 'GLD']
 
 all_sectors = [
-    {'sector': 'Banks',
+    # {'sector': 'Banks',
+    #  'data': {
+    #      'stocks': banks_stocks,
+    #      'etfs': banks_etfs
+    #  }},
+    #
+    # {'sector': 'ApplicationSoftware',
+    #  'data': {
+    #      'stocks': app_stocks,
+    #      'etfs': app_etfs
+    #  }},
+    #
+    # {'sector': 'Semiconductors',
+    #  'data': {
+    #      'stocks': semi_stocks,
+    #      'etfs': semi_etfs
+    #  }},
+    #
+    # {'sector': 'Oil',
+    #  'data': {
+    #      'stocks': oil_stocks,
+    #      'etfs': oil_etfs
+    #  }},
+    #
+    # {'sector': 'RenewableEnergy',
+    #  'data': {
+    #      'stocks': renew_stocks,
+    #      'etfs': renew_etfs
+    #  }},
+    #
+    # {'sector': 'China',
+    #  'data': {
+    #      'stocks': china_stocks,
+    #      'etfs': china_etfs
+    #  }},
+
+    {'sector': 'Gold',
      'data': {
-         'stocks': banks_stocks,
-         'etfs': banks_etfs
+         'stocks': gold_stocks,
+         'etfs': gold_etfs
      }},
 
-    {'sector': 'ApplicationSoftware',
+    {'sector': 'DowJones',
      'data': {
-         'stocks': app_stocks,
-         'etfs': app_etfs
-     }},
-
-    {'sector': 'Semiconductors',
-     'data': {
-         'stocks': semi_stocks,
-         'etfs': semi_etfs
-     }},
-
-    {'sector': 'Oil',
-     'data': {
-         'stocks': oil_stocks,
-         'etfs': oil_etfs
-     }},
-
-    {'sector': 'RenewableEnergy',
-     'data': {
-         'stocks': renew_stocks,
-         'etfs': renew_etfs
-     }},
-
-    {'sector': 'China',
-     'data': {
-         'stocks': china_stocks,
-         'etfs': china_etfs
+         'stocks': dow_stocks,
+         'etfs': dow_etfs
      }}
 ]
 
@@ -384,7 +404,7 @@ def create_gaps_dataset(targets: list,
     for key in list(targets_dict):
         df = targets_dict[key][features]
         rename_columns_dict = {
-            feature: f'{feature}_{key}' for feature in features
+            feature: f'{feature}_{key}' for feature in features[1:]
         }
         df.rename(columns=rename_columns_dict, inplace=True)
         dfs_list.append(df)
