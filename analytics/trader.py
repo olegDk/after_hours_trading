@@ -646,7 +646,11 @@ class Trader:
                        SEMICONDUCTORS: NEUTRAL,
                        CHINA: NEUTRAL,
                        GOLD: NEUTRAL,
-                       DOW_JONES: NEUTRAL
+                       DOW_JONES: NEUTRAL,
+                       REITS: NEUTRAL,
+                       UTILITIES: NEUTRAL,
+                       AIRLINES: NEUTRAL,
+                       STEEL: NEUTRAL
                        }
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},

@@ -44,43 +44,47 @@ def get_tickers() -> dict:
     list_subfolders_with_paths = \
         [f.path for f in os.scandir(f'{path}/sectors') if f.is_dir()]
 
-    tickers = []
     with open(f'{path}/all_indicators.pkl', "rb") as i:
-        f_list = pickle.load(i)
-        tickers = tickers + f_list
+        indicators_list = list(set(pickle.load(i)))
+
+    traidable_tickers_list = []
 
     for sector_dir in list_subfolders_with_paths:
         for f in os.listdir(f'{sector_dir}/tickers'):
             with open(f'{sector_dir}/tickers/{f}', "rb") as i:
                 if f.startswith('traidable_tickers'):
-                    f_list = pickle.load(i)
-                    tickers = tickers + f_list
-
-    # Removing duplicates
-    tickers = list(set(tickers))
+                    traidable_tickers_list = \
+                        traidable_tickers_list + list(set(pickle.load(i)))
 
     # Manually approximate sum of probabilities for most liquid stocks
-    sum_liquid = 0.40
+    sum_indicators = 0.6
 
     # Determine probability mass to distribute across other tickers
-    sum_to_distribute = float(1 - sum_liquid)
+    sum_to_distribute = float(1 - sum_indicators)
 
     # Uniformly distribute probability mass across rest of the tickers
-    uniform_prob = float(sum_to_distribute / (len(tickers) - 8))
+    uniform_prob_traidable_tickers =\
+        float(sum_to_distribute / len(traidable_tickers_list))
 
-    uniform_dist = [uniform_prob for _ in tickers]
+    uniform_dist_traidable_tickers =\
+        [uniform_prob_traidable_tickers for _ in traidable_tickers_list]
 
-    prob_dict = dict(zip(tickers, uniform_dist))
+    prob_dict_traidable_tickers = dict(zip(traidable_tickers_list,
+                                           uniform_dist_traidable_tickers))
 
-    # Manually assigning probabilities for most liquid stocks
-    prob_dict['SPY'] = 0.05
-    prob_dict['QQQ'] = 0.05
-    prob_dict['BAC'] = 0.05
-    prob_dict['DIA'] = 0.05
-    prob_dict['NEM'] = 0.05
-    prob_dict['GDX'] = 0.05
-    prob_dict['GLD'] = 0.05
-    prob_dict['PG'] = 0.05
+    uniform_prob_indicators = \
+        float(sum_indicators / len(indicators_list))
+
+    uniform_dist_indicators = \
+        [uniform_prob_indicators for _ in indicators_list]
+
+    prob_dict_indicators = dict(zip(indicators_list,
+                                    uniform_dist_indicators))
+
+    prob_dict = {}
+
+    prob_dict.update(prob_dict_traidable_tickers)
+    prob_dict.update(prob_dict_indicators)
 
     return prob_dict
 

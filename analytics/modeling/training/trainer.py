@@ -7,18 +7,20 @@ from tqdm import tqdm
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer
 
+cwd = os.getcwd()
 mae = make_scorer(mean_ae)
 
-main_etf = {
-    'ApplicationSoftware': 'QQQ',
-    'Banks': 'XLF',
-    'China': 'KWEB',
-    'Oil': 'XOP',
-    'RenewableEnergy': 'TAN',
-    'Semiconductors': 'SOXL',
-    'Gold': 'GDX',
-    'DowJones': 'DIA'
-}
+if not sys.gettrace():
+    sector_stocks = \
+        pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling/training/bloomberg_sectors_filtered.csv')
+else:
+    sector_stocks = \
+        pd.read_csv(filepath_or_buffer=f'{cwd}/bloomberg_sectors_filtered.csv')
+
+sectors = list(sector_stocks['Sector'].unique())
+
+sector_to_main_etf = {sector: sector_stocks[sector_stocks['Sector'] == sector]['MainETF'].values[0]
+                      for sector in sectors}
 
 
 def calculate_IQR(x: pd.Series) -> Tuple[float, float, float]:
@@ -72,18 +74,6 @@ def train_all_models():
     for sector_dir in tqdm(sectors_dirs):
         print(sector_dir)
         sector = sector_dir.split('/')[-1]
-        if 'tickers' not in os.listdir(sector_dir):
-            print(f'tickers dir missing '
-                  f'for sector: {sector}')
-            continue
-        if 'datasets' not in os.listdir(sector_dir):
-            print(f'datasets dir missing '
-                  f'for sector: {sector}')
-            continue
-        if 'models' not in os.listdir(sector_dir):
-            print(f'models dir missing '
-                  f'for sector: {sector}')
-            continue
 
         traidable_tickers = []
         indicators = []
@@ -161,7 +151,7 @@ def run_sector_regression(sector_dir: str,
     tickers_models = {}
     tickers_models_filtered = {}
 
-    main_etf_sector = main_etf[sector]
+    main_etf_sector = sector_to_main_etf[sector]
 
     for ticker in traidable_tickers:
         ticker_model_dict = {}
@@ -271,24 +261,29 @@ def run_sector_regression(sector_dir: str,
 
     # Saving dicts into models directory for given sector
     try:
-        with open(f'analytics/modeling/sectors/'
-                  f'{sector}/models/tickers_indicators.pkl', 'wb') as o:
+        if not sys.gettrace():
+            sectors_path = f'{cwd}/analytics/modeling/sectors/'
+        else:
+            sectors_path = f'../sectors/'
+
+        sector_path = f'{sectors_path}{sector}'
+
+        if 'models' not in os.listdir(sector_path):
+            os.mkdir(f'{sector_path}/models')
+
+        models_path = f'{sector_path}/models'
+
+        with open(f'{models_path}/tickers_indicators.pkl', 'wb') as o:
             pickle.dump(tickers_indicators, o)
-        with open(f'analytics/modeling/sectors/'
-                  f'{sector}/models/tickers_main_etf.pkl', 'wb') as o:
+        with open(f'{models_path}/tickers_main_etf.pkl', 'wb') as o:
             pickle.dump(tickers_main_etf, o)
-        with open(f'analytics/modeling/sectors/'
-                  f'{sector}/models/tickers_models.pkl', 'wb') as o:
+        with open(f'{models_path}/tickers_models.pkl', 'wb') as o:
             pickle.dump(tickers_models, o)
-        with open(f'analytics/modeling/sectors/'
-                  f'{sector}/models/tickers_indicators_filtered.pkl',
-                  'wb') as o:
+        with open(f'{models_path}/tickers_indicators_filtered.pkl', 'wb') as o:
             pickle.dump(tickers_indicators_filtered, o)
-        with open(f'analytics/modeling/sectors/'
-                  f'{sector}/models/tickers_main_etf_filtered.pkl', 'wb') as o:
+        with open(f'{models_path}/tickers_main_etf_filtered.pkl', 'wb') as o:
             pickle.dump(tickers_main_etf_filtered, o)
-        with open(f'analytics/modeling/sectors/'
-                  f'{sector}/models/tickers_models_filtered.pkl', 'wb') as o:
+        with open(f'{models_path}/tickers_models_filtered.pkl', 'wb') as o:
             pickle.dump(tickers_models_filtered, o)
     except Exception as e:
         print(e)

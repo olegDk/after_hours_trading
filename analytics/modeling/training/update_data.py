@@ -18,31 +18,6 @@ else:
     sector_stocks = \
         pd.read_csv(filepath_or_buffer=f'{cwd}/bloomberg_sectors_filtered.csv')
 
-ETFs = ['SPY', 'QQQ', 'CLOU', 'DIA', 'GDX', 'IWM', 'JETS',
-        'SMH', 'TAN', 'XBI', 'XLE', 'XLF', 'XLK', 'XLP',
-        'XLU', 'XLV', 'XOP', 'ARKG', 'ARKK', 'EWZ', 'FXI', 'HYG',
-        'IEFA', 'IEF', 'EEM', 'EFA', 'IEMG', 'VXX', 'TLT', 'SOXL',
-        'XLI', 'XLB', 'XLC', 'XME', 'ITB', 'KWEB', 'CQQQ', 'MCHI', 'BAC',
-        'GLD']
-
-if not sys.gettrace():
-    with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
-        pickle.dump(ETFs, o)
-    with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'rb') as i:
-        ETFs_test = pickle.load(i)
-else:
-    with open(f'{cwd}/../all_indicators.pkl', 'wb') as o:
-        pickle.dump(ETFs, o)
-    with open(f'{cwd}/../all_indicators.pkl', 'rb') as i:
-        ETFs_test = pickle.load(i)
-
-print(ETFs_test)
-
-ETFs = sorted(ETFs)
-
-BTC_USD = ['BTC-USD']
-BTC_F = ['BTC=F']
-
 # Transforming sector_stocks dataframe to divide into rows by stocks and respective sector
 stocks_df = pd.DataFrame(columns=['stock', 'sector'])
 
@@ -65,14 +40,6 @@ else:
                      index=None)
     stocks_df = pd.read_csv(filepath_or_buffer=f'{cwd}/stocks_filtered.csv')
 
-STOCKs = stocks_df['stock'].to_list()
-
-print(STOCKs)
-
-all_tickers = STOCKs + ETFs + BTC_USD + BTC_F
-
-len(all_tickers)
-
 # Calculating correlations for each sector
 # Getting unique sectors
 sectors = list(sector_stocks['Sector'].unique())
@@ -80,19 +47,38 @@ sectors = list(sector_stocks['Sector'].unique())
 sector_to_stocks = {sector: sector_stocks[sector_stocks['Sector'] == sector]['Stocks'].values[0].split(',')
                     for sector in sectors}
 
+sector_to_etfs = {sector: sector_stocks[sector_stocks['Sector'] == sector]['Indicators'].values[0].split(',')
+                  for sector in sectors}
+
 print(sector_to_stocks)
+print(sector_to_etfs)
 
-banks_stocks = sector_to_stocks['Banks']
-app_stocks = sector_to_stocks['Application Software']
-semi_stocks = sector_to_stocks['Semiconductors']
-oil_stocks = sector_to_stocks['Oil']
-china_stocks = sector_to_stocks['China']
-renew_stocks = sector_to_stocks['Renewable Energy']
-dow_stocks = sector_to_stocks['Dow Jones']
-gold_stocks = sector_to_stocks['Gold']
+tickers_to_update = []
+ETFs = []
+BTC_USD = ['BTC-USD']
+BTC_F = ['BTC=F']
 
-tickers_to_update = banks_stocks + app_stocks + semi_stocks + oil_stocks + renew_stocks + china_stocks + \
-                    dow_stocks + gold_stocks + ETFs
+for sector in sector_to_stocks.keys():
+    tickers_to_update = tickers_to_update + sector_to_stocks[sector]
+
+for sector in sector_to_etfs.keys():
+    ETFs = ETFs + sector_to_etfs[sector]
+
+if not sys.gettrace():
+    with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'wb') as o:
+        pickle.dump(ETFs, o)
+    with open(f'{cwd}/analytics/modeling/all_indicators.pkl', 'rb') as i:
+        ETFs_test = pickle.load(i)
+else:
+    with open(f'{cwd}/../all_indicators.pkl', 'wb') as o:
+        pickle.dump(ETFs, o)
+    with open(f'{cwd}/../all_indicators.pkl', 'rb') as i:
+        ETFs_test = pickle.load(i)
+
+print(ETFs_test)
+
+tickers_to_update = list(set(tickers_to_update + ETFs))
+
 print(f'Num symbols to update: '
       f'{len(tickers_to_update)}')
 
@@ -140,18 +126,15 @@ def run_data_update():
 
 
 def get_data_for_tickers(tickers: list,
-                         file_path: str = f'{cwd}/analytics/modeling/training/ticker_data/',
                          file_prefix: str = 'ticker_',
                          calculate_gaps: bool = True,
                          calculate_technicals: bool = False,
                          calculate_liquidity: bool = True,
                          filter_tickers: bool = True) -> dict:
-    if not file_path[-1:] == '/':
-        # include / at the end
-        file_path = file_path + '/'
-
     if sys.gettrace():
         file_path = 'ticker_data/'
+    else:
+        file_path = f'{cwd}/analytics/modeling/training/ticker_data/'
 
     result = {}
     last_possible_date = datetime.now() - timedelta(days=5)  # filter possibly delisted tickers
@@ -327,64 +310,17 @@ def get_bollinger_flag(gap,
             return 'AboveSMA20LowerTwoSigma'
 
 
-banks_etfs = ['XLF', 'DIA', 'XLI', 'XLE', 'SPY', 'TLT', 'QQQ']
-app_etfs = ['QQQ', 'XLK', 'DIA', 'XLF', 'SPY', 'TLT']
-semi_etfs = ['QQQ', 'SPY', 'SOXL', 'TLT']
-oil_etfs = ['XOP', 'XLE', 'XLF', 'DIA', 'SPY']
-renew_etfs = ['TAN', 'XOP', 'SPY']
-china_etfs = ['QQQ', 'KWEB', 'MCHI']
-dow_etfs = ['DIA', 'SPY']
-gold_etfs = ['GDX', 'GLD']
-
-all_sectors = [
-    # {'sector': 'Banks',
-    #  'data': {
-    #      'stocks': banks_stocks,
-    #      'etfs': banks_etfs
-    #  }},
-    #
-    # {'sector': 'ApplicationSoftware',
-    #  'data': {
-    #      'stocks': app_stocks,
-    #      'etfs': app_etfs
-    #  }},
-    #
-    # {'sector': 'Semiconductors',
-    #  'data': {
-    #      'stocks': semi_stocks,
-    #      'etfs': semi_etfs
-    #  }},
-    #
-    # {'sector': 'Oil',
-    #  'data': {
-    #      'stocks': oil_stocks,
-    #      'etfs': oil_etfs
-    #  }},
-    #
-    # {'sector': 'RenewableEnergy',
-    #  'data': {
-    #      'stocks': renew_stocks,
-    #      'etfs': renew_etfs
-    #  }},
-    #
-    # {'sector': 'China',
-    #  'data': {
-    #      'stocks': china_stocks,
-    #      'etfs': china_etfs
-    #  }},
-
-    {'sector': 'Gold',
-     'data': {
-         'stocks': gold_stocks,
-         'etfs': gold_etfs
-     }},
-
-    {'sector': 'DowJones',
-     'data': {
-         'stocks': dow_stocks,
-         'etfs': dow_etfs
-     }}
-]
+all_sectors = []
+for sector in sector_to_stocks:
+    if sector in ['Reits', 'Utilities', 'Airlines', 'Steel', 'DowJones']:
+        sector_dict = {
+            'sector': sector,
+            'data': {
+                'stocks': sector_to_stocks[sector],
+                'etfs': sector_to_etfs[sector]
+            }
+        }
+        all_sectors = all_sectors + [sector_dict]
 
 print(all_sectors)
 
@@ -425,20 +361,46 @@ def create_gaps_data(sectors_names: list):
         df = create_gaps_dataset(targets=sector_traidable_stocks,
                                  factors=sector_etfs)
 
-        df.to_csv(path_or_buf=f'{cwd}/analytics/modeling/sectors/{sector_name}/'
-                              f'datasets/data_{sector_name}.csv',
-                  index=None)
-
-        with open(f'{cwd}/analytics/modeling/sectors/{sector_name}/'
-                  f'tickers/traidable_tickers_{sector_name}.pkl',
-                  'wb') as output:
-            pickle.dump(sector_traidable_stocks, output)
-
-        with open(f'{cwd}/analytics/modeling/sectors/{sector_name}/'
-                  f'tickers/indicators_{sector_name}.pkl',
-                  'wb') as output:
-            pickle.dump(sector_etfs, output)
+        dump_gaps_data(sector_name=sector_name,
+                       df=df,
+                       sector_traidable_stocks=sector_traidable_stocks,
+                       sector_etfs=sector_etfs)
 
 
-run_data_update()
+def dump_gaps_data(sector_name: str,
+                   df: pd.DataFrame,
+                   sector_traidable_stocks: list,
+                   sector_etfs: list):
+
+    if not sys.gettrace():
+        sectors_path = f'{cwd}/analytics/modeling/sectors/'
+    else:
+        sectors_path = f'../sectors/'
+
+    if sector_name not in os.listdir(sectors_path):
+        os.mkdir(f'{sectors_path}{sector_name}')
+
+    sector_path = f'{sectors_path}{sector_name}'
+
+    if 'datasets' not in os.listdir():
+        os.mkdir(f'{sector_path}/datasets')
+
+    df.to_csv(path_or_buf=f'{sector_path}/datasets/data_{sector_name}.csv',
+                          index=None)
+
+    if 'tickers' not in os.listdir(sector_path):
+        os.mkdir(f'{sector_path}/tickers')
+
+    with open(f'{sector_path}/'
+              f'tickers/traidable_tickers_{sector_name}.pkl',
+              'wb') as output:
+        pickle.dump(sector_traidable_stocks, output)
+
+    with open(f'{sector_path}/'
+              f'tickers/indicators_{sector_name}.pkl',
+              'wb') as output:
+        pickle.dump(sector_etfs, output)
+
+
+# run_data_update()
 create_gaps_data(sectors_names=all_sectors)
