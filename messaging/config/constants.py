@@ -109,6 +109,12 @@ OIL = 'Oil'
 RENEWABLE_ENERGY = 'RenewableEnergy'
 SEMICONDUCTORS = 'Semiconductors'
 CHINA = 'China'
+GOLD = 'Gold'
+DOW_JONES = 'DowJones'
+REITS = 'Reits'
+UTILITIES = 'Utilities'
+AIRLINES = 'Airlines'
+STEEL = 'Steel'
 
 # Trade policies
 NEUTRAL = 'neutral'

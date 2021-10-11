@@ -201,8 +201,6 @@ def run_sector_regression(sector_dir: str,
             print(e)
             print(f'Failed to select features for ticker: {ticker}, '
                   f'sector: {sector}')
-            print(traidable_tickers)
-            print(indicators)
             continue
 
         # Train on train_data, all features

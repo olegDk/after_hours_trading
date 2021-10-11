@@ -9,18 +9,20 @@ import pandas as pd
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer
 
+cwd = os.getcwd()
 mae = make_scorer(mean_ae)
 
-main_etf = {
-    'ApplicationSoftware': 'QQQ',
-    'Banks': 'XLF',
-    'China': 'KWEB',
-    'Oil': 'XOP',
-    'RenewableEnergy': 'TAN',
-    'Semiconductors': 'SOXL',
-    'Gold': 'GDX',
-    'DowJones': 'DIA'
-}
+if not sys.gettrace():
+    sector_stocks = \
+        pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling/training/bloomberg_sectors_filtered.csv')
+else:
+    sector_stocks = \
+        pd.read_csv(filepath_or_buffer=f'{cwd}/bloomberg_sectors_filtered.csv')
+
+sectors = list(sector_stocks['Sector'].unique())
+
+sector_to_main_etf = {sector: sector_stocks[sector_stocks['Sector'] == sector]['MainETF'].values[0]
+                      for sector in sectors}
 
 
 def calculate_IQR(x: pd.Series) -> Tuple[float, float, float]:
@@ -176,7 +178,7 @@ class SectorModeler:
         tickers_main_etf = {}
         tickers_models = {}
 
-        main_etf_sector = main_etf[sector]
+        main_etf_sector = sector_to_main_etf[sector]
 
         for ticker in traidable_tickers:
             ticker_model_dict = {}
