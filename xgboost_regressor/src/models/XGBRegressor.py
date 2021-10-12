@@ -16,7 +16,7 @@ random.seed(42)
 
 class XGBRegressor(BaseEstimator):
 
-    def __init__(self, random_state: int = 42):
+    def __init__(self):
         super().__init__()
         self.pipeline = self.make_pipeline()
         self.tune_pipeline = self.make_pipeline()
