@@ -17,7 +17,7 @@ if not sys.gettrace():
         pd.read_csv(filepath_or_buffer=f'{cwd}/analytics/modeling/training/bloomberg_sectors_filtered.csv')
 else:
     sector_stocks = \
-        pd.read_csv(filepath_or_buffer=f'{cwd}/bloomberg_sectors_filtered.csv')
+        pd.read_csv(filepath_or_buffer=f'{cwd}/../bloomberg_sectors_filtered.csv')
 
 sectors = list(sector_stocks['Sector'].unique())
 
@@ -164,6 +164,7 @@ class SectorModeler:
 
         if df.empty:
             print(f'Empty dataset for sector: {sector}')
+            return
 
         # Shuffle df and make train/test split
         test_size = 40
@@ -268,7 +269,7 @@ class SectorModeler:
 
 
 sectors = ['ApplicationSoftware']
-features = ['%Gap']  # , '%YesterdaysGain', '%2DaysGain']
+features = ['%Gap', 'NearSigmaFlag', 'NearBollingerBandsFlag']  # , '%YesterdaysGain', '%2DaysGain']
 sector_modeler = SectorModeler(sectors=sectors)
 sector_modeler.run_sector_regression(sector=sectors[0],
                                      features=features)

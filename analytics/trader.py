@@ -53,6 +53,10 @@ def get_position_size(price: float,
                       prop: float
                       ) -> int:
     size = int((bp * bp_usage_pct * 0.1 * 0.0625 * prop) / (price + 1e-7))
+    if size < 5:
+        size = 5
+    elif 95 <= size < 100:
+        size = 100
     return size
 
 

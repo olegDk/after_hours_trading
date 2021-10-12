@@ -1,0 +1,5 @@
+xgboost==0.90
+scikit-learn==0.20.3
+pandas==0.25.3
+pytest==5.3.1
+scikit-optimize==0.5.2
