@@ -47,10 +47,10 @@ def process_news(news_data: dict):
                     print(f'Got symbol_news_data for symbol {symbol}: '
                           f'{symbol_news_data}')
                     symbol_news_data = json.loads(symbol_news_data)
-                    symbol_news_data[N_NEWS] += 1
+                    symbol_news_data[symbol][N_NEWS] += 1
                     # News type is news heading not topic
-                    symbol_news_data[NEWS_TYPE] = \
-                        symbol_news_data[NEWS_TYPE] + [news_data]
+                    symbol_news_data[symbol][NEWS_TYPE] = \
+                        symbol_news_data[symbol][NEWS_TYPE] + [news_data]
                     symbol_news_data_str = json.dumps(symbol_news_data)
                     rc.h_set_str(h=NEWS_TYPE,
                                  key=symbol,

@@ -197,6 +197,7 @@ def sample_stock_l1(ticker: str) -> dict:
 def sample_stock_news(ticker: str,
                       words_dict: dict,
                       num_words: int) -> dict:
+    ticker = 'SWKS'
     sample_dict = {SYMBOL: ticker}
     words = list(words_dict.keys())
     len_words = len(words)
