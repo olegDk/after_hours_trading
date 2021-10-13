@@ -640,29 +640,14 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        print('Traidable stocks:'
-              '')
-        black_list = ['SQ',
-                      'FB',
-                      'UMPQ',
-                      'AAL',
-                      'NFLX',
-                      'MCHP',
-                      'CTXS',
-                      'AMKR',
-
-                      ]  # Add untraidable stocks here
+        black_list = []  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
-                       BANKS: NEUTRAL,
                        OIL: NEUTRAL,
-                       RENEWABLE_ENERGY: BULL,
-                       SEMICONDUCTORS: BULL,
+                       RENEWABLE_ENERGY: NEUTRAL,
+                       SEMICONDUCTORS: NEUTRAL,
                        CHINA: NEUTRAL,
                        GOLD: NEUTRAL,
                        DOW_JONES: NEUTRAL,
-                       REITS: NEUTRAL,
-                       UTILITIES: NEUTRAL,
-                       AIRLINES: BULL,
                        STEEL: NEUTRAL
                        }
         delta_dict = {NEUTRAL: {LONG_COEF: 1,

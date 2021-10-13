@@ -4,6 +4,7 @@ import os
 import pickle
 from typing import Tuple
 from tqdm import tqdm
+import traceback
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer
 
@@ -54,7 +55,7 @@ def remove_outliers(data_df: pd.DataFrame,
     return df[mask]
 
 
-def train_all_models():
+def train_all_regular_models():
     """
     Train models, save ticker: indicator pairs and ticker: model pairs
     :return: tuple with two dicts:
@@ -88,9 +89,10 @@ def train_all_models():
                     elif f.startswith('indicators'):
                         indicators = pickle.load(inp)
         except Exception as e:
-            print(e)
+            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
             print(f'Failed to load tickers for sector: {sector}')
-            continue
 
         if not traidable_tickers:
             print(f'Traidable tickers missing '
@@ -109,31 +111,37 @@ def train_all_models():
         traidable_tickers = list(set([ticker for ticker in traidable_tickers
                                       if ticker not in intersection]))
 
+        df = None
         try:
-            run_sector_regression(sector_dir=sector_dir,
-                                  sector=sector,
-                                  traidable_tickers=traidable_tickers,
-                                  indicators=indicators)
+            df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
+                                                f'datasets/'
+                                                f'data_{sector}.csv')
         except Exception as e:
-            print(e)
-            print(f'Failed regression analysis for sector: {sector}')
+            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to load dataset for sector: {sector}')
+
+        if df.empty:
+            print(f'Empty dataset for sector: {sector}')
+            continue
+
+        try:
+            run_regular_sector_regression(sector=sector,
+                                          traidable_tickers=traidable_tickers,
+                                          indicators=indicators,
+                                          df=df)
+        except Exception as e:
+            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to run sector regression sector: {sector}')
 
 
-def run_sector_regression(sector_dir: str,
-                          sector: str,
-                          traidable_tickers: list,
-                          indicators: list):
-    df = None
-    try:
-        df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
-                                            f'datasets/'
-                                            f'data_{sector}.csv')
-    except Exception as e:
-        print(e)
-        print(f'Failed to load dataset for sector: {sector}')
-
-    if df.empty:
-        print(f'Empty dataset for sector: {sector}')
+def run_regular_sector_regression(sector: str,
+                                  traidable_tickers: list,
+                                  indicators: list,
+                                  df: pd.DataFrame):
 
     # Shuffle df and make train/test split
     test_size = 40
@@ -198,9 +206,10 @@ def run_sector_regression(sector_dir: str,
             ticker_target_main_etf_test = test_df[target_name]
 
         except Exception as e:
-            print(e)
-            print(f'Failed to select features for ticker: {ticker}, '
-                  f'sector: {sector}')
+            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to select features for ticker: {ticker}')
             continue
 
         # Train on train_data, all features
@@ -215,11 +224,11 @@ def run_sector_regression(sector_dir: str,
                         y=ticker_target_main_etf_train)
 
         preds = lr.predict(X=ticker_features_test)
-        test_mae =\
+        test_mae = \
             mean_ae(y_true=ticker_target_test, y_pred=preds)
 
         preds_main_etf = lr_main_etf.predict(X=ticker_main_etf_test)
-        test_mae_main_etf =\
+        test_mae_main_etf = \
             mean_ae(y_true=ticker_target_main_etf_test, y_pred=preds_main_etf)
 
         print(f'Test MAE for ticker {ticker} is '
@@ -241,8 +250,8 @@ def run_sector_regression(sector_dir: str,
         ticker_model_dict['mean'] = ticker_target_mean
         ticker_model_dict['lower_sigma'] = ticker_target_mean - ticker_target_std
         ticker_model_dict['upper_sigma'] = ticker_target_mean + ticker_target_std
-        ticker_model_dict['lower_two_sigma'] = ticker_target_mean - 2*ticker_target_std
-        ticker_model_dict['upper_two_sigma'] = ticker_target_mean + 2*ticker_target_std
+        ticker_model_dict['lower_two_sigma'] = ticker_target_mean - 2 * ticker_target_std
+        ticker_model_dict['upper_two_sigma'] = ticker_target_mean + 2 * ticker_target_std
         tickers_models[ticker] = ticker_model_dict
 
         if test_mae <= 1.5:
@@ -284,8 +293,10 @@ def run_sector_regression(sector_dir: str,
         with open(f'{models_path}/tickers_models_filtered.pkl', 'wb') as o:
             pickle.dump(tickers_models_filtered, o)
     except Exception as e:
-        print(e)
-        print(f'Failed saving data for sector: {sector}')
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to save data for sector: {sector}')
 
 
-train_all_models()
+train_all_regular_models()
