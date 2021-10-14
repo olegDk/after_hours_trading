@@ -640,14 +640,8 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['BA',
-                      'SWKS',
-                      'CRUS',
-                      'QRVO',
-                      'AVGO',
-                      'TXN',
-                      ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+        black_list = []  # Add untraidable stocks here
+        policy_dict = {APPLICATION_SOFTWARE: BULL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
@@ -658,14 +652,14 @@ class Trader:
                        }
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
-                      BULL: {LONG_COEF: 1 / 2,
+                      BULL: {LONG_COEF: 1,
                              SHORT_COEF: 2},
                       BEAR: {LONG_COEF: 2,
-                             SHORT_COEF: 1 / 2},
-                      AGG_BULL: {LONG_COEF: 1 / 4,
-                                 SHORT_COEF: 4},
-                      AGG_BEAR: {LONG_COEF: 4,
-                                 SHORT_COEF: 1 / 4}}
+                             SHORT_COEF: 1},
+                      AGG_BULL: {LONG_COEF: 1 / 2,
+                                 SHORT_COEF: 2},
+                      AGG_BEAR: {LONG_COEF: 2,
+                                 SHORT_COEF: 1 / 2}}
         acc_info_dict = {BP_KEY: INIT_BP,
                          BP_USAGE_PCT_KEY: BP_USAGE_PCT}
         stock_to_tier_proportion = {}

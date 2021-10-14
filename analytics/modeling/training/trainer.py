@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 import pandas as pd
 import os
 import pickle
@@ -36,7 +37,7 @@ def calculate_outlier_mask(x: pd.Series,
     IQR, Q1, Q3 = calculate_IQR(x)
     x_up = Q3 + num_iqrs * IQR
     x_down = Q1 - num_iqrs * IQR
-    x_mask = ~((x < x_down) | (x > x_up))
+    x_mask = ~((x < x_down) | (x > x_up))  # valid observations
 
     return x_mask
 
@@ -53,6 +54,43 @@ def remove_outliers(data_df: pd.DataFrame,
             mask = mask & column_mask
     mask = ~((mask == True) & (target_mask == False))
     return df[mask]
+
+
+def leave_outliers(data_df: pd.DataFrame,
+                   target_column: str) -> pd.DataFrame:
+    df = data_df.copy()
+    target_mask = calculate_outlier_mask(x=df[target_column])
+    mask = pd.Series(True, index=df.index)
+    for column in list(df.columns):
+        if "%Gap" in column and column != target_column:
+            column_mask = calculate_outlier_mask(x=df[column],
+                                                 num_iqrs=1.5)
+            mask = mask & column_mask
+    mask = (mask == True) & (target_mask == False)
+    return df[mask]
+
+
+def calculate_corr_beta(data_df: pd.DataFrame,
+                        dependent: str,
+                        independent: str,
+                        exclude_outliers: bool = True) -> float:
+    df = data_df.copy()
+
+    if exclude_outliers:
+        # Remove IQR outliers by gap and volume from Y
+        # We keep outliers in Y if there are corresponding
+        # outliers in X
+        df = remove_outliers(data_df=df,
+                             target_column=dependent)
+
+    Y_gap = df[dependent]
+    X_gap = df[independent]
+
+    # Calculating correlation
+    gap_corr_matrix = np.corrcoef(Y_gap, X_gap)
+    gap_corr = gap_corr_matrix[0, 1]
+
+    return gap_corr
 
 
 def train_all_regular_models():
@@ -131,6 +169,11 @@ def train_all_regular_models():
                                           traidable_tickers=traidable_tickers,
                                           indicators=indicators,
                                           df=df)
+
+            # run_report_related_regression(sector=sector,
+            #                               traidable_tickers=traidable_tickers,
+            #                               indicators=indicators,
+            #                               df=df)
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
@@ -142,7 +185,6 @@ def run_regular_sector_regression(sector: str,
                                   traidable_tickers: list,
                                   indicators: list,
                                   df: pd.DataFrame):
-
     # Shuffle df and make train/test split
     test_size = 40
     train_df = df[:-test_size]
@@ -297,6 +339,31 @@ def run_regular_sector_regression(sector: str,
         print(message)
         print(traceback.format_exc())
         print(f'Failed to save data for sector: {sector}')
+
+
+def run_report_related_regression(sector: str,
+                                  traidable_tickers: list,
+                                  indicators: list,
+                                  df: pd.DataFrame):
+    tickers_indicators = {}
+    tickers_indicators_filtered = {}
+    tickers_main_etf = {}
+    tickers_main_etf_filtered = {}
+    tickers_models = {}
+    tickers_models_filtered = {}
+
+    main_etf_sector = sector_to_main_etf[sector]
+
+    for ticker in traidable_tickers:
+        ticker_model_dict = {}
+        tickers_indicators[ticker] = indicators
+        indicators_names = [f'%Gap_{indicator}'
+                            for indicator in indicators]
+        tickers_main_etf[ticker] = main_etf_sector
+        main_indicator_name = f'%Gap_{main_etf_sector}'
+        target_name = f'%Gap_{ticker}'
+
+    return
 
 
 train_all_regular_models()
