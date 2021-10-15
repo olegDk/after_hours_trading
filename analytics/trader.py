@@ -654,7 +654,8 @@ class Trader:
                       'KLAC',
                       'LRCX',
                       'AMAT',
-                      'VGFC']  # Add untraidable stocks here
+                      'VGFC',
+                      'FTCH']  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
