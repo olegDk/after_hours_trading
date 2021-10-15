@@ -70,10 +70,10 @@ def leave_outliers(data_df: pd.DataFrame,
     return df[mask]
 
 
-def calculate_corr_beta(data_df: pd.DataFrame,
-                        dependent: str,
-                        independent: str,
-                        exclude_outliers: bool = True) -> float:
+def calculate_corr(data_df: pd.DataFrame,
+                   dependent: str,
+                   independent: str,
+                   exclude_outliers: bool = True) -> float:
     df = data_df.copy()
 
     if exclude_outliers:
@@ -93,7 +93,7 @@ def calculate_corr_beta(data_df: pd.DataFrame,
     return gap_corr
 
 
-def train_all_regular_models():
+def train_all_models():
     """
     Train models, save ticker: indicator pairs and ticker: model pairs
     :return: tuple with two dicts:
@@ -165,15 +165,16 @@ def train_all_regular_models():
             continue
 
         try:
-            run_regular_sector_regression(sector=sector,
-                                          traidable_tickers=traidable_tickers,
-                                          indicators=indicators,
-                                          df=df)
-
-            # run_report_related_regression(sector=sector,
+            # run_regular_sector_regression(sector=sector,
             #                               traidable_tickers=traidable_tickers,
             #                               indicators=indicators,
-            #                               df=df)
+            #                               data_df=df)
+
+            if sector not in ['Gold', 'Steel', 'Oil', 'DowJones']:
+                run_report_related_regression(sector=sector,
+                                              traidable_tickers=traidable_tickers,
+                                              indicators=indicators,
+                                              data_df=df)
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
@@ -184,7 +185,8 @@ def train_all_regular_models():
 def run_regular_sector_regression(sector: str,
                                   traidable_tickers: list,
                                   indicators: list,
-                                  df: pd.DataFrame):
+                                  data_df: pd.DataFrame):
+    df = data_df.copy()
     # Shuffle df and make train/test split
     test_size = 40
     train_df = df[:-test_size]
@@ -296,7 +298,7 @@ def run_regular_sector_regression(sector: str,
         ticker_model_dict['upper_two_sigma'] = ticker_target_mean + 2 * ticker_target_std
         tickers_models[ticker] = ticker_model_dict
 
-        if test_mae <= 1.5:
+        if test_mae <= 1:
             # Refit and save filtered
             lr.fit(X=ticker_features,
                    y=ticker_target)
@@ -341,29 +343,50 @@ def run_regular_sector_regression(sector: str,
         print(f'Failed to save data for sector: {sector}')
 
 
+def calculate_top_corr(ticker_name: str,
+                       peers_names: list,
+                       data_df: pd.DataFrame) -> dict:
+    ticker_top_peers_correlation = {}
+    df = data_df.copy()
+    for peer_name in peers_names:
+        cor = calculate_corr(data_df=df[[ticker_name, peer_name]],
+                             dependent=ticker_name,
+                             independent=peer_name)
+        if cor >= 0.7:
+            peer = peer_name.split('_')[1]
+            ticker_top_peers_correlation[peer] = cor
+
+    return ticker_top_peers_correlation
+
+
 def run_report_related_regression(sector: str,
                                   traidable_tickers: list,
                                   indicators: list,
-                                  df: pd.DataFrame):
-    tickers_indicators = {}
-    tickers_indicators_filtered = {}
-    tickers_main_etf = {}
-    tickers_main_etf_filtered = {}
-    tickers_models = {}
-    tickers_models_filtered = {}
+                                  data_df: pd.DataFrame):
+    df = data_df.copy()
+    df = df.sample(frac=1)
 
-    main_etf_sector = sector_to_main_etf[sector]
+    tickers_report_models = {}  # For any given ticker models which use tickers with highest correlation
+    # as features to model respective reports on report day for given correlated stock
+    # i.e. today is UNH report and we need to add %Gap_UNH as a feature for trading given sector stocks on
+    # this particular day structure is following:
+    # {stock: {report_stock: model_dict, report_stock_1: model_dict_1, ...}
+
+    tickers_report_models_filtered = {}  # Don't use report models when they are worse than regular
 
     for ticker in traidable_tickers:
-        ticker_model_dict = {}
-        tickers_indicators[ticker] = indicators
-        indicators_names = [f'%Gap_{indicator}'
-                            for indicator in indicators]
-        tickers_main_etf[ticker] = main_etf_sector
-        main_indicator_name = f'%Gap_{main_etf_sector}'
-        target_name = f'%Gap_{ticker}'
+        # Calculate top correlated stocks in sector
+        # Get all peers
+        peers = list(set(traidable_tickers) - {ticker})  # set literal
+        ticker_name = f'%Gap_{ticker}'
+        peers_names = [f'%Gap_{peer}' for peer in peers]
+        peers_names_filtered = [peer_name for peer_name in peers_names if peer_name in list(df.columns)]
+        if ticker_name in list(df.columns):
+            top_corr_list = calculate_top_corr(ticker_name=ticker_name,
+                                               peers_names=peers_names_filtered,
+                                               data_df=df)
 
     return
 
 
-train_all_regular_models()
+train_all_models()
