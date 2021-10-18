@@ -70,10 +70,10 @@ def leave_outliers(data_df: pd.DataFrame,
     return df[mask]
 
 
-def calculate_corr(data_df: pd.DataFrame,
-                   dependent: str,
-                   independent: str,
-                   exclude_outliers: bool = True) -> float:
+def calculate_corr_beta(data_df: pd.DataFrame,
+                        dependent: str,
+                        independent: str,
+                        exclude_outliers: bool = True) -> Tuple[float, float]:
     df = data_df.copy()
 
     if exclude_outliers:
@@ -90,7 +90,11 @@ def calculate_corr(data_df: pd.DataFrame,
     gap_corr_matrix = np.corrcoef(Y_gap, X_gap)
     gap_corr = gap_corr_matrix[0, 1]
 
-    return gap_corr
+    # Calculating beta
+    gap_cov_matrix = np.cov(Y_gap, X_gap)
+    gap_beta = gap_cov_matrix[0, 1] / gap_cov_matrix[1, 1]
+
+    return gap_corr, gap_beta
 
 
 def train_all_models():
@@ -165,16 +169,16 @@ def train_all_models():
             continue
 
         try:
-            # run_regular_sector_regression(sector=sector,
-            #                               traidable_tickers=traidable_tickers,
-            #                               indicators=indicators,
-            #                               data_df=df)
+            run_regular_sector_regression(sector=sector,
+                                          traidable_tickers=traidable_tickers,
+                                          indicators=indicators,
+                                          data_df=df)
 
-            if sector not in ['Gold', 'Steel', 'Oil', 'DowJones']:
-                run_report_related_regression(sector=sector,
-                                              traidable_tickers=traidable_tickers,
-                                              indicators=indicators,
-                                              data_df=df)
+            # if sector not in ['Gold', 'Steel', 'Oil', 'DowJones']:
+            #     run_correlation_analysis(sector=sector,
+            #                              traidable_tickers=traidable_tickers,
+            #                              indicators=indicators,
+            #                              data_df=df)
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
@@ -343,48 +347,69 @@ def run_regular_sector_regression(sector: str,
         print(f'Failed to save data for sector: {sector}')
 
 
-def calculate_top_corr(ticker_name: str,
-                       peers_names: list,
-                       data_df: pd.DataFrame) -> dict:
-    ticker_top_peers_correlation = {}
-    df = data_df.copy()
-    for peer_name in peers_names:
-        cor = calculate_corr(data_df=df[[ticker_name, peer_name]],
-                             dependent=ticker_name,
-                             independent=peer_name)
-        if cor >= 0.7:
-            peer = peer_name.split('_')[1]
-            ticker_top_peers_correlation[peer] = cor
-
-    return ticker_top_peers_correlation
-
-
-def run_report_related_regression(sector: str,
-                                  traidable_tickers: list,
-                                  indicators: list,
-                                  data_df: pd.DataFrame):
+def run_correlation_analysis(sector: str,
+                             traidable_tickers: list,
+                             indicators: list,
+                             data_df: pd.DataFrame):
     df = data_df.copy()
     df = df.sample(frac=1)
 
-    tickers_report_models = {}  # For any given ticker models which use tickers with highest correlation
-    # as features to model respective reports on report day for given correlated stock
-    # i.e. today is UNH report and we need to add %Gap_UNH as a feature for trading given sector stocks on
-    # this particular day structure is following:
-    # {stock: {report_stock: model_dict, report_stock_1: model_dict_1, ...}
+    traidable_tickers_filtered = [traidable_ticker for traidable_ticker in traidable_tickers
+                                  if f'%Gap_{traidable_ticker}' in list(df.columns)]
 
-    tickers_report_models_filtered = {}  # Don't use report models when they are worse than regular
+    indicators_filtered = [indicator for indicator in indicators
+                           if f'%Gap_{indicator}' in list(df.columns)]
 
-    for ticker in traidable_tickers:
-        # Calculate top correlated stocks in sector
-        # Get all peers
-        peers = list(set(traidable_tickers) - {ticker})  # set literal
-        ticker_name = f'%Gap_{ticker}'
-        peers_names = [f'%Gap_{peer}' for peer in peers]
-        peers_names_filtered = [peer_name for peer_name in peers_names if peer_name in list(df.columns)]
-        if ticker_name in list(df.columns):
-            top_corr_list = calculate_top_corr(ticker_name=ticker_name,
-                                               peers_names=peers_names_filtered,
-                                               data_df=df)
+    stocks_cor_matrix = pd.DataFrame(index=traidable_tickers_filtered,
+                                     columns=traidable_tickers_filtered)
+
+    stocks_beta_matrix = pd.DataFrame(index=traidable_tickers_filtered,
+                                      columns=traidable_tickers_filtered)
+
+    stocks_etfs_cor_matrix = pd.DataFrame(index=traidable_tickers_filtered,
+                                          columns=indicators_filtered)
+
+    stocks_etfs_beta_matrix = pd.DataFrame(index=traidable_tickers_filtered,
+                                           columns=indicators_filtered)
+
+    for ticker_dependent in tqdm(traidable_tickers_filtered):
+        ticker_dependent_name = f'%Gap_{ticker_dependent}'
+        for ticker_independent in traidable_tickers_filtered:
+            if ticker_dependent == ticker_independent:
+                stocks_cor_matrix.loc[ticker_dependent, ticker_independent] = 1
+                stocks_beta_matrix.loc[ticker_dependent, ticker_independent] = 1
+                continue
+
+            try:
+                ticker_independent_name = f'%Gap_{ticker_independent}'
+                columns_to_select = [ticker_dependent_name, ticker_independent_name]
+                cor, beta = calculate_corr_beta(data_df=df[columns_to_select],
+                                                dependent=ticker_dependent_name,
+                                                independent=ticker_independent_name)
+                stocks_cor_matrix.loc[ticker_dependent, ticker_independent] = cor
+                stocks_beta_matrix.loc[ticker_dependent, ticker_independent] = beta
+            except Exception as e:
+                message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to calculate cor and beta for {ticker_dependent} with '
+                      f'{ticker_independent}')
+
+        for indicator in indicators_filtered:
+            try:
+                indicator_name = f'%Gap_{indicator}'
+                columns_to_select = [ticker_dependent_name, indicator_name]
+                cor, beta = calculate_corr_beta(data_df=df[columns_to_select],
+                                                dependent=ticker_dependent_name,
+                                                independent=indicator_name)
+                stocks_etfs_cor_matrix.loc[ticker_dependent, indicator] = cor
+                stocks_etfs_beta_matrix.loc[ticker_dependent, indicator] = beta
+            except Exception as e:
+                message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to calculate cor and beta for {ticker_dependent} with '
+                      f'{indicator}')
 
     return
 
