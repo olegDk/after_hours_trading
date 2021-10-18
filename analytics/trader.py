@@ -650,7 +650,7 @@ class Trader:
                       'EQT',
                       'PNC',
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: BULL,
+        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
