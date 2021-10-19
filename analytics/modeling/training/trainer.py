@@ -169,15 +169,16 @@ def train_all_models():
             continue
 
         try:
-            run_regular_sector_regression(sector=sector,
-                                          traidable_tickers=traidable_tickers,
-                                          indicators=indicators,
-                                          data_df=df)
+            if sector in ['Uranium']:
+                run_regular_sector_regression(sector=sector,
+                                              traidable_tickers=traidable_tickers,
+                                              indicators=indicators,
+                                              data_df=df)
 
-            run_correlation_analysis(sector=sector,
-                                     traidable_tickers=traidable_tickers,
-                                     indicators=indicators,
-                                     data_df=df)
+                run_correlation_analysis(sector=sector,
+                                         traidable_tickers=traidable_tickers,
+                                         indicators=indicators,
+                                         data_df=df)
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)

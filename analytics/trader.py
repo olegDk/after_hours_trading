@@ -647,7 +647,8 @@ class Trader:
                       'SNOW',
                       'PDCE',
                       'AMBA',
-                      'PACW'
+                      'PACW',
+                      'IBM'
                       ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        OIL: NEUTRAL,

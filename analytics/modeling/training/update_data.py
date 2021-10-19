@@ -140,9 +140,7 @@ def get_data_for_tickers(tickers: list,
 
     result_dict = {}
     last_possible_date = datetime.now() - timedelta(days=5)  # filter possibly delisted tickers
-    first_possible_date = datetime(year=2020,
-                                   month=1,
-                                   day=1)
+    first_possible_date = last_possible_date - timedelta(days=180)
     params_list = [(ticker,
                     file_path,
                     first_possible_date,
@@ -367,14 +365,15 @@ def get_all_sectors_data(sector_to_stocks: dict,
                          sector_to_etfs: dict) -> list:
     all_sectors = []
     for sector in sector_to_stocks:
-        sector_dict = {
-            'sector': sector,
-            'data': {
-                'stocks': sector_to_stocks[sector],
-                'etfs': sector_to_etfs[sector]
+        if sector in ['Uranium']:
+            sector_dict = {
+                'sector': sector,
+                'data': {
+                    'stocks': sector_to_stocks[sector],
+                    'etfs': sector_to_etfs[sector]
+                }
             }
-        }
-        all_sectors = all_sectors + [sector_dict]
+            all_sectors = all_sectors + [sector_dict]
 
     return all_sectors
 
