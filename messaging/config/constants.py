@@ -114,6 +114,7 @@ DOW_JONES = 'DowJones'
 REITS = 'Reits'
 UTILITIES = 'Utilities'
 STEEL = 'Steel'
+URANIUM = 'Uranium'
 
 # Trade policies
 NEUTRAL = 'neutral'

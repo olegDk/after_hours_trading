@@ -658,6 +658,7 @@ class Trader:
                        GOLD: NEUTRAL,
                        DOW_JONES: NEUTRAL,
                        STEEL: NEUTRAL
+
                        }
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
