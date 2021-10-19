@@ -174,11 +174,10 @@ def train_all_models():
                                           indicators=indicators,
                                           data_df=df)
 
-            # if sector not in ['Gold', 'Steel', 'Oil', 'DowJones']:
-            #     run_correlation_analysis(sector=sector,
-            #                              traidable_tickers=traidable_tickers,
-            #                              indicators=indicators,
-            #                              data_df=df)
+            run_correlation_analysis(sector=sector,
+                                     traidable_tickers=traidable_tickers,
+                                     indicators=indicators,
+                                     data_df=df)
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
@@ -411,7 +410,30 @@ def run_correlation_analysis(sector: str,
                 print(f'Failed to calculate cor and beta for {ticker_dependent} with '
                       f'{indicator}')
 
-    return
+    try:
+        if not sys.gettrace():
+            sectors_path = f'{cwd}/analytics/modeling/sectors/'
+        else:
+            sectors_path = f'../sectors/'
+
+        sector_path = f'{sectors_path}{sector}'
+
+        if 'statistics' not in os.listdir(sector_path):
+            os.mkdir(f'{sector_path}/statistics')
+
+        statistics_path = f'{sector_path}/statistics'
+
+        stocks_cor_matrix.to_csv(path_or_buf=f'{statistics_path}/stocks_cor_matrix.csv')
+        stocks_beta_matrix.to_csv(path_or_buf=f'{statistics_path}/stocks_beta_matrix.csv')
+
+        stocks_etfs_cor_matrix.to_csv(path_or_buf=f'{statistics_path}/stocks_etfs_cor_matrix.csv')
+        stocks_etfs_beta_matrix.to_csv(path_or_buf=f'{statistics_path}/stocks_etfs_beta_matrix.csv')
+
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to save statistics data for sector: {sector}')
 
 
 train_all_models()

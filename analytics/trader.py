@@ -640,17 +640,16 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['CHNG',
-                      'MDLA',
-                      'ROCC',
-                      'X',
-                      'CLF',
-                      'NUE',
-                      'DOW',
-                      'EQT',
-                      'PNC',
+        black_list = ['MQ',
+                      'BILL',
+                      'COP',
+                      'FANG',
+                      'SNOW',
+                      'PDCE',
+                      'AMBA',
+                      'PACW'
                       ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
+        policy_dict = {APPLICATION_SOFTWARE: BEAR,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,
@@ -813,44 +812,45 @@ class Trader:
                         acc_info = self.__get_acc_info()
                         bp = float(acc_info[BP_KEY])
                         bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
-                        order_data = get_order(prediction=prediction,
-                                               prediction_main_etf=prediction_main_etf,
-                                               pct_bid_net=pct_bid_net,
-                                               pct_ask_net=pct_ask_net,
-                                               indicators=indicators,
-                                               factors_l1=factors_l1,
-                                               close=close,
-                                               symbol=symbol,
-                                               bid_l1=bid_l1,
-                                               ask_l1=ask_l1,
-                                               bid_venue=bid_venue,
-                                               ask_venue=ask_venue,
-                                               vwap=vwap,
-                                               prem_high=prem_high,
-                                               prem_low=prem_low,
-                                               imb=imb,
-                                               vol=vol,
-                                               std_err=std_err,
-                                               std_err_main_etf=std_err_main_etf,
-                                               lower_sigma=lower_sigma,
-                                               upper_sigma=upper_sigma,
-                                               lower_two_sigma=lower_two_sigma,
-                                               upper_two_sigma=upper_two_sigma,
-                                               policy=symbol_policy,
-                                               prop=symbol_prop,
-                                               delta_long_coef=delta_long_coef,
-                                               delta_short_coef=delta_short_coef,
-                                               bp=bp,
-                                               bp_usage_pct=bp_usage_pct)
-                        if order_data:
-                            if self.__sent_orders_by_ticker.get(symbol):
-                                self.__sent_orders_by_ticker[symbol] += 1
-                            else:
-                                self.__sent_orders_by_ticker[symbol] = 1
-                            self.__redis_connector.h_set_int(h=SENT_ORDERS_BY_TICKER,
-                                                             key=symbol,
-                                                             value=self.__sent_orders_by_ticker[symbol])
-                        return order_data
+                        if bp_usage_pct:
+                            order_data = get_order(prediction=prediction,
+                                                   prediction_main_etf=prediction_main_etf,
+                                                   pct_bid_net=pct_bid_net,
+                                                   pct_ask_net=pct_ask_net,
+                                                   indicators=indicators,
+                                                   factors_l1=factors_l1,
+                                                   close=close,
+                                                   symbol=symbol,
+                                                   bid_l1=bid_l1,
+                                                   ask_l1=ask_l1,
+                                                   bid_venue=bid_venue,
+                                                   ask_venue=ask_venue,
+                                                   vwap=vwap,
+                                                   prem_high=prem_high,
+                                                   prem_low=prem_low,
+                                                   imb=imb,
+                                                   vol=vol,
+                                                   std_err=std_err,
+                                                   std_err_main_etf=std_err_main_etf,
+                                                   lower_sigma=lower_sigma,
+                                                   upper_sigma=upper_sigma,
+                                                   lower_two_sigma=lower_two_sigma,
+                                                   upper_two_sigma=upper_two_sigma,
+                                                   policy=symbol_policy,
+                                                   prop=symbol_prop,
+                                                   delta_long_coef=delta_long_coef,
+                                                   delta_short_coef=delta_short_coef,
+                                                   bp=bp,
+                                                   bp_usage_pct=bp_usage_pct)
+                            if order_data:
+                                if self.__sent_orders_by_ticker.get(symbol):
+                                    self.__sent_orders_by_ticker[symbol] += 1
+                                else:
+                                    self.__sent_orders_by_ticker[symbol] = 1
+                                self.__redis_connector.h_set_int(h=SENT_ORDERS_BY_TICKER,
+                                                                 key=symbol,
+                                                                 value=self.__sent_orders_by_ticker[symbol])
+                            return order_data
 
                 else:
                     raise TypeError('One of indicators is not populated yet')
