@@ -8,6 +8,7 @@ from tqdm import tqdm
 import traceback
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer
+from scipy.stats import shapiro, normaltest, chisquare, kstest
 
 cwd = os.getcwd()
 mae = make_scorer(mean_ae)
@@ -23,6 +24,38 @@ sectors = list(sector_stocks['Sector'].unique())
 
 sector_to_main_etf = {sector: sector_stocks[sector_stocks['Sector'] == sector]['MainETF'].values[0]
                       for sector in sectors}
+
+
+def check_shapiro(a: np.ndarray) -> bool:
+    _, p = shapiro(a)
+    if p > 0.05:
+        return True
+    else:
+        return False
+
+
+def check_pearson(a: np.ndarray) -> bool:
+    _, p = normaltest(a)
+    if p > 0.05:
+        return True
+    else:
+        return False
+
+
+def check_chisquare(a: np.ndarray) -> bool:
+    _, p = chisquare(a)
+    if p > 0.05:
+        return True
+    else:
+        return False
+
+
+def check_kstest(a: np.ndarray) -> bool:
+    _, p = kstest(a, 'norm')
+    if p > 0.05:
+        return True
+    else:
+        return False
 
 
 def calculate_IQR(x: pd.Series) -> Tuple[float, float, float]:
@@ -169,21 +202,30 @@ def train_all_models():
             continue
 
         try:
-            if sector in ['Uranium']:
-                run_regular_sector_regression(sector=sector,
-                                              traidable_tickers=traidable_tickers,
-                                              indicators=indicators,
-                                              data_df=df)
+            run_regular_sector_regression(sector=sector,
+                                          traidable_tickers=traidable_tickers,
+                                          indicators=indicators,
+                                          data_df=df)
 
-                run_correlation_analysis(sector=sector,
-                                         traidable_tickers=traidable_tickers,
-                                         indicators=indicators,
-                                         data_df=df)
+            run_correlation_analysis(sector=sector,
+                                     traidable_tickers=traidable_tickers,
+                                     indicators=indicators,
+                                     data_df=df)
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
             print(traceback.format_exc())
             print(f'Failed to run sector regression sector: {sector}')
+
+
+def calculate_abs_diff_when_bt_mae(targets: np.ndarray,
+                                   preds: np.ndarray,
+                                   test_mae: float) -> float:
+
+    abs_diffs = list(np.abs(targets-preds))
+    abs_diffs_bt_mae = [abs_diff for abs_diff in abs_diffs if abs_diff >= test_mae]
+
+    return float(np.mean(abs_diffs_bt_mae))
 
 
 def run_regular_sector_regression(sector: str,
@@ -192,9 +234,9 @@ def run_regular_sector_regression(sector: str,
                                   data_df: pd.DataFrame):
     df = data_df.copy()
     # Shuffle df and make train/test split
-    test_size = 40
+    test_size = 120
     train_df = df[:-test_size]
-    test_df = df.tail(40)
+    test_df = df.tail(test_size)
     train_df = train_df.sample(frac=1)
 
     # For future refit
@@ -288,10 +330,31 @@ def run_regular_sector_regression(sector: str,
         print(f'Beta of {ticker} with main ETF {main_indicator_name} is '
               f'{lr_main_etf.coef_}')
 
+        errors = ticker_target_test - preds
+        errors_main_etf = ticker_target_main_etf_test - preds_main_etf
+
         ticker_model_dict['model'] = lr
         ticker_model_dict['model_main_etf'] = lr_main_etf
         ticker_model_dict['mae'] = test_mae
+        ticker_model_dict['shapiro_normal'] = check_shapiro(a=errors)
+        ticker_model_dict['pearson_normal'] = check_pearson(a=errors)
+        ticker_model_dict['ks_normal'] = check_kstest(a=errors)
+        ticker_model_dict['chisquare_normal'] = check_chisquare(a=errors)
+        ticker_model_dict['shapiro_normal_main_etf'] = check_shapiro(a=errors_main_etf)
+        ticker_model_dict['pearson_normal_main_etf'] = check_pearson(a=errors_main_etf)
+        ticker_model_dict['ks_normal_main_etf'] = check_kstest(a=errors_main_etf)
+        ticker_model_dict['chisquare_normal_main_etf'] = check_chisquare(a=errors_main_etf)
+        ticker_model_dict['n_days_error_bt_mae'] = \
+            sum(i > test_mae
+                for i in list(np.abs(ticker_target_test-preds)))
+        ticker_model_dict['mean_abs_diff_when_bt_mae'] = \
+            calculate_abs_diff_when_bt_mae(ticker_target_test, preds, test_mae)
         ticker_model_dict['mae_main_etf'] = test_mae_main_etf
+        ticker_model_dict['n_days_error_bt_main_etf_mae'] = \
+            sum(i > test_mae_main_etf
+                for i in list(np.abs(ticker_target_main_etf_test-preds_main_etf)))
+        ticker_model_dict['mean_abs_diff_when_bt_main_etf_mae'] = \
+            calculate_abs_diff_when_bt_mae(ticker_target_main_etf_test, preds_main_etf, test_mae_main_etf)
         ticker_target_std = ticker_target.std()
         ticker_model_dict['stock_std'] = ticker_target_std
         ticker_target_mean = ticker_target.mean()
@@ -328,6 +391,7 @@ def run_regular_sector_regression(sector: str,
 
         models_path = f'{sector_path}/models'
 
+        # Dumping models and data required for live trading
         with open(f'{models_path}/tickers_indicators.pkl', 'wb') as o:
             pickle.dump(tickers_indicators, o)
         with open(f'{models_path}/tickers_main_etf.pkl', 'wb') as o:
@@ -340,6 +404,32 @@ def run_regular_sector_regression(sector: str,
             pickle.dump(tickers_main_etf_filtered, o)
         with open(f'{models_path}/tickers_models_filtered.pkl', 'wb') as o:
             pickle.dump(tickers_models_filtered, o)
+
+        # Dumping data for manual analysis
+        if 'statistics' not in os.listdir(sector_path):
+            os.mkdir(f'{sector_path}/statistics')
+
+        statistics_path = f'{sector_path}/statistics'
+
+        statistics_fields = ['mae', 'n_days_error_bt_mae',
+                             'mae_main_etf', 'n_days_error_bt_main_etf_mae',
+                             'stock_std', 'mean', 'lower_sigma', 'upper_sigma',
+                             'lower_two_sigma', 'upper_two_sigma', 'mean_abs_diff_when_bt_mae',
+                             'mean_abs_diff_when_bt_main_etf_mae',
+                             'shapiro_normal', 'shapiro_normal_main_etf',
+                             'pearson_normal', 'pearson_normal_main_etf',
+                             'ks_normal', 'ks_normal_main_etf',
+                             'chisquare_normal', 'chisquare_normal_main_etf'
+                             ]
+
+        statistics_dict = {key_stock: {key_statistics: tickers_models[key_stock][key_statistics]
+                                       for key_statistics in tickers_models[key_stock]
+                                       if key_statistics in statistics_fields}
+                           for key_stock in tickers_models}
+
+        pd.DataFrame.from_dict(statistics_dict, orient='index').\
+            to_csv(f'{statistics_path}/modeling_statistics.csv')
+
     except Exception as e:
         message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
         print(message)

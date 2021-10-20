@@ -640,17 +640,8 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['MQ',
-                      'BILL',
-                      'COP',
-                      'FANG',
-                      'SNOW',
-                      'PDCE',
-                      'AMBA',
-                      'PACW',
-                      'IBM'
-                      ]  # Add untraidable stocks here
-        policy_dict = {APPLICATION_SOFTWARE: BEAR,
+        black_list = []  # Add untraidable stocks here
+        policy_dict = {APPLICATION_SOFTWARE: BULL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
                        SEMICONDUCTORS: NEUTRAL,

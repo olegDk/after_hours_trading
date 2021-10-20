@@ -365,15 +365,14 @@ def get_all_sectors_data(sector_to_stocks: dict,
                          sector_to_etfs: dict) -> list:
     all_sectors = []
     for sector in sector_to_stocks:
-        if sector in ['Uranium']:
-            sector_dict = {
-                'sector': sector,
-                'data': {
-                    'stocks': sector_to_stocks[sector],
-                    'etfs': sector_to_etfs[sector]
-                }
+        sector_dict = {
+            'sector': sector,
+            'data': {
+                'stocks': sector_to_stocks[sector],
+                'etfs': sector_to_etfs[sector]
             }
-            all_sectors = all_sectors + [sector_dict]
+        }
+        all_sectors = all_sectors + [sector_dict]
 
     return all_sectors
 
