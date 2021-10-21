@@ -7,7 +7,7 @@ from typing import Tuple
 from tqdm import tqdm
 import traceback
 from sklearn.linear_model import RidgeCV
-from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer
+from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer, r2_score
 from scipy.stats import shapiro, normaltest, chisquare, kstest
 
 cwd = os.getcwd()
@@ -330,12 +330,16 @@ def run_regular_sector_regression(sector: str,
         print(f'Beta of {ticker} with main ETF {main_indicator_name} is '
               f'{lr_main_etf.coef_}')
 
-        errors = ticker_target_test - preds
-        errors_main_etf = ticker_target_main_etf_test - preds_main_etf
+        errors = np.sqrt((ticker_target_test - preds) ** 2)
+        errors_main_etf = np.sqrt((ticker_target_main_etf_test - preds_main_etf) ** 2)
 
         ticker_model_dict['model'] = lr
         ticker_model_dict['model_main_etf'] = lr_main_etf
         ticker_model_dict['mae'] = test_mae
+        ticker_model_dict['mae_main_etf'] = test_mae_main_etf
+        ticker_model_dict['r2_score'] = r2_score(y_true=ticker_target_test, y_pred=preds)
+        ticker_model_dict['r2_score_main_etf'] = r2_score(y_true=ticker_target_main_etf_test,
+                                                          y_pred=preds_main_etf)
         ticker_model_dict['shapiro_normal'] = check_shapiro(a=errors)
         ticker_model_dict['pearson_normal'] = check_pearson(a=errors)
         ticker_model_dict['ks_normal'] = check_kstest(a=errors)
@@ -347,12 +351,11 @@ def run_regular_sector_regression(sector: str,
         ticker_model_dict['n_days_error_bt_mae'] = \
             sum(i > test_mae
                 for i in list(np.abs(ticker_target_test-preds)))
-        ticker_model_dict['mean_abs_diff_when_bt_mae'] = \
-            calculate_abs_diff_when_bt_mae(ticker_target_test, preds, test_mae)
-        ticker_model_dict['mae_main_etf'] = test_mae_main_etf
         ticker_model_dict['n_days_error_bt_main_etf_mae'] = \
             sum(i > test_mae_main_etf
-                for i in list(np.abs(ticker_target_main_etf_test-preds_main_etf)))
+                for i in list(np.abs(ticker_target_main_etf_test - preds_main_etf)))
+        ticker_model_dict['mean_abs_diff_when_bt_mae'] = \
+            calculate_abs_diff_when_bt_mae(ticker_target_test, preds, test_mae)
         ticker_model_dict['mean_abs_diff_when_bt_main_etf_mae'] = \
             calculate_abs_diff_when_bt_mae(ticker_target_main_etf_test, preds_main_etf, test_mae_main_etf)
         ticker_target_std = ticker_target.std()
@@ -371,6 +374,12 @@ def run_regular_sector_regression(sector: str,
                    y=ticker_target)
             lr_main_etf.fit(X=ticker_main_etf,
                             y=ticker_main_etf_target)
+            preds_full = lr.predict(ticker_features)
+            preds_full_main_etf = lr_main_etf.predict(ticker_main_etf)
+            ticker_model_dict['r2_score_full'] = r2_score(y_true=ticker_target,
+                                                          y_pred=preds_full)
+            ticker_model_dict['r2_score_main_etf_full'] = r2_score(y_true=ticker_main_etf_target,
+                                                                   y_pred=preds_full_main_etf)
             ticker_model_dict['model'] = lr
             ticker_model_dict['model_main_etf'] = lr_main_etf
             tickers_indicators_filtered[ticker] = indicators
@@ -419,7 +428,9 @@ def run_regular_sector_regression(sector: str,
                              'shapiro_normal', 'shapiro_normal_main_etf',
                              'pearson_normal', 'pearson_normal_main_etf',
                              'ks_normal', 'ks_normal_main_etf',
-                             'chisquare_normal', 'chisquare_normal_main_etf'
+                             'chisquare_normal', 'chisquare_normal_main_etf',
+                             'r2_score', 'r2_score_main_etf', 'r2_score_full',
+                             'r2_score_main_etf_full'
                              ]
 
         statistics_dict = {key_stock: {key_statistics: tickers_models[key_stock][key_statistics]
