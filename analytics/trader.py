@@ -640,7 +640,20 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = []  # Add untraidable stocks here
+        black_list = ['WE',
+                      'LRCX',
+                      'KLAC',
+                      'NXPI',
+                      'AVGO',
+                      'TER',
+                      'OLED',
+                      'AMBA',
+                      'KLIC',
+                      'JNJ',
+                      'INOV',
+                      'HOOD',
+                      
+                      ]  # Add untraidable stocks here
         policy_dict = {APPLICATION_SOFTWARE: NEUTRAL,
                        OIL: NEUTRAL,
                        RENEWABLE_ENERGY: NEUTRAL,
@@ -874,7 +887,7 @@ class Trader:
         return {}
 
 
-# trader = Trader()
-# print(trader.get_subscription_list())
-# import pandas as pd
-# pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
+trader = Trader()
+print(trader.get_subscription_list())
+import pandas as pd
+pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
