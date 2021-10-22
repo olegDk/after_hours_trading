@@ -172,6 +172,7 @@ def get_data_for_ticker(ticker: str,
                         calculate_technicals: bool = True,
                         calculate_liquidity: bool = True,
                         filter_tickers: bool = True) -> dict:
+
     try:
         data = pd.read_csv(filepath_or_buffer=f'{file_path}{file_prefix}{ticker}.csv')
         if 'Date' not in data.columns:
@@ -194,7 +195,7 @@ def get_data_for_ticker(ticker: str,
             return {ticker: pd.DataFrame()}
         try:
             market_cap = yfinance.Ticker(ticker=ticker).info['marketCap']
-            if market_cap < 2e9:
+            if market_cap < 2e9 and not ticker == 'CENX':
                 return {ticker: pd.DataFrame()}
         except Exception as e:
             message = f'Get data for ticker {ticker} error: ' \

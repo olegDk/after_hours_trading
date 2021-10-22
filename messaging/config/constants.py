@@ -102,20 +102,6 @@ VENUE = 'venue'
 ACCOUNT_ID_KEY = 'accountId'
 ORDER_DATA = 'orderData'
 
-# Sector names
-APPLICATION_SOFTWARE = 'ApplicationSoftware'
-BANKS = 'Banks'
-OIL = 'Oil'
-RENEWABLE_ENERGY = 'RenewableEnergy'
-SEMICONDUCTORS = 'Semiconductors'
-CHINA = 'China'
-GOLD = 'Gold'
-DOW_JONES = 'DowJones'
-REITS = 'Reits'
-UTILITIES = 'Utilities'
-STEEL = 'Steel'
-URANIUM = 'Uranium'
-
 # Trade policies
 NEUTRAL = 'neutral'
 BULL = 'bull'

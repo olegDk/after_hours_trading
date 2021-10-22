@@ -476,8 +476,12 @@ CLF,Steel
 NUE,Steel
 STLD,Steel
 X,Steel
-CENX,Steel
 FCX,Steel
+TECK,Steel
 CCJ,Uranium
 UUUU,Uranium
 NXE,Uranium
+FCX,Cooper
+AA,Aluminium
+CENX,Aluminium
+VALE,BrazilSteel
