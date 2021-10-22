@@ -145,8 +145,7 @@ def train_all_models():
 
     print(sectors_dirs)
 
-    # for sector_dir in tqdm(['analytics/modeling/sectors/RenewableEnergy']):
-    # for sector_dir in tqdm([sectors_dirs[1]]):
+    # for sector_dir in tqdm([sectors_dirs[11]]):
     for sector_dir in tqdm(sectors_dirs):
         print(sector_dir)
         sector = sector_dir.split('/')[-1]
@@ -221,8 +220,7 @@ def train_all_models():
 def calculate_abs_diff_when_bt_mae(targets: np.ndarray,
                                    preds: np.ndarray,
                                    test_mae: float) -> float:
-
-    abs_diffs = list(np.abs(targets-preds))
+    abs_diffs = list(np.abs(targets - preds))
     abs_diffs_bt_mae = [abs_diff for abs_diff in abs_diffs if abs_diff >= test_mae]
 
     return float(np.mean(abs_diffs_bt_mae))
@@ -235,6 +233,8 @@ def run_regular_sector_regression(sector: str,
     df = data_df.copy()
     # Shuffle df and make train/test split
     test_size = 120
+    if sector == 'China':
+        test_size = 40
     train_df = df[:-test_size]
     test_df = df.tail(test_size)
     train_df = train_df.sample(frac=1)
@@ -350,7 +350,7 @@ def run_regular_sector_regression(sector: str,
         ticker_model_dict['chisquare_normal_main_etf'] = check_chisquare(a=errors_main_etf)
         ticker_model_dict['n_days_error_bt_mae'] = \
             sum(i > test_mae
-                for i in list(np.abs(ticker_target_test-preds)))
+                for i in list(np.abs(ticker_target_test - preds)))
         ticker_model_dict['n_days_error_bt_main_etf_mae'] = \
             sum(i > test_mae_main_etf
                 for i in list(np.abs(ticker_target_main_etf_test - preds_main_etf)))
@@ -368,7 +368,7 @@ def run_regular_sector_regression(sector: str,
         ticker_model_dict['upper_two_sigma'] = ticker_target_mean + 2 * ticker_target_std
         tickers_models[ticker] = ticker_model_dict
 
-        if test_mae <= 1:
+        if test_mae <= 1.5:
             # Refit and save filtered
             lr.fit(X=ticker_features,
                    y=ticker_target)
@@ -438,7 +438,7 @@ def run_regular_sector_regression(sector: str,
                                        if key_statistics in statistics_fields}
                            for key_stock in tickers_models}
 
-        pd.DataFrame.from_dict(statistics_dict, orient='index').\
+        pd.DataFrame.from_dict(statistics_dict, orient='index'). \
             to_csv(f'{statistics_path}/modeling_statistics.csv')
 
     except Exception as e:
