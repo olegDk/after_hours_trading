@@ -644,6 +644,8 @@ class Trader:
                       'PINS',
                       'XM',
                       'MQ',
+                      'GOOG',
+                      'GOOGL',
                       ]  # Add untraidable stocks here
 
         policy_dict = {sector: NEUTRAL for sector in list(self.__sector_to_indicators.keys())}
