@@ -640,20 +640,10 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['ROKU',
-                      'PYPL',
-                      'FB',
-                      'KOS',
-                      'GOOGL',
-                      'GOOG',
-                      'TWTR',
+        black_list = ['PYPL',
                       'PINS',
-                      'TTD',
-                      'APPS',
-                      'AMD',
-                      'NUE',
-                      'BKU',
-                      
+                      'XM',
+                      'MQ',
                       ]  # Add untraidable stocks here
 
         policy_dict = {sector: NEUTRAL for sector in list(self.__sector_to_indicators.keys())}

@@ -145,7 +145,7 @@ def train_all_models():
 
     print(sectors_dirs)
 
-    # for sector_dir in tqdm([sectors_dirs[11]]):
+    # for sector_dir in tqdm([sectors_dirs[4]]):
     for sector_dir in tqdm(sectors_dirs):
         print(sector_dir)
         sector = sector_dir.split('/')[-1]
@@ -232,9 +232,7 @@ def run_regular_sector_regression(sector: str,
                                   data_df: pd.DataFrame):
     df = data_df.copy()
     # Shuffle df and make train/test split
-    test_size = 120
-    if sector == 'China':
-        test_size = 40
+    test_size = int(len(df) * 0.3)
     train_df = df[:-test_size]
     test_df = df.tail(test_size)
     train_df = train_df.sample(frac=1)
@@ -452,6 +450,7 @@ def run_correlation_analysis(sector: str,
                              traidable_tickers: list,
                              indicators: list,
                              data_df: pd.DataFrame):
+
     df = data_df.copy()
     df = df.sample(frac=1)
 
@@ -473,8 +472,11 @@ def run_correlation_analysis(sector: str,
     stocks_etfs_beta_matrix = pd.DataFrame(index=traidable_tickers_filtered,
                                            columns=indicators_filtered)
 
+    top_corr_all = {}
+
     for ticker_dependent in tqdm(traidable_tickers_filtered):
         ticker_dependent_name = f'%Gap_{ticker_dependent}'
+        top_corr = {}
         for ticker_independent in traidable_tickers_filtered:
             if ticker_dependent == ticker_independent:
                 stocks_cor_matrix.loc[ticker_dependent, ticker_independent] = 1
@@ -489,12 +491,16 @@ def run_correlation_analysis(sector: str,
                                                 independent=ticker_independent_name)
                 stocks_cor_matrix.loc[ticker_dependent, ticker_independent] = cor
                 stocks_beta_matrix.loc[ticker_dependent, ticker_independent] = beta
+                if cor >= 0.7:
+                    top_corr[ticker_independent] = cor
             except Exception as e:
                 message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
                 print(message)
                 print(traceback.format_exc())
                 print(f'Failed to calculate cor and beta for {ticker_dependent} with '
                       f'{ticker_independent}')
+
+        top_corr_all[ticker_dependent] = top_corr
 
         for indicator in indicators_filtered:
             try:

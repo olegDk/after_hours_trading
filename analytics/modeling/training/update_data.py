@@ -139,8 +139,8 @@ def get_data_for_tickers(tickers: list,
         file_path = f'{cwd}/analytics/modeling/training/ticker_data/'
 
     result_dict = {}
-    last_possible_date = datetime.now() - timedelta(days=5)  # filter possibly delisted tickers
-    first_possible_date = last_possible_date - timedelta(days=180)
+    last_possible_date = datetime.now() - timedelta(days=7)  # filter possibly delisted tickers
+    first_possible_date = last_possible_date - timedelta(days=120)
     params_list = [(ticker,
                     file_path,
                     first_possible_date,
