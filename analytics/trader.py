@@ -169,12 +169,12 @@ def init_models() -> dict:
     for sector_dir in sectors_dirs:
         sector = sector_dir.split('/')[-1]
         print(f'Sector: {sector}...')
-        tickers_models_filtered_path \
-            = f'{sector_dir}/models/tickers_models_filtered.pkl'
+        tickers_models_path \
+            = f'{sector_dir}/models/tickers_models.pkl'
         try:
-            with open(tickers_models_filtered_path, 'rb') as i:
-                tickers_models_filtered = pickle.load(i)
-            models_dict.update(tickers_models_filtered)
+            with open(tickers_models_path, 'rb') as i:
+                tickers_models = pickle.load(i)
+            models_dict.update(tickers_models)
             print(f'Sector: {sector} loaded.')
             print(f'-------')
         except Exception as e:
@@ -203,19 +203,19 @@ def init_factors() -> Tuple[dict, dict, dict, dict, dict, dict]:
     for sector_dir in sectors_dirs:
         sector = sector_dir.split('/')[-1]
         print(f'Sector: {sector}...')
-        tickers_indicators_filtered_path \
-            = f'{sector_dir}/models/tickers_indicators_filtered.pkl'
-        main_etfs_filtered_path = f'{sector_dir}/models/tickers_main_etf_filtered.pkl'
+        tickers_indicators_path \
+            = f'{sector_dir}/models/tickers_indicators.pkl'
+        main_etfs_path = f'{sector_dir}/models/tickers_main_etf.pkl'
         try:
-            with open(tickers_indicators_filtered_path, 'rb') as i:
-                tickers_indicators_filtered = pickle.load(i)
-            factors_dict.update(tickers_indicators_filtered)
-            with open(main_etfs_filtered_path, 'rb') as i:
-                main_etfs_filtered = pickle.load(i)
-            main_etfs_dict.update(main_etfs_filtered)
-            current_sector_stocks = list(tickers_indicators_filtered.keys())
+            with open(tickers_indicators_path, 'rb') as i:
+                tickers_indicators = pickle.load(i)
+            factors_dict.update(tickers_indicators)
+            with open(main_etfs_path, 'rb') as i:
+                main_etfs = pickle.load(i)
+            main_etfs_dict.update(main_etfs)
+            current_sector_stocks = list(tickers_indicators.keys())
             key = current_sector_stocks[0]
-            current_sector_indicators = tickers_indicators_filtered[key]
+            current_sector_indicators = tickers_indicators[key]
             sector_to_indicators[sector] = current_sector_indicators
             sector_to_stocks[sector] = current_sector_stocks
             for stock in current_sector_stocks:
@@ -641,11 +641,7 @@ class Trader:
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = ['PYPL',
-                      'PINS',
-                      'XM',
-                      'MQ',
-                      'GOOG',
-                      'GOOGL',
+                      'PINS'
                       ]  # Add untraidable stocks here
 
         policy_dict = {sector: NEUTRAL for sector in list(self.__sector_to_indicators.keys())}

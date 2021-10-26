@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
-from typing import Tuple
 from tqdm import tqdm
 import traceback
+from typing import Tuple
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer, r2_score
 from scipy.stats import shapiro, normaltest, chisquare, kstest
@@ -226,6 +226,174 @@ def calculate_abs_diff_when_bt_mae(targets: np.ndarray,
     return float(np.mean(abs_diffs_bt_mae))
 
 
+def run_regular_ticker_regression(ticker: str,
+                                  data_df: pd.DataFrame,
+                                  train_df: pd.DataFrame,
+                                  test_df: pd.DataFrame,
+                                  indicators: list,
+                                  main_etf_sector: list) -> dict:
+    df = data_df.copy()
+    ticker_model_dict = {}
+    indicators_names = [f'%Gap_{indicator}'
+                        for indicator in indicators]
+    main_indicator_name = f'%Gap_{main_etf_sector}'
+    target_name = f'%Gap_{ticker}'
+
+    try:
+        # Getting train and test data
+        df_filtered = data_df[indicators_names + [target_name]]
+        df_filtered = \
+            remove_outliers(data_df=df_filtered,
+                            target_column=target_name)
+        ticker_features = df_filtered[indicators_names]
+        ticker_target = df_filtered[target_name]
+
+        df_main_etf_filtered = df[[main_indicator_name] + [target_name]]
+        df_main_etf_filtered = \
+            remove_outliers(data_df=df_main_etf_filtered,
+                            target_column=target_name)
+        ticker_main_etf = df_main_etf_filtered[main_indicator_name].to_frame()
+        ticker_main_etf_target = df_main_etf_filtered[target_name]
+
+        # For filtering stocks with high test mae
+        train_df_filtered = train_df[indicators_names + [target_name]]
+        train_df_filtered = \
+            remove_outliers(data_df=train_df_filtered,
+                            target_column=target_name)
+        train_df_main_etf_filtered = train_df[[main_indicator_name] + [target_name]]
+        train_df_main_etf_filtered = \
+            remove_outliers(data_df=train_df_main_etf_filtered,
+                            target_column=target_name)
+        ticker_features_train = train_df_filtered[indicators_names]
+        ticker_target_train = train_df_filtered[target_name]
+        ticker_features_test = test_df[indicators_names]
+        ticker_target_test = test_df[target_name]
+
+        ticker_main_etf_train = train_df_main_etf_filtered[main_indicator_name].to_frame()
+        ticker_target_main_etf_train = train_df_main_etf_filtered[target_name]
+        ticker_main_etf_test = test_df[main_indicator_name].to_frame()
+        ticker_target_main_etf_test = test_df[target_name]
+
+        ticker_model_dict = get_models(ticker=ticker,
+                                       main_indicator_name=main_indicator_name,
+                                       ticker_features=ticker_features,
+                                       ticker_target=ticker_target,
+                                       ticker_main_etf=ticker_main_etf,
+                                       ticker_main_etf_target=ticker_main_etf_target,
+                                       ticker_features_train=ticker_features_train,
+                                       ticker_target_train=ticker_target_train,
+                                       ticker_main_etf_train=ticker_main_etf_train,
+                                       ticker_target_main_etf_train=ticker_target_main_etf_train,
+                                       ticker_features_test=ticker_features_test,
+                                       ticker_target_test=ticker_target_test,
+                                       ticker_main_etf_test=ticker_main_etf_test,
+                                       ticker_target_main_etf_test=ticker_target_main_etf_test)
+
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to select features for ticker: {ticker}')
+
+    return ticker_model_dict
+
+
+def get_models(ticker: str,
+               main_indicator_name: str,
+               ticker_features: pd.DataFrame,
+               ticker_target: pd.Series,
+               ticker_main_etf: pd.DataFrame,
+               ticker_main_etf_target: pd.Series,
+               ticker_features_train: pd.DataFrame,
+               ticker_target_train: pd.Series,
+               ticker_main_etf_train: pd.DataFrame,
+               ticker_target_main_etf_train: pd.Series,
+               ticker_features_test: pd.DataFrame,
+               ticker_target_test: np.ndarray,
+               ticker_main_etf_test: pd.DataFrame,
+               ticker_target_main_etf_test: np.ndarray) -> dict:
+    ticker_model_dict = {}
+    lr = RidgeCV(fit_intercept=False,
+                 scoring=mae)
+    lr.fit(X=ticker_features_train,
+           y=ticker_target_train)
+
+    lr_main_etf = RidgeCV(fit_intercept=False,
+                          scoring=mae)
+    lr_main_etf.fit(X=ticker_main_etf_train,
+                    y=ticker_target_main_etf_train)
+
+    preds = lr.predict(X=ticker_features_test)
+    test_mae = \
+        mean_ae(y_true=ticker_target_test, y_pred=preds)
+
+    preds_main_etf = lr_main_etf.predict(X=ticker_main_etf_test)
+    test_mae_main_etf = \
+        mean_ae(y_true=ticker_target_main_etf_test, y_pred=preds_main_etf)
+
+    print(f'Test MAE for ticker {ticker} is '
+          f'{test_mae}')
+
+    print(f'Test MAE of beta model with main ETF is '
+          f'{test_mae_main_etf}')
+
+    print(f'Beta of {ticker} with main ETF {main_indicator_name} is '
+          f'{lr_main_etf.coef_}')
+
+    errors = np.sqrt((ticker_target_test - preds) ** 2)
+    errors_main_etf = np.sqrt((ticker_target_main_etf_test - preds_main_etf) ** 2)
+
+    ticker_model_dict['model'] = lr
+    ticker_model_dict['model_main_etf'] = lr_main_etf
+    ticker_model_dict['mae'] = test_mae
+    ticker_model_dict['mae_main_etf'] = test_mae_main_etf
+    ticker_model_dict['r2_score'] = r2_score(y_true=ticker_target_test, y_pred=preds)
+    ticker_model_dict['r2_score_main_etf'] = r2_score(y_true=ticker_target_main_etf_test,
+                                                      y_pred=preds_main_etf)
+    ticker_model_dict['shapiro_normal'] = check_shapiro(a=errors)
+    ticker_model_dict['pearson_normal'] = check_pearson(a=errors)
+    ticker_model_dict['ks_normal'] = check_kstest(a=errors)
+    ticker_model_dict['chisquare_normal'] = check_chisquare(a=errors)
+    ticker_model_dict['shapiro_normal_main_etf'] = check_shapiro(a=errors_main_etf)
+    ticker_model_dict['pearson_normal_main_etf'] = check_pearson(a=errors_main_etf)
+    ticker_model_dict['ks_normal_main_etf'] = check_kstest(a=errors_main_etf)
+    ticker_model_dict['chisquare_normal_main_etf'] = check_chisquare(a=errors_main_etf)
+    ticker_model_dict['n_days_error_bt_mae'] = \
+        sum(i > test_mae
+            for i in list(np.abs(ticker_target_test - preds)))
+    ticker_model_dict['n_days_error_bt_main_etf_mae'] = \
+        sum(i > test_mae_main_etf
+            for i in list(np.abs(ticker_target_main_etf_test - preds_main_etf)))
+    ticker_model_dict['mean_abs_diff_when_bt_mae'] = \
+        calculate_abs_diff_when_bt_mae(ticker_target_test, preds, test_mae)
+    ticker_model_dict['mean_abs_diff_when_bt_main_etf_mae'] = \
+        calculate_abs_diff_when_bt_mae(ticker_target_main_etf_test, preds_main_etf, test_mae_main_etf)
+    ticker_target_std = ticker_target.std()
+    ticker_model_dict['stock_std'] = ticker_target_std
+    ticker_target_mean = ticker_target.mean()
+    ticker_model_dict['mean'] = ticker_target_mean
+    ticker_model_dict['lower_sigma'] = ticker_target_mean - ticker_target_std
+    ticker_model_dict['upper_sigma'] = ticker_target_mean + ticker_target_std
+    ticker_model_dict['lower_two_sigma'] = ticker_target_mean - 2 * ticker_target_std
+    ticker_model_dict['upper_two_sigma'] = ticker_target_mean + 2 * ticker_target_std
+
+    # Refit and save filtered
+    lr.fit(X=ticker_features,
+           y=ticker_target)
+    lr_main_etf.fit(X=ticker_main_etf,
+                    y=ticker_main_etf_target)
+    preds_full = lr.predict(ticker_features)
+    preds_full_main_etf = lr_main_etf.predict(ticker_main_etf)
+    ticker_model_dict['r2_score_full'] = r2_score(y_true=ticker_target,
+                                                  y_pred=preds_full)
+    ticker_model_dict['r2_score_main_etf_full'] = r2_score(y_true=ticker_main_etf_target,
+                                                           y_pred=preds_full_main_etf)
+    ticker_model_dict['model'] = lr
+    ticker_model_dict['model_main_etf'] = lr_main_etf
+
+    return ticker_model_dict
+
+
 def run_regular_sector_regression(sector: str,
                                   traidable_tickers: list,
                                   indicators: list,
@@ -241,150 +409,39 @@ def run_regular_sector_regression(sector: str,
     df = df.sample(frac=1)
 
     tickers_indicators = {}
-    tickers_indicators_filtered = {}
     tickers_main_etf = {}
-    tickers_main_etf_filtered = {}
     tickers_models = {}
-    tickers_models_filtered = {}
 
     main_etf_sector = sector_to_main_etf[sector]
 
     for ticker in traidable_tickers:
-        ticker_model_dict = {}
-        tickers_indicators[ticker] = indicators
-        indicators_names = [f'%Gap_{indicator}'
-                            for indicator in indicators]
-        tickers_main_etf[ticker] = main_etf_sector
-        main_indicator_name = f'%Gap_{main_etf_sector}'
-        target_name = f'%Gap_{ticker}'
-
         try:
-            # For future refit
-            df_filtered = df[indicators_names + [target_name]]
-            df_filtered = \
-                remove_outliers(data_df=df_filtered,
-                                target_column=target_name)
-            ticker_features = df_filtered[indicators_names]
-            ticker_target = df_filtered[target_name]
-
-            df_main_etf_filtered = df[[main_indicator_name] + [target_name]]
-            df_main_etf_filtered = \
-                remove_outliers(data_df=df_main_etf_filtered,
-                                target_column=target_name)
-            ticker_main_etf = df_main_etf_filtered[main_indicator_name].to_frame()
-            ticker_main_etf_target = df_main_etf_filtered[target_name]
-
-            # For filtering stocks with high test mae
-            train_df_filtered = train_df[indicators_names + [target_name]]
-            train_df_filtered = \
-                remove_outliers(data_df=train_df_filtered,
-                                target_column=target_name)
-            train_df_main_etf_filtered = train_df[[main_indicator_name] + [target_name]]
-            train_df_main_etf_filtered = \
-                remove_outliers(data_df=train_df_main_etf_filtered,
-                                target_column=target_name)
-            ticker_features_train = train_df_filtered[indicators_names]
-            ticker_target_train = train_df_filtered[target_name]
-            ticker_features_test = test_df[indicators_names]
-            ticker_target_test = test_df[target_name]
-
-            ticker_main_etf_train = train_df_main_etf_filtered[main_indicator_name].to_frame()
-            ticker_target_main_etf_train = train_df_main_etf_filtered[target_name]
-            ticker_main_etf_test = test_df[main_indicator_name].to_frame()
-            ticker_target_main_etf_test = test_df[target_name]
-
+            ticker_model_dict = run_regular_ticker_regression(ticker=ticker,
+                                                              data_df=df,
+                                                              train_df=train_df,
+                                                              test_df=test_df,
+                                                              indicators=indicators,
+                                                              main_etf_sector=main_etf_sector)
+            tickers_indicators[ticker] = indicators
+            tickers_main_etf[ticker] = main_etf_sector
+            tickers_models[ticker] = ticker_model_dict
         except Exception as e:
             message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
             print(traceback.format_exc())
-            print(f'Failed to select features for ticker: {ticker}')
-            continue
-
-        # Train on train_data, all features
-        lr = RidgeCV(fit_intercept=False,
-                     scoring=mae)
-        lr.fit(X=ticker_features_train,
-               y=ticker_target_train)
-
-        lr_main_etf = RidgeCV(fit_intercept=False,
-                              scoring=mae)
-        lr_main_etf.fit(X=ticker_main_etf_train,
-                        y=ticker_target_main_etf_train)
-
-        preds = lr.predict(X=ticker_features_test)
-        test_mae = \
-            mean_ae(y_true=ticker_target_test, y_pred=preds)
-
-        preds_main_etf = lr_main_etf.predict(X=ticker_main_etf_test)
-        test_mae_main_etf = \
-            mean_ae(y_true=ticker_target_main_etf_test, y_pred=preds_main_etf)
-
-        print(f'Test MAE for ticker {ticker} is '
-              f'{test_mae}')
-
-        print(f'Test MAE of beta model with main ETF is '
-              f'{test_mae_main_etf}')
-
-        print(f'Beta of {ticker} with main ETF {main_indicator_name} is '
-              f'{lr_main_etf.coef_}')
-
-        errors = np.sqrt((ticker_target_test - preds) ** 2)
-        errors_main_etf = np.sqrt((ticker_target_main_etf_test - preds_main_etf) ** 2)
-
-        ticker_model_dict['model'] = lr
-        ticker_model_dict['model_main_etf'] = lr_main_etf
-        ticker_model_dict['mae'] = test_mae
-        ticker_model_dict['mae_main_etf'] = test_mae_main_etf
-        ticker_model_dict['r2_score'] = r2_score(y_true=ticker_target_test, y_pred=preds)
-        ticker_model_dict['r2_score_main_etf'] = r2_score(y_true=ticker_target_main_etf_test,
-                                                          y_pred=preds_main_etf)
-        ticker_model_dict['shapiro_normal'] = check_shapiro(a=errors)
-        ticker_model_dict['pearson_normal'] = check_pearson(a=errors)
-        ticker_model_dict['ks_normal'] = check_kstest(a=errors)
-        ticker_model_dict['chisquare_normal'] = check_chisquare(a=errors)
-        ticker_model_dict['shapiro_normal_main_etf'] = check_shapiro(a=errors_main_etf)
-        ticker_model_dict['pearson_normal_main_etf'] = check_pearson(a=errors_main_etf)
-        ticker_model_dict['ks_normal_main_etf'] = check_kstest(a=errors_main_etf)
-        ticker_model_dict['chisquare_normal_main_etf'] = check_chisquare(a=errors_main_etf)
-        ticker_model_dict['n_days_error_bt_mae'] = \
-            sum(i > test_mae
-                for i in list(np.abs(ticker_target_test - preds)))
-        ticker_model_dict['n_days_error_bt_main_etf_mae'] = \
-            sum(i > test_mae_main_etf
-                for i in list(np.abs(ticker_target_main_etf_test - preds_main_etf)))
-        ticker_model_dict['mean_abs_diff_when_bt_mae'] = \
-            calculate_abs_diff_when_bt_mae(ticker_target_test, preds, test_mae)
-        ticker_model_dict['mean_abs_diff_when_bt_main_etf_mae'] = \
-            calculate_abs_diff_when_bt_mae(ticker_target_main_etf_test, preds_main_etf, test_mae_main_etf)
-        ticker_target_std = ticker_target.std()
-        ticker_model_dict['stock_std'] = ticker_target_std
-        ticker_target_mean = ticker_target.mean()
-        ticker_model_dict['mean'] = ticker_target_mean
-        ticker_model_dict['lower_sigma'] = ticker_target_mean - ticker_target_std
-        ticker_model_dict['upper_sigma'] = ticker_target_mean + ticker_target_std
-        ticker_model_dict['lower_two_sigma'] = ticker_target_mean - 2 * ticker_target_std
-        ticker_model_dict['upper_two_sigma'] = ticker_target_mean + 2 * ticker_target_std
-        tickers_models[ticker] = ticker_model_dict
-
-        if test_mae <= 1.5:
-            # Refit and save filtered
-            lr.fit(X=ticker_features,
-                   y=ticker_target)
-            lr_main_etf.fit(X=ticker_main_etf,
-                            y=ticker_main_etf_target)
-            preds_full = lr.predict(ticker_features)
-            preds_full_main_etf = lr_main_etf.predict(ticker_main_etf)
-            ticker_model_dict['r2_score_full'] = r2_score(y_true=ticker_target,
-                                                          y_pred=preds_full)
-            ticker_model_dict['r2_score_main_etf_full'] = r2_score(y_true=ticker_main_etf_target,
-                                                                   y_pred=preds_full_main_etf)
-            ticker_model_dict['model'] = lr
-            ticker_model_dict['model_main_etf'] = lr_main_etf
-            tickers_indicators_filtered[ticker] = indicators
-            tickers_main_etf_filtered[ticker] = main_etf_sector
-            tickers_models_filtered[ticker] = ticker_model_dict
+            print(f'Failed to run regression for ticker: {ticker}')
 
     # Saving dicts into models directory for given sector
+    dump_training_data(sector=sector,
+                       tickers_indicators=tickers_indicators,
+                       tickers_main_etf=tickers_main_etf,
+                       tickers_models=tickers_models)
+
+
+def dump_training_data(sector: str,
+                       tickers_indicators: dict,
+                       tickers_main_etf: dict,
+                       tickers_models: dict):
     try:
         if not sys.gettrace():
             sectors_path = f'{cwd}/analytics/modeling/sectors/'
@@ -405,12 +462,6 @@ def run_regular_sector_regression(sector: str,
             pickle.dump(tickers_main_etf, o)
         with open(f'{models_path}/tickers_models.pkl', 'wb') as o:
             pickle.dump(tickers_models, o)
-        with open(f'{models_path}/tickers_indicators_filtered.pkl', 'wb') as o:
-            pickle.dump(tickers_indicators_filtered, o)
-        with open(f'{models_path}/tickers_main_etf_filtered.pkl', 'wb') as o:
-            pickle.dump(tickers_main_etf_filtered, o)
-        with open(f'{models_path}/tickers_models_filtered.pkl', 'wb') as o:
-            pickle.dump(tickers_models_filtered, o)
 
         # Dumping data for manual analysis
         if 'statistics' not in os.listdir(sector_path):

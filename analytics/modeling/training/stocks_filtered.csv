@@ -99,13 +99,11 @@ NOV,Oil
 SLB,Oil
 EQT,OilAndGas
 SWN,OilAndGas
-CHK,OilAndGas
 AR,OilAndGas
 RRC,OilAndGas
 CNX,OilAndGas
 DVN,OilAndGas
 EOG,OilAndGas
-CRC,OilAndGas
 XOM,OilLarge
 CVX,OilLarge
 AEM,Gold
@@ -249,4 +247,3 @@ AMAT,SemiconductorsEquipment
 KLAC,SemiconductorsEquipment
 LRCX,SemiconductorsEquipment
 TER,SemiconductorsEquipment
-KLIC,SemiconductorsEquipment
