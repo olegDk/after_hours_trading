@@ -102,7 +102,7 @@ async def send_subscribe(writer: asyncio.StreamWriter):
     while True:
         if session_key:
             subscribe = messages.subscribe()
-            tickers = trader.get_subscription_list()
+            tickers, _ = trader.get_subscription_list()
             subscribe[SYMBOLS] = tickers
             subscribe[SESSION_KEY] = session_key
             await send_tcp_message(writer, subscribe)
