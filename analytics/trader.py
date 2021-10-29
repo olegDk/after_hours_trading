@@ -812,6 +812,7 @@ class Trader:
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
                     valid_tier = True
+                    
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
