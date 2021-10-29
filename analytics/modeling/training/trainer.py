@@ -6,6 +6,7 @@ import pickle
 from tqdm import tqdm
 import traceback
 from typing import Tuple
+from multiprocessing import Pool
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer, r2_score
 from scipy.stats import shapiro, normaltest, chisquare, kstest
@@ -130,6 +131,82 @@ def calculate_corr_beta(data_df: pd.DataFrame,
     return gap_corr, gap_beta
 
 
+def run_sector_training(sector_dir: str):
+    print(sector_dir)
+    sector = sector_dir.split('/')[-1]
+
+    traidable_tickers = []
+    indicators = []
+
+    tickers_files = os.listdir(f'{sector_dir}/tickers')
+
+    try:
+        for f in tickers_files:
+            with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
+                if f.startswith('traidable_tickers'):
+                    traidable_tickers = pickle.load(inp)
+                elif f.startswith('indicators'):
+                    indicators = pickle.load(inp)
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to load tickers for sector: {sector}')
+
+    if not traidable_tickers:
+        print(f'Traidable tickers missing '
+              f'for sector: {sector}')
+        return
+    if not indicators:
+        print(f'Indicators missing '
+              f'for sector: {sector}')
+        return
+
+    # Check for intersection, for now, don't trade indicators tickers,
+    # so exclude intersection from traidable tickers
+    intersection = \
+        list(set(traidable_tickers).intersection(set(indicators)))
+
+    traidable_tickers = list(set([ticker for ticker in traidable_tickers
+                                  if ticker not in intersection]))
+
+    df = None
+    try:
+        df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
+                                            f'datasets/'
+                                            f'data_{sector}.csv')
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to load dataset for sector: {sector}')
+
+    if df.empty:
+        print(f'Empty dataset for sector: {sector}')
+        return
+
+    try:
+        run_sector_regression(sector=sector,
+                              traidable_tickers=traidable_tickers,
+                              indicators=indicators,
+                              data_df=df)
+
+        run_correlation_modeling(sector=sector,
+                                 traidable_tickers=traidable_tickers,
+                                 indicators=indicators,
+                                 data_df=df)
+
+        run_report_modeling(sector=sector,
+                            traidable_tickers=traidable_tickers,
+                            indicators=indicators,
+                            data_df=df)
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to run sector regression sector: {sector}')
+
+
 def train_all_models():
     """
     Train models, save ticker: indicator pairs and ticker: model pairs
@@ -145,76 +222,9 @@ def train_all_models():
 
     print(sectors_dirs)
 
-    # for sector_dir in tqdm([sectors_dirs[4]]):
-    for sector_dir in tqdm(sectors_dirs):
-        print(sector_dir)
-        sector = sector_dir.split('/')[-1]
-
-        traidable_tickers = []
-        indicators = []
-
-        tickers_files = os.listdir(f'{sector_dir}/tickers')
-
-        try:
-            for f in tickers_files:
-                with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
-                    if f.startswith('traidable_tickers'):
-                        traidable_tickers = pickle.load(inp)
-                    elif f.startswith('indicators'):
-                        indicators = pickle.load(inp)
-        except Exception as e:
-            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to load tickers for sector: {sector}')
-
-        if not traidable_tickers:
-            print(f'Traidable tickers missing '
-                  f'for sector: {sector}')
-            continue
-        if not indicators:
-            print(f'Indicators missing '
-                  f'for sector: {sector}')
-            continue
-
-        # Check for intersection, for now, don't trade indicators tickers,
-        # so exclude intersection from traidable tickers
-        intersection = \
-            list(set(traidable_tickers).intersection(set(indicators)))
-
-        traidable_tickers = list(set([ticker for ticker in traidable_tickers
-                                      if ticker not in intersection]))
-
-        df = None
-        try:
-            df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
-                                                f'datasets/'
-                                                f'data_{sector}.csv')
-        except Exception as e:
-            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to load dataset for sector: {sector}')
-
-        if df.empty:
-            print(f'Empty dataset for sector: {sector}')
-            continue
-
-        try:
-            run_regular_sector_regression(sector=sector,
-                                          traidable_tickers=traidable_tickers,
-                                          indicators=indicators,
-                                          data_df=df)
-
-            run_correlation_analysis(sector=sector,
-                                     traidable_tickers=traidable_tickers,
-                                     indicators=indicators,
-                                     data_df=df)
-        except Exception as e:
-            message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to run sector regression sector: {sector}')
+    with Pool() as p:
+        p.map(func=run_sector_training,
+              iterable=sectors_dirs)
 
 
 def calculate_abs_diff_when_bt_mae(targets: np.ndarray,
@@ -226,12 +236,12 @@ def calculate_abs_diff_when_bt_mae(targets: np.ndarray,
     return float(np.mean(abs_diffs_bt_mae))
 
 
-def run_regular_ticker_regression(ticker: str,
-                                  data_df: pd.DataFrame,
-                                  train_df: pd.DataFrame,
-                                  test_df: pd.DataFrame,
-                                  indicators: list,
-                                  main_etf_sector: list) -> dict:
+def run_ticker_regression(ticker: str,
+                          data_df: pd.DataFrame,
+                          train_df: pd.DataFrame,
+                          test_df: pd.DataFrame,
+                          indicators: list,
+                          main_etf_sector: list) -> dict:
     df = data_df.copy()
     ticker_model_dict = {}
     indicators_names = [f'%Gap_{indicator}'
@@ -394,10 +404,15 @@ def get_models(ticker: str,
     return ticker_model_dict
 
 
-def run_regular_sector_regression(sector: str,
-                                  traidable_tickers: list,
-                                  indicators: list,
-                                  data_df: pd.DataFrame):
+def run_sector_regression(sector: str,
+                          traidable_tickers: list,
+                          indicators: list,
+                          data_df: pd.DataFrame,
+                          mode: str = 'regular',
+                          reporting_stock: str = None):
+
+    print(f'Running correlation modeling for sector {sector}')
+
     df = data_df.copy()
     # Shuffle df and make train/test split
     test_size = int(len(df) * 0.3)
@@ -416,12 +431,12 @@ def run_regular_sector_regression(sector: str,
 
     for ticker in traidable_tickers:
         try:
-            ticker_model_dict = run_regular_ticker_regression(ticker=ticker,
-                                                              data_df=df,
-                                                              train_df=train_df,
-                                                              test_df=test_df,
-                                                              indicators=indicators,
-                                                              main_etf_sector=main_etf_sector)
+            ticker_model_dict = run_ticker_regression(ticker=ticker,
+                                                      data_df=df,
+                                                      train_df=train_df,
+                                                      test_df=test_df,
+                                                      indicators=indicators,
+                                                      main_etf_sector=main_etf_sector)
             tickers_indicators[ticker] = indicators
             tickers_main_etf[ticker] = main_etf_sector
             tickers_models[ticker] = ticker_model_dict
@@ -435,13 +450,17 @@ def run_regular_sector_regression(sector: str,
     dump_training_data(sector=sector,
                        tickers_indicators=tickers_indicators,
                        tickers_main_etf=tickers_main_etf,
-                       tickers_models=tickers_models)
+                       tickers_models=tickers_models,
+                       mode=mode,
+                       ticker=reporting_stock)
 
 
 def dump_training_data(sector: str,
                        tickers_indicators: dict,
                        tickers_main_etf: dict,
-                       tickers_models: dict):
+                       tickers_models: dict,
+                       mode: str = 'regular',
+                       ticker: str = None):
     try:
         if not sys.gettrace():
             sectors_path = f'{cwd}/analytics/modeling/sectors/'
@@ -454,6 +473,16 @@ def dump_training_data(sector: str,
             os.mkdir(f'{sector_path}/models')
 
         models_path = f'{sector_path}/models'
+
+        if mode == 'report':
+            if 'report_models' not in os.listdir(models_path):
+                os.mkdir(f'{models_path}/report_models')
+
+            models_path = f'{models_path}/report_models'
+            if ticker not in os.listdir(models_path):
+                os.mkdir(f'{models_path}/{ticker}')
+
+            models_path = f'{models_path}/{ticker}'
 
         # Dumping models and data required for live trading
         with open(f'{models_path}/tickers_indicators.pkl', 'wb') as o:
@@ -468,6 +497,12 @@ def dump_training_data(sector: str,
             os.mkdir(f'{sector_path}/statistics')
 
         statistics_path = f'{sector_path}/statistics'
+
+        if mode == 'report':
+            if ticker not in os.listdir(statistics_path):
+                os.mkdir(f'{statistics_path}/{ticker}')
+
+            statistics_path = f'{statistics_path}/{ticker}'
 
         statistics_fields = ['mae', 'n_days_error_bt_mae',
                              'mae_main_etf', 'n_days_error_bt_main_etf_mae',
@@ -497,10 +532,12 @@ def dump_training_data(sector: str,
         print(f'Failed to save data for sector: {sector}')
 
 
-def run_correlation_analysis(sector: str,
+def run_correlation_modeling(sector: str,
                              traidable_tickers: list,
                              indicators: list,
                              data_df: pd.DataFrame):
+
+    print(f'Running correlation modeling for sector {sector}')
 
     df = data_df.copy()
     df = df.sample(frac=1)
@@ -523,11 +560,8 @@ def run_correlation_analysis(sector: str,
     stocks_etfs_beta_matrix = pd.DataFrame(index=traidable_tickers_filtered,
                                            columns=indicators_filtered)
 
-    top_corr_all = {}
-
     for ticker_dependent in tqdm(traidable_tickers_filtered):
         ticker_dependent_name = f'%Gap_{ticker_dependent}'
-        top_corr = {}
         for ticker_independent in traidable_tickers_filtered:
             if ticker_dependent == ticker_independent:
                 stocks_cor_matrix.loc[ticker_dependent, ticker_independent] = 1
@@ -542,16 +576,12 @@ def run_correlation_analysis(sector: str,
                                                 independent=ticker_independent_name)
                 stocks_cor_matrix.loc[ticker_dependent, ticker_independent] = cor
                 stocks_beta_matrix.loc[ticker_dependent, ticker_independent] = beta
-                if cor >= 0.7:
-                    top_corr[ticker_independent] = cor
             except Exception as e:
                 message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
                 print(message)
                 print(traceback.format_exc())
                 print(f'Failed to calculate cor and beta for {ticker_dependent} with '
                       f'{ticker_independent}')
-
-        top_corr_all[ticker_dependent] = top_corr
 
         for indicator in indicators_filtered:
             try:
@@ -569,6 +599,37 @@ def run_correlation_analysis(sector: str,
                 print(f'Failed to calculate cor and beta for {ticker_dependent} with '
                       f'{indicator}')
 
+    dump_correlation_statistics_data(sector=sector,
+                                     stocks_cor_matrix=stocks_cor_matrix,
+                                     stocks_beta_matrix=stocks_beta_matrix,
+                                     stocks_etfs_cor_matrix=stocks_etfs_cor_matrix,
+                                     stocks_etfs_beta_matrix=stocks_etfs_beta_matrix)
+
+
+def run_report_modeling(sector: str,
+                        traidable_tickers: list,
+                        indicators: list,
+                        data_df: pd.DataFrame):
+    df = data_df.copy()
+    for ticker in traidable_tickers:
+        print(f'Report modeling for ticker {ticker}')
+        indicators_ticker = indicators + [ticker]
+        peers = [t for t in traidable_tickers
+                 if t != ticker]
+        if peers:
+            run_sector_regression(sector=sector,
+                                  traidable_tickers=peers,
+                                  indicators=indicators_ticker,
+                                  data_df=df,
+                                  mode='report',
+                                  reporting_stock=ticker)
+
+
+def dump_correlation_statistics_data(sector: str,
+                                     stocks_cor_matrix: pd.DataFrame,
+                                     stocks_beta_matrix: pd.DataFrame,
+                                     stocks_etfs_cor_matrix: pd.DataFrame,
+                                     stocks_etfs_beta_matrix: pd.DataFrame):
     try:
         if not sys.gettrace():
             sectors_path = f'{cwd}/analytics/modeling/sectors/'

@@ -11,6 +11,7 @@ import pickle
 from typing import Tuple
 from multiprocessing import Pool
 import traceback
+import time
 
 cwd = os.getcwd()
 
@@ -379,8 +380,10 @@ def get_all_sectors_data(sector_to_stocks: dict,
 
 
 def create_gaps_dataset(targets: list,
-                        factors: list) -> pd.DataFrame:
+                        factors: list) -> Tuple[pd.DataFrame, list]:
     targets_dict = get_data_for_tickers(tickers=targets)
+    # Saving only those tickers for which we have training data
+    traidable_tickers = list(targets_dict.keys())
     factors_dict = get_data_for_tickers(tickers=factors,
                                         filter_tickers=False)
 
@@ -402,7 +405,8 @@ def create_gaps_dataset(targets: list,
         dfs_list.append(df)
 
     df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'], how='inner'), dfs_list)
-    return df_merged
+
+    return df_merged, traidable_tickers
 
 
 def create_gaps_data(sectors_names: list):
@@ -414,12 +418,13 @@ def create_gaps_data(sectors_names: list):
         sector_traidable_stocks = sector_data['stocks']
         sector_etfs = sector_data['etfs']
 
-        df = create_gaps_dataset(targets=sector_traidable_stocks,
-                                 factors=sector_etfs)
+        df, sector_traidable_stocks_filtered =\
+            create_gaps_dataset(targets=sector_traidable_stocks,
+                                factors=sector_etfs)
 
         dump_gaps_data(sector_name=sector_name,
                        df=df,
-                       sector_traidable_stocks=sector_traidable_stocks,
+                       sector_traidable_stocks=sector_traidable_stocks_filtered,
                        sector_etfs=sector_etfs)
 
 
@@ -457,12 +462,86 @@ def dump_gaps_data(sector_name: str,
         pickle.dump(sector_etfs, output)
 
 
+def get_all_traidable_tickers() -> list:
+    if not sys.gettrace():
+        sectors_path = f'{cwd}/analytics/modeling/sectors/'
+    else:
+        sectors_path = f'../sectors/'
+
+    sectors_dirs = \
+        [f.path for f in os.scandir(sectors_path) if f.is_dir()]
+
+    stocks_list = []
+
+    for sector_dir in sectors_dirs:
+        sector = sector_dir.split('/')[-1]
+
+        try:
+            with open(f'{sector_dir}/tickers/traidable_tickers_{sector}.pkl', 'rb') as inp:
+                stocks = pickle.load(inp)
+                stocks_list = stocks_list + stocks
+
+        except Exception as e:
+            message = f'Get sector stocks maps error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to get maps for sector: {sector}')
+            continue
+
+    return stocks_list
+
+
+def create_market_cap_data():
+    stocks = get_all_traidable_tickers()
+
+    with Pool() as p:
+        result_map = p.map(func=get_market_cap_data_for_stock,
+                           iterable=stocks)
+
+    if result_map:
+        result_dict = {}
+        for d in result_map:
+            result_dict.update(d)
+        if not sys.gettrace():
+            modeling_path = f'{cwd}/analytics/modeling/'
+        else:
+            modeling_path = f'../'
+
+        market_cap_data_path = f'{modeling_path}/market_cap_data.pkl'
+
+        with open(market_cap_data_path, 'wb') as o:
+            pickle.dump(result_dict, o)
+
+
+def get_market_cap_data_for_stock(stock: str,
+                                  n_retries: int = 2,
+                                  sleeping_seconds: int = 10) -> dict:
+    market_cap = 0
+
+    for _ in range(n_retries):
+        try:
+            market_cap = int(yfinance.Ticker(ticker=stock).info['marketCap'])
+            print(f'Market cap for stock: {stock} is {market_cap}')
+            return {stock: market_cap}
+        except Exception as e:
+            message = f'Get market cap data error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to get market cap data for stock: {stock}')
+            time.sleep(sleeping_seconds)
+
+    return {stock: market_cap}
+
+
 sector_stocks = get_bloomberg_sectors()
 save_filtered_stocks(sector_stocks=sector_stocks)
 sector_to_stocks, sector_to_etfs = init_sector_mappings(sector_stocks=sector_stocks)
 tickers_to_update = get_tickers_to_update(sector_to_stocks=sector_to_stocks,
                                           sector_to_etfs=sector_to_etfs)
-# run_data_update(tickers_to_update=tickers_to_update)
+run_data_update(tickers_to_update=tickers_to_update)
 all_sectors_data = get_all_sectors_data(sector_to_stocks=sector_to_stocks,
                                         sector_to_etfs=sector_to_etfs)
 create_gaps_data(sectors_names=all_sectors_data)
+# create_market_cap_data()

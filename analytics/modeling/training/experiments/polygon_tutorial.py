@@ -14,9 +14,9 @@ key = 'EuMC51EF6YZypR2x5kS__K72C6FKdwhF'
 # RESTClient can be used as a context manager to facilitate closing the underlying http session
 # https://requests.readthedocs.io/en/master/user/advanced/#session-objects
 with RESTClient(key) as client:
-    from_ = '2019-10-01'
-    to = '2019-10-04'
-    resp = client.stocks_equities_aggregates('SPY', 5, 'minute', from_, to, unadjusted=False)
+    from_ = '2021-10-18'
+    to = '2021-10-22'
+    resp = client.stocks_equities_aggregates('AGN', 1, 'minute', from_, to, unadjusted=False)
 
     print(f'5 minute aggregates for {resp.ticker} between {from_} and {to}.')
 

@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 import pickle
 import os
 from typing import Tuple
@@ -13,6 +14,7 @@ from messaging.redis_connector import RedisConnector
 from news_analyzer.news_analyzer import NewsAnalyzer
 import random
 import traceback
+import operator
 
 sum_update_l1_speed = 0
 sum_predict_speed = 0
@@ -35,6 +37,7 @@ final_dt = datetime(year=now_init.year,
                     minute=27,
                     second=0,
                     tzinfo=EST)
+cwd = os.getcwd()
 
 
 def generate_id() -> str:
@@ -98,114 +101,137 @@ def extend_dict(fr: dict, to: dict) -> dict:
     return extended
 
 
-def get_tickers() -> list:
-    sectors_path = 'analytics/modeling/sectors'
-    sectors_dirs = \
-        [f.path for f in os.scandir(sectors_path) if f.is_dir()]
-
-    all_tickers = []
-
-    for sector_dir in sectors_dirs:
-        sector = sector_dir.split('/')[-1]
-        if 'tickers' not in os.listdir(sector_dir):
-            print(f'tickers dir missing '
-                  f'for sector: {sector}')
-            continue
-
-        tickers_files = os.listdir(f'{sector_dir}/tickers')
-
-        try:
-            for f in tickers_files:
-                with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
-                    tickers = pickle.load(inp)
-                    all_tickers = all_tickers + tickers
-
-        except Exception as e:
-            message = f'Get tickers error: ' \
-                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to init factors')
-            continue
-
-    all_tickers = list(set(all_tickers))
-
+def get_reports() -> list:
     # Getting earnings calendar manually every day
     # https://hosting.briefing.com/cschwab/
     # Calendars/EarningsCalendar5Weeks.htm
-    with open('analytics/modeling/reports') as i:
+    reports_path = 'analytics/modeling/reports'
+    if sys.gettrace():
+        reports_path = '/home/oleh/takion_trader/analytics/modeling/reports'
+
+    with open(reports_path) as i:
         reports = i.read().splitlines()
         print(f'Reports: {reports}')
 
-    all_tickers = \
-        [ticker for ticker in all_tickers if ticker not in reports]
-
-    return all_tickers
+    return reports
 
 
-def init_stocks_data() -> Tuple[dict, list]:
-    print('Inializing indicators...')
-    with open(f'analytics/modeling/'
-              f'all_indicators.pkl', 'rb') as i:
-        indicators_list = pickle.load(i)
+def get_sectors_reports(stock_to_sector: dict,
+                        reports: list) -> dict:
+    sectors_reports = {}
 
-    # Update to get from subscription response or request directly
-    indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                   PCT_ASK_NET: INIT_PCT}
-                       for indicator in indicators_list}
+    for ticker in reports:
+        sector_report = stock_to_sector.get(ticker)
+        if sector_report:
+            if sector_report in sectors_reports:
+                sectors_reports[sector_report] = sectors_reports[sector_report] + [ticker]
+            else:
+                sectors_reports[sector_report] = [ticker]
 
-    print(indicators_dict)
-
-    return indicators_dict, indicators_list
+    return sectors_reports
 
 
-def init_models() -> dict:
-    print('Initializing models...')
+def get_sector_stocks_maps() -> Tuple[dict, dict]:
     sectors_path = 'analytics/modeling/sectors'
+    if sys.gettrace():
+        sectors_path = '/home/oleh/takion_trader/analytics/modeling/sectors'
+
     sectors_dirs = \
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
-    models_dict = {}
+    sector_to_stocks = {}
+    stock_to_sector = {}
+
     for sector_dir in sectors_dirs:
         sector = sector_dir.split('/')[-1]
-        print(f'Sector: {sector}...')
-        tickers_models_path \
-            = f'{sector_dir}/models/tickers_models.pkl'
+
         try:
-            with open(tickers_models_path, 'rb') as i:
-                tickers_models = pickle.load(i)
-            models_dict.update(tickers_models)
-            print(f'Sector: {sector} loaded.')
-            print(f'-------')
+            with open(f'{sector_dir}/tickers/traidable_tickers_{sector}.pkl', 'rb') as inp:
+                stocks = pickle.load(inp)
+
+            sector_to_stocks.update({sector: stocks})
+            stock_to_sector.update({stock: sector for stock in stocks})
+
         except Exception as e:
-            message = f'Init models error: ' \
+            message = f'Get sector stocks maps error: ' \
                       f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
             print(traceback.format_exc())
-            print(f'Failed to init models')
+            print(f'Failed to get maps for sector: {sector}')
             continue
 
-    return models_dict
+    return sector_to_stocks, stock_to_sector
 
 
-def init_factors() -> Tuple[dict, dict, dict, dict, dict, dict]:
-    print('Initializing factors...')
+def get_main_stock(sector_reports: list,
+                   market_cap_data: dict) -> str:
+
+    market_caps = {sector_report: market_cap_data.get(sector_report)
+                   for sector_report in sector_reports
+                   if market_cap_data.get(sector_report) is not None}
+
+    if market_caps:
+        return max(market_caps.items(), key=operator.itemgetter(1))[0]
+
+    return ''
+
+
+def get_market_cap_data() -> dict:
+    market_cap_data_path = f'analytics/modeling/market_cap_data.pkl'
+    if sys.gettrace():
+        market_cap_data_path = f'/home/oleh/takion_trader/analytics/' \
+                               f'modeling/market_cap_data.pkl'
+    with open(market_cap_data_path, 'rb') as i:
+        market_cap_data = pickle.load(i)
+    return market_cap_data
+
+
+def init_models(reports: list,
+                market_cap_data: dict) -> Tuple[dict, dict, dict, dict, dict]:
+    print('Initializing models...')
+
     sectors_path = 'analytics/modeling/sectors'
+    if sys.gettrace():
+        sectors_path = '/home/oleh/takion_trader/analytics/modeling/sectors'
+
     sectors_dirs = \
         [f.path for f in os.scandir(sectors_path) if f.is_dir()]
 
+    sector_to_stocks, stock_to_sector = get_sector_stocks_maps()
+    sectors_reports = \
+        get_sectors_reports(stock_to_sector=stock_to_sector,
+                            reports=reports)
+
     factors_dict = {}
     main_etfs_dict = {}
-    stock_to_sector = {}
     sector_to_indicators = {}
-    sector_to_stocks = {}
+    models_dict = {}
 
     for sector_dir in sectors_dirs:
         sector = sector_dir.split('/')[-1]
         print(f'Sector: {sector}...')
-        tickers_indicators_path \
-            = f'{sector_dir}/models/tickers_indicators.pkl'
-        main_etfs_path = f'{sector_dir}/models/tickers_main_etf.pkl'
+
+        if sector == 'Software':
+            print()
+
+        sector_reports = sectors_reports.get(sector)
+        if sector_reports:
+            main_stock = get_main_stock(sector_reports,
+                                        market_cap_data)
+            if main_stock:
+                tickers_indicators_path \
+                    = f'{sector_dir}/models/report_models/' \
+                      f'{main_stock}/tickers_indicators.pkl'
+                main_etfs_path = f'{sector_dir}/models/report_models/' \
+                                 f'{main_stock}/tickers_main_etf.pkl'
+                models_path = f'{sector_dir}/models/report_models/' \
+                              f'{main_stock}/tickers_models.pkl'
+        else:
+            tickers_indicators_path \
+                = f'{sector_dir}/models/tickers_indicators.pkl'
+            main_etfs_path = f'{sector_dir}/models/tickers_main_etf.pkl'
+            models_path = f'{sector_dir}/models/tickers_models.pkl'
+
         try:
             with open(tickers_indicators_path, 'rb') as i:
                 tickers_indicators = pickle.load(i)
@@ -213,34 +239,33 @@ def init_factors() -> Tuple[dict, dict, dict, dict, dict, dict]:
             with open(main_etfs_path, 'rb') as i:
                 main_etfs = pickle.load(i)
             main_etfs_dict.update(main_etfs)
-            current_sector_stocks = list(tickers_indicators.keys())
-            key = current_sector_stocks[0]
+            with open(models_path, 'rb') as i:
+                models = pickle.load(i)
+            models_dict.update(models)
+            key = list(tickers_indicators.keys())[0]
             current_sector_indicators = tickers_indicators[key]
-            sector_to_indicators[sector] = current_sector_indicators
-            sector_to_stocks[sector] = current_sector_stocks
-            for stock in current_sector_stocks:
-                stock_to_sector[stock] = sector
-            print(f'Sector: {sector} loaded.')
-            print(f'-------')
+            sector_to_indicators.update({sector: current_sector_indicators})
+
         except Exception as e:
             message = f'Init factors error: ' \
                       f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
             print(message)
             print(traceback.format_exc())
-            print(f'Failed to init factors')
+            print(f'Failed to init factors for sector {sector}')
             continue
-        except KeyError as e:
-            message = f'Init factors KeyError: ' \
-                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
-            print(message)
-            print(traceback.format_exc())
-            print(f'Failed to init factors')
 
-    indicator_to_sectors = invert_dict(d=sector_to_indicators)
-    indicator_to_stocks = extend_dict(fr=indicator_to_sectors, to=sector_to_stocks)
+    # Filter stocks with reports
+    factors_dict_filtered = {key: factors_dict[key] for key in factors_dict
+                             if key not in reports}
+    main_etfs_dict_filtered = {key: main_etfs_dict[key] for key in main_etfs_dict
+                               if key not in reports}
+    stocks_to_sector_filtered = {key: stock_to_sector[key] for key in stock_to_sector
+                                 if key not in reports}
+    models_dict_filtered = {key: models_dict[key] for key in models_dict
+                            if key not in reports}
 
-    return factors_dict, main_etfs_dict, stock_to_sector, \
-           sector_to_indicators, indicator_to_sectors, indicator_to_stocks
+    return factors_dict_filtered, main_etfs_dict_filtered, stocks_to_sector_filtered, \
+           sector_to_indicators, models_dict_filtered
 
 
 def adjust_limit_price(side,
@@ -262,12 +287,12 @@ def adjust_limit_price(side,
                 if l1_price >= vwap:
                     return max([l1_price, short_bound])
                 else:
-                    adjusted_price = round(vwap - float(np.abs(vwap-target)) / 3, 2)
+                    adjusted_price = round(vwap - float(np.abs(vwap - target)) / 3, 2)
                     return max([adjusted_price, l1_price, short_bound])
             elif l1_price >= prem_high:
                 return max([l1_price, short_bound])
             elif l1_price <= prem_low:
-                adjusted_price = round(vwap - float(np.abs(vwap-target)) / 3, 2)
+                adjusted_price = round(vwap - float(np.abs(vwap - target)) / 3, 2)
                 return max([adjusted_price, l1_price, short_bound])
 
         # long logic
@@ -277,12 +302,12 @@ def adjust_limit_price(side,
                 if l1_price <= vwap:
                     return min([l1_price, long_bound])
                 else:
-                    adjusted_price = round(vwap + float(np.abs(vwap-target)) / 3, 2)
+                    adjusted_price = round(vwap + float(np.abs(vwap - target)) / 3, 2)
                     return min([adjusted_price, l1_price, long_bound])
             elif l1_price <= prem_low:
                 return min([l1_price, long_bound])
             elif l1_price >= prem_high:
-                adjusted_price = round(vwap + float(np.abs(vwap-target)) / 3, 2)
+                adjusted_price = round(vwap + float(np.abs(vwap - target)) / 3, 2)
                 return min([adjusted_price, l1_price, long_bound])
 
     return l1_price
@@ -376,23 +401,45 @@ class Trader:
     def __init__(self):
         self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
         self.__redis_connector = RedisConnector(REDIS_HOST, REDIS_PORT)
-        self.__tickers = get_tickers()
-        self.__stocks_l1, self.__all_indicators = init_stocks_data()
+        self.__reports = \
+            get_reports()
         self.__factors, \
         self.__main_etfs, \
         self.__stock_to_sector, \
         self.__sector_to_indicators, \
-        self.__indicator_to_sectors, \
-        self.__indicators_to_stocks = init_factors()
+        self.__models\
+            = init_models(reports=self.__reports,
+                          market_cap_data=get_market_cap_data())
+        self.__subscription_list, self.__all_indicators = self.get_subscription_list()
+        self.__stocks_l1 = self.init_stocks_data()
         self.__init_policy()
-        self.__models = init_models()
         self.positions = {}
         self.__orders = {}
         self.__sent_orders_by_ticker = {}
         self.__na = NewsAnalyzer()
 
-    def get_subscription_list(self) -> list:
-        return self.__tickers
+    def init_stocks_data(self) -> dict:
+        print('Inializing indicators...')
+
+        # Update to get from subscription response or request directly
+        indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
+                                       PCT_ASK_NET: INIT_PCT}
+                           for indicator in self.__all_indicators}
+
+        print(indicators_dict)
+
+        return indicators_dict
+
+    def get_subscription_list(self) -> Tuple[list, list]:
+
+        all_tickers_to_subscribe = []
+        all_indicators = []
+        for key in self.__factors.keys():
+            tickers_to_subscribe = list(set([key] + self.__factors[key]))
+            all_indicators = all_indicators + self.__factors[key]
+            all_tickers_to_subscribe = all_tickers_to_subscribe + tickers_to_subscribe
+
+        return list(set(all_tickers_to_subscribe)), list(set(all_indicators))
 
     def update_account_information(self,
                                    acc_info: dict):
@@ -871,5 +918,5 @@ class Trader:
 
 # trader = Trader()
 # print(trader.get_subscription_list())
-# import pandas as pd
+# import pandas as pdT
 # pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
