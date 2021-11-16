@@ -925,7 +925,7 @@ class Trader:
 
         return order_data
 
-trader = Trader()
+# trader = Trader()
 # print(trader.get_subscription_list())
 # import pandas as pdT
 # pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
