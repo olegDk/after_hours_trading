@@ -916,7 +916,7 @@ class Trader:
 
             if not position_size:
                 return {}
-
+            print('======Must send normal order======')
             order[ORDER][DATA][SIZE] = position_size
             order[ORDER][DATA][VENUE] = order_params[VENUE]
             order[ORDER][DATA][TARGET] = target
