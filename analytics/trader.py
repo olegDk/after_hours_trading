@@ -882,6 +882,7 @@ class Trader:
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
         if trade_flag:
+            print('There is trade flagg1!!!!!!adfasldkfja;sldfjk;alsdkfj;alsdkfj;alskdfj;alksdjf')
             side = BUY if np.sign(delta_long) > 0 else SELL
             position = self.__get_position(ticker=symbol)
             order_params = side_params[side]
