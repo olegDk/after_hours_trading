@@ -9,7 +9,7 @@ from typing import Tuple
 from multiprocessing import Pool
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error as mean_ae, make_scorer, r2_score
-from scipy.stats import shapiro, normaltest, chisquare, kstest
+from scipy.stats import chisquare
 
 cwd = os.getcwd()
 mae = make_scorer(mean_ae)
@@ -27,32 +27,8 @@ sector_to_main_etf = {sector: sector_stocks[sector_stocks['Sector'] == sector]['
                       for sector in sectors}
 
 
-def check_shapiro(a: np.ndarray) -> bool:
-    _, p = shapiro(a)
-    if p > 0.05:
-        return True
-    else:
-        return False
-
-
-def check_pearson(a: np.ndarray) -> bool:
-    _, p = normaltest(a)
-    if p > 0.05:
-        return True
-    else:
-        return False
-
-
 def check_chisquare(a: np.ndarray) -> bool:
     _, p = chisquare(a)
-    if p > 0.05:
-        return True
-    else:
-        return False
-
-
-def check_kstest(a: np.ndarray) -> bool:
-    _, p = kstest(a, 'norm')
     if p > 0.05:
         return True
     else:
@@ -174,7 +150,7 @@ def run_sector_training(sector_dir: str):
     try:
         df = pd.read_csv(filepath_or_buffer=f'{sector_dir}/'
                                             f'datasets/'
-                                            f'data_{sector}.csv')
+                                            f'daily_data_{sector}.csv')
     except Exception as e:
         message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
         print(message)
@@ -360,13 +336,7 @@ def get_models(ticker: str,
     ticker_model_dict['r2_score'] = r2_score(y_true=ticker_target_test, y_pred=preds)
     ticker_model_dict['r2_score_main_etf'] = r2_score(y_true=ticker_target_main_etf_test,
                                                       y_pred=preds_main_etf)
-    ticker_model_dict['shapiro_normal'] = check_shapiro(a=errors)
-    ticker_model_dict['pearson_normal'] = check_pearson(a=errors)
-    ticker_model_dict['ks_normal'] = check_kstest(a=errors)
     ticker_model_dict['chisquare_normal'] = check_chisquare(a=errors)
-    ticker_model_dict['shapiro_normal_main_etf'] = check_shapiro(a=errors_main_etf)
-    ticker_model_dict['pearson_normal_main_etf'] = check_pearson(a=errors_main_etf)
-    ticker_model_dict['ks_normal_main_etf'] = check_kstest(a=errors_main_etf)
     ticker_model_dict['chisquare_normal_main_etf'] = check_chisquare(a=errors_main_etf)
     ticker_model_dict['n_days_error_bt_mae'] = \
         sum(i > test_mae
@@ -509,9 +479,6 @@ def dump_training_data(sector: str,
                              'stock_std', 'mean', 'lower_sigma', 'upper_sigma',
                              'lower_two_sigma', 'upper_two_sigma', 'mean_abs_diff_when_bt_mae',
                              'mean_abs_diff_when_bt_main_etf_mae',
-                             'shapiro_normal', 'shapiro_normal_main_etf',
-                             'pearson_normal', 'pearson_normal_main_etf',
-                             'ks_normal', 'ks_normal_main_etf',
                              'chisquare_normal', 'chisquare_normal_main_etf',
                              'r2_score', 'r2_score_main_etf', 'r2_score_full',
                              'r2_score_main_etf_full'

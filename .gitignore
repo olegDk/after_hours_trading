@@ -54,6 +54,12 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 ticker_*.csv
+ticker_minute_*.csv
+ticker_daily_data
+ticker_minute_data
+data_*.csv
+data
+datasets
 
 # Translations
 *.mo

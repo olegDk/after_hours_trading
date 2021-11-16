@@ -53,13 +53,24 @@ def generate_cid() -> int:
 def get_position_size(price: float,
                       bp: float,
                       bp_usage_pct: float,
-                      prop: float
+                      prop: float,
+                      order_side: str,
+                      position: dict
                       ) -> int:
     size = int((bp * bp_usage_pct * 0.1 * 0.0625 * prop) / (price + 1e-7))
     if size < 5:
         size = 5
     elif 95 <= size < 100:
         size = 100
+    if position:
+        pos_side = position[SIDE]
+        pos_size = position[SIZE]
+        opposite_side = not pos_side == order_side
+        open_position = not pos_size == 0
+        # if flipping
+        if opposite_side and open_position:
+            return 0
+
     return size
 
 
@@ -165,7 +176,6 @@ def get_sector_stocks_maps() -> Tuple[dict, dict]:
 
 def get_main_stock(sector_reports: list,
                    market_cap_data: dict) -> str:
-
     market_caps = {sector_report: market_cap_data.get(sector_report)
                    for sector_report in sector_reports
                    if market_cap_data.get(sector_report) is not None}
@@ -313,91 +323,6 @@ def adjust_limit_price(side,
     return l1_price
 
 
-def get_order(prediction,
-              prediction_main_etf,
-              pct_bid_net,
-              pct_ask_net,
-              indicators,
-              factors_l1,
-              close,
-              symbol,
-              bid_l1,
-              ask_l1,
-              bid_venue,
-              ask_venue,
-              vwap,
-              prem_high,
-              prem_low,
-              imb,
-              vol,
-              std_err,
-              std_err_main_etf,
-              lower_sigma,
-              upper_sigma,
-              lower_two_sigma,
-              upper_two_sigma,
-              policy,
-              prop,
-              delta_long_coef,
-              delta_short_coef,
-              bp,
-              bp_usage_pct) -> dict:
-    side_params = {
-        # Long params
-        BUY: {
-            PRICE: ask_l1,
-            VENUE: ask_venue,
-            PCT_NET: pct_ask_net,
-        },
-        # Short params
-        SELL: {
-            PRICE: bid_l1,
-            VENUE: bid_venue,
-            PCT_NET: pct_bid_net
-        }
-    }
-    order_data = {}
-    delta_long = prediction - pct_ask_net
-    delta_short = prediction - pct_bid_net
-    trade_flag = delta_long >= std_err * delta_long_coef or \
-                 delta_short <= -std_err * delta_short_coef
-    trade_flag = True
-    if trade_flag:
-        side = BUY if np.sign(delta_long) > 0 else SELL
-        order_params = side_params[side]
-        order_related_data_dict = dict(zip(indicators, factors_l1))
-        order_related_data_dict.update({POLICY: policy,
-                                        LONG_COEF: delta_long_coef,
-                                        SHORT_COEF: delta_short_coef,
-                                        PREDICTION_KEY: prediction})
-        order_data[ORDER_RELATED_DATA] = order_related_data_dict
-        target = float(close + float(prediction / 100) * close)
-        order = messages.order_request()
-        order[ORDER][DATA][SYMBOL] = symbol
-        price = order_params[PRICE]
-        order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
-                                                       l1_price=price,
-                                                       target=target,
-                                                       prem_low=prem_low,
-                                                       prem_high=prem_high,
-                                                       vwap=vwap,
-                                                       prediction_main_etf=prediction_main_etf,
-                                                       std_err_main_etf=std_err_main_etf,
-                                                       close=close
-                                                       )
-        order[ORDER][DATA][SIDE] = side
-        order[ORDER][DATA][SIZE] = get_position_size(price=order_params[PRICE],
-                                                     bp=bp,
-                                                     bp_usage_pct=bp_usage_pct,
-                                                     prop=prop)
-        order[ORDER][DATA][VENUE] = order_params[VENUE]
-        order[ORDER][DATA][TARGET] = target
-        order[ORDER][CID] = generate_cid()
-        order_data[ORDER_DATA] = order
-
-    return order_data
-
-
 class Trader:
     def __init__(self):
         self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
@@ -408,7 +333,7 @@ class Trader:
         self.__main_etfs, \
         self.__stock_to_sector, \
         self.__sector_to_indicators, \
-        self.__models\
+        self.__models \
             = init_models(reports=self.__reports,
                           market_cap_data=get_market_cap_data())
         self.__subscription_list, self.__all_indicators = self.get_subscription_list()
@@ -688,9 +613,7 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['PYPL',
-                      'PINS'
-                      ]  # Add untraidable stocks here
+        black_list = []  # Add untraidable stocks here
 
         policy_dict = {sector: NEUTRAL for sector in list(self.__sector_to_indicators.keys())}
 
@@ -736,6 +659,12 @@ class Trader:
         if not deltas:
             return 1.0, 1.0
         return float(deltas[LONG_COEF]), float(deltas[SHORT_COEF])
+
+    def __get_position(self, ticker: str) -> dict:
+        position = json.loads(self.__redis_connector.hm_get(h=POSITIONS, key=ticker)[0])
+        if not position:
+            return {}
+        return position
 
     def get_tier_prop(self, symbol: str) -> float:
         prop = self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
@@ -811,8 +740,7 @@ class Trader:
 
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
-                    valid_tier = True
-                    
+
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
@@ -850,35 +778,21 @@ class Trader:
                         bp = float(acc_info[BP_KEY])
                         bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
                         if bp_usage_pct:
-                            order_data = get_order(prediction=prediction,
-                                                   prediction_main_etf=prediction_main_etf,
-                                                   pct_bid_net=pct_bid_net,
-                                                   pct_ask_net=pct_ask_net,
-                                                   indicators=indicators,
-                                                   factors_l1=factors_l1,
-                                                   close=close,
-                                                   symbol=symbol,
-                                                   bid_l1=bid_l1,
-                                                   ask_l1=ask_l1,
-                                                   bid_venue=bid_venue,
-                                                   ask_venue=ask_venue,
-                                                   vwap=vwap,
-                                                   prem_high=prem_high,
-                                                   prem_low=prem_low,
-                                                   imb=imb,
-                                                   vol=vol,
-                                                   std_err=std_err,
-                                                   std_err_main_etf=std_err_main_etf,
-                                                   lower_sigma=lower_sigma,
-                                                   upper_sigma=upper_sigma,
-                                                   lower_two_sigma=lower_two_sigma,
-                                                   upper_two_sigma=upper_two_sigma,
-                                                   policy=symbol_policy,
-                                                   prop=symbol_prop,
-                                                   delta_long_coef=delta_long_coef,
-                                                   delta_short_coef=delta_short_coef,
-                                                   bp=bp,
-                                                   bp_usage_pct=bp_usage_pct)
+                            order_data = self.get_order(prediction=prediction, prediction_main_etf=prediction_main_etf,
+                                                        pct_bid_net=pct_bid_net, pct_ask_net=pct_ask_net,
+                                                        indicators=indicators, factors_l1=factors_l1,
+                                                        main_etf_l1=main_etf,
+                                                        close=close, symbol=symbol, bid_l1=bid_l1, ask_l1=ask_l1,
+                                                        bid_venue=bid_venue, ask_venue=ask_venue, vwap=vwap,
+                                                        prem_high=prem_high, prem_low=prem_low, imb=imb, vol=vol,
+                                                        std_err=std_err, std_err_main_etf=std_err_main_etf,
+                                                        lower_sigma=lower_sigma, upper_sigma=upper_sigma,
+                                                        lower_two_sigma=lower_two_sigma,
+                                                        upper_two_sigma=upper_two_sigma,
+                                                        policy=symbol_policy, prop=symbol_prop,
+                                                        delta_long_coef=delta_long_coef,
+                                                        delta_short_coef=delta_short_coef,
+                                                        bp=bp, bp_usage_pct=bp_usage_pct)
                             if order_data:
                                 if self.__sent_orders_by_ticker.get(symbol):
                                     self.__sent_orders_by_ticker[symbol] += 1
@@ -917,8 +831,101 @@ class Trader:
 
         return {}
 
+    def get_order(self,
+                  prediction,
+                  prediction_main_etf,
+                  pct_bid_net,
+                  pct_ask_net,
+                  indicators,
+                  factors_l1,
+                  main_etf_l1,
+                  close,
+                  symbol,
+                  bid_l1,
+                  ask_l1,
+                  bid_venue,
+                  ask_venue,
+                  vwap,
+                  prem_high,
+                  prem_low,
+                  imb,
+                  vol,
+                  std_err,
+                  std_err_main_etf,
+                  lower_sigma,
+                  upper_sigma,
+                  lower_two_sigma,
+                  upper_two_sigma,
+                  policy,
+                  prop,
+                  delta_long_coef,
+                  delta_short_coef,
+                  bp,
+                  bp_usage_pct) -> dict:
+        side_params = {
+            # Long params
+            BUY: {
+                PRICE: ask_l1,
+                VENUE: ask_venue,
+                PCT_NET: pct_ask_net,
+            },
+            # Short params
+            SELL: {
+                PRICE: bid_l1,
+                VENUE: bid_venue,
+                PCT_NET: pct_bid_net
+            }
+        }
+        order_data = {}
+        delta_long = prediction - pct_ask_net
+        delta_short = prediction - pct_bid_net
+        trade_flag = delta_long >= std_err * delta_long_coef or \
+                     delta_short <= -std_err * delta_short_coef
+        if trade_flag:
+            side = BUY if np.sign(delta_long) > 0 else SELL
+            position = self.__get_position(ticker=symbol)
+            order_params = side_params[side]
+            order_related_data_dict = dict(zip(indicators, factors_l1))
+            order_related_data_dict.update({POLICY: policy,
+                                            LONG_COEF: delta_long_coef,
+                                            SHORT_COEF: delta_short_coef,
+                                            PREDICTION_KEY: prediction})
+            order_data[ORDER_RELATED_DATA] = order_related_data_dict
+            target_pct = (prediction_main_etf + main_etf_l1) / 2
+            target = float(close + float(target_pct / 100) * close)
+            order = messages.order_request()
+            order[ORDER][DATA][SYMBOL] = symbol
+            price = order_params[PRICE]
+            order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
+                                                           l1_price=price,
+                                                           target=target,
+                                                           prem_low=prem_low,
+                                                           prem_high=prem_high,
+                                                           vwap=vwap,
+                                                           prediction_main_etf=prediction_main_etf,
+                                                           std_err_main_etf=std_err_main_etf,
+                                                           close=close
+                                                           )
+            order[ORDER][DATA][SIDE] = side
+            position_size = get_position_size(price=order_params[PRICE],
+                                              bp=bp,
+                                              bp_usage_pct=bp_usage_pct,
+                                              prop=prop,
+                                              order_side=side,
+                                              position=position)
 
-# trader = Trader()
+            if not position_size:
+                return {}
+
+            order[ORDER][DATA][SIZE] = position_size
+            order[ORDER][DATA][VENUE] = order_params[VENUE]
+            order[ORDER][DATA][TARGET] = target
+            order[ORDER][CID] = generate_cid()
+            order_data[ORDER_DATA] = order
+
+        return order_data
+
+trader = Trader()
 # print(trader.get_subscription_list())
 # import pandas as pdT
 # pd.DataFrame(trader.get_subscription_list()).to_csv('analytics/modeling/tickers.csv')
