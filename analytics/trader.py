@@ -661,10 +661,10 @@ class Trader:
         return float(deltas[LONG_COEF]), float(deltas[SHORT_COEF])
 
     def __get_position(self, ticker: str) -> dict:
-        position = json.loads(self.__redis_connector.hm_get(h=POSITIONS, key=ticker)[0])
-        if not position:
+        position_str = self.__redis_connector.hm_get(h=POSITIONS, key=ticker)[0]
+        if not position_str:
             return {}
-        return position
+        return json.loads(position_str)
 
     def get_tier_prop(self, symbol: str) -> float:
         prop = self.__redis_connector.hm_get(h=STOCK_TO_TIER_PROPORTION,
