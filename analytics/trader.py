@@ -778,6 +778,7 @@ class Trader:
                         bp = float(acc_info[BP_KEY])
                         bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
                         if bp_usage_pct:
+                            print('=====start_getting_order======')
                             order_data = self.get_order(prediction=prediction, prediction_main_etf=prediction_main_etf,
                                                         pct_bid_net=pct_bid_net, pct_ask_net=pct_ask_net,
                                                         indicators=indicators, factors_l1=factors_l1,
@@ -881,9 +882,9 @@ class Trader:
         delta_short = prediction - pct_bid_net
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
-        trade_flag = True if random.random() > 0.9 else False
+        trade_flag = True
         if trade_flag:
-            print('There is trade flagg1!!!!!!adfasldkfja;sldfjk;alsdkfj;alsdkfj;alskdfj;alksdjf')
+            print('======Trade flag======')
             side = BUY if np.sign(delta_long) > 0 else SELL
             position = self.__get_position(ticker=symbol)
             order_params = side_params[side]
