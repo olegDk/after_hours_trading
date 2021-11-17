@@ -57,7 +57,7 @@ def get_position_size(price: float,
                       order_side: str,
                       position: dict
                       ) -> int:
-    size = int((bp * bp_usage_pct * 0.1 * 0.0625 * prop) / (price + 1e-7))
+    size = int((bp * bp_usage_pct * 0.1 * 0.125 * prop) / (price + 1e-7))
     if size < 5:
         size = 5
     elif 95 <= size < 100:
@@ -571,13 +571,28 @@ class Trader:
                     pos_size = pos_size - size
                     self.positions[symbol][SIZE] = pos_size
                     self.positions[symbol][INVESTMENT] = pos_size * pos_price
+                    if pos_size == 0:
+                        self.__sent_orders_by_ticker[symbol] = 0
                 # if flip
                 elif size > pos_size:
                     pos_size = int(np.abs(pos_size - size))
+                    investment = pos_size * price
                     self.positions[symbol][SIZE] = pos_size
                     self.positions[symbol][SIDE] = side
                     self.positions[symbol][PRICE] = price
-                    self.positions[symbol][INVESTMENT] = pos_size * price
+                    self.positions[symbol][INVESTMENT] = investment
+                    # Recalculating number of sent tiers
+                    bp_info = self.__get_acc_info()
+                    bp = float(bp_info[BP_KEY])
+                    bp_usage_pct = float(bp_info[BP_USAGE_PCT_KEY])
+                    cur_bp_per_tier = bp * bp_usage_pct * 0.1 / MAX_ORDERS
+                    n_tiers_symbol = int(investment / cur_bp_per_tier)
+                    if symbol in self.__sent_orders_by_ticker:
+                        self.__sent_orders_by_ticker[symbol] = \
+                            self.__sent_orders_by_ticker[symbol] + n_tiers_symbol
+                    else:
+                        self.__sent_orders_by_ticker[symbol] = n_tiers_symbol
+
             # If there is no position for current symbol
             else:
                 self.positions[symbol] = {
@@ -697,24 +712,14 @@ class Trader:
         all_invalid_flag = cur_time > final_dt
         if not all_invalid_flag:
             if not num_orders_sent:
-                if cur_time_hour < 9:
-                    return True
-                else:
                     return True
             if num_orders_sent < MAX_ORDERS:
-                if cur_time_hour < 8 and \
-                        num_orders_sent < BEFORE_8_N_ORDERS:
-                    return True
-                elif cur_time_hour == 8 and \
-                        num_orders_sent < BEFORE_8_30_N_ORDERS:
-                    return True
-                elif cur_time_hour == 8 and \
-                        cur_time_minute > 30 and \
+                if cur_time_hour < 9 and \
                         num_orders_sent < BEFORE_9_N_ORDERS:
                     return True
                 elif cur_time_hour == 9 and \
                         cur_time_minute < 15 and \
-                        num_orders_sent < BEFORE_9_15_ORDERS:
+                        num_orders_sent < BEFORE_9_15_N_ORDERS:
                     return True
                 elif cur_time_hour == 9 and \
                         cur_time_minute < 27 and \
@@ -740,7 +745,7 @@ class Trader:
 
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
-                    valid_tier = True if random.random() > 0.9 else False
+                    # valid_tier = True if random.random() > 0.9 else False
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
@@ -882,7 +887,7 @@ class Trader:
         delta_short = prediction - pct_bid_net
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
-        trade_flag = True
+        # trade_flag = True
         if trade_flag:
             print('======Trade flag======')
             side = BUY if np.sign(delta_long) > 0 else SELL
