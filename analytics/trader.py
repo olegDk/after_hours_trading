@@ -927,6 +927,7 @@ class Trader:
                                               position=position)
 
             if not position_size:
+                print('===Bug===')
                 return {}
             print('======Must send normal order======')
             order[ORDER][DATA][SIZE] = position_size
