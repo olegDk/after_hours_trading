@@ -33,7 +33,7 @@ now_init = datetime.now()
 final_dt = datetime(year=now_init.year,
                     month=now_init.month,
                     day=now_init.day,
-                    hour=9,
+                    hour=10,
                     minute=27,
                     second=0,
                     tzinfo=EST)
