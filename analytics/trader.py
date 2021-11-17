@@ -706,7 +706,7 @@ class Trader:
     def validate_tier(self, symbol: str) -> bool:
         # num_orders_sent = self.__sent_orders_by_ticker.get(symbol)
         num_orders_sent = self.__get_num_orders_sent(symbol=symbol)
-        cur_time = datetime.now(EST) + timedelta(hours=1)
+        cur_time = datetime.now(EST)
         cur_time_hour = cur_time.hour
         cur_time_minute = cur_time.minute
         all_invalid_flag = cur_time > final_dt
