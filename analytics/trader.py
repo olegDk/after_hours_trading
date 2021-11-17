@@ -710,6 +710,7 @@ class Trader:
         cur_time_hour = cur_time.hour
         cur_time_minute = cur_time.minute
         all_invalid_flag = cur_time > final_dt
+        print(cur_time)
         print(all_invalid_flag)
         if not all_invalid_flag:
             if not num_orders_sent:
