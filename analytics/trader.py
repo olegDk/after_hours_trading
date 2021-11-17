@@ -710,6 +710,7 @@ class Trader:
         cur_time_hour = cur_time.hour
         cur_time_minute = cur_time.minute
         all_invalid_flag = cur_time > final_dt
+        print(all_invalid_flag)
         if not all_invalid_flag:
             if not num_orders_sent:
                     return True
@@ -725,6 +726,7 @@ class Trader:
                         cur_time_minute < 27 and \
                         num_orders_sent < BEFORE_OPEN_N_ORDERS:
                     return True
+        print('Here!!!')
         return False
 
     def process_symbol_dict(self, symbol_dict: dict) -> dict:
@@ -888,6 +890,7 @@ class Trader:
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
         # trade_flag = True
+        print('======Getting order======')
         if trade_flag:
             print('======Trade flag======')
             side = BUY if np.sign(delta_long) > 0 else SELL
