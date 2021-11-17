@@ -34,7 +34,7 @@ final_dt = datetime(year=now_init.year,
                     month=now_init.month,
                     day=now_init.day,
                     hour=10,
-                    minute=27,
+                    minute=40,
                     second=0,
                     tzinfo=EST)
 cwd = os.getcwd()
