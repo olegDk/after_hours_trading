@@ -28,7 +28,7 @@ def run_sector_relative_strengh_analysis(sector: str,
     with open(f'{sectors_data_path}/{sector}/tickers/indicators_{sector}.pkl', 'rb') as i:
         indicators = pickle.load(i)
 
-    data 
+    data
 
     data[f'{main_etf}-{relative_etf}'] =
     print()
