@@ -705,7 +705,7 @@ save_filtered_stocks(sector_stocks=sector_stocks)
 sector_to_stocks, sector_to_etfs = init_sector_mappings(sector_stocks=sector_stocks)
 tickers_to_update = get_tickers_to_update(sector_to_stocks=sector_to_stocks,
                                           sector_to_etfs=sector_to_etfs)
-run_data_update(tickers_to_update=tickers_to_update)
+# run_data_update(tickers_to_update=tickers_to_update)
 all_sectors_data = get_all_sectors_data(sector_to_stocks=sector_to_stocks,
                                         sector_to_etfs=sector_to_etfs)
 create_gaps_data(sectors_names=all_sectors_data)

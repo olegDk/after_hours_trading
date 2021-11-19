@@ -10,8 +10,6 @@ import traceback
 import time
 from polygon import RESTClient
 
-os.getcwd()
-
 minute_data_path = f'analytics/modeling/training/ticker_minute_data'
 daily_data_path = f'analytics/modeling/training/ticker_daily_data'
 sectors_data_path = f'analytics/modeling/sectors'
@@ -286,9 +284,11 @@ def get_all_times(start_hour: int = 9,
 
 
 def create_premarket_dataset_for_sector(sector: str):
-    sector_daily_df = pd.read_csv(f'{sectors_data_path}/{sector}/datasets/daily_data_{sector}.csv', index_col=0)
+    sector_daily_df = pd.read_csv(f'{sectors_data_path}/{sector}/datasets/daily_data_{sector}.csv',
+                                  index_col=0)
     sector_daily_df.reset_index(inplace=True)
-    sector_daily_df.rename(columns={'index': 'Date'}, inplace=True)
+    sector_daily_df.rename(columns={'index': 'Date'},
+                           inplace=True)
 
     with open(f'{sectors_data_path}/{sector}/tickers/traidable_tickers_{sector}.pkl', 'rb') as i:
         traidable_tickers = pickle.load(i)
@@ -303,8 +303,9 @@ def create_premarket_dataset_for_sector(sector: str):
     indicators_dfs = []
 
     for ticker in indicators:
-        indicators_dfs = indicators_dfs + [create_premarket_dataset_for_ticker(ticker=ticker,
-                                                                               all_times=all_times)]
+        indicators_dfs = indicators_dfs + \
+                         [create_premarket_dataset_for_ticker(ticker=ticker,
+                                                              all_times=all_times)]
 
     indicators_df_merged = reduce(lambda left, right: pd.merge(left,
                                                                right,
@@ -312,40 +313,47 @@ def create_premarket_dataset_for_sector(sector: str):
                                                                how='inner'),
                                   indicators_dfs)
 
+    traidable_tickers_dfs = []
+
     for ticker in traidable_tickers:
-        df = create_premarket_dataset_for_ticker(ticker=ticker,
-                                                 all_times=all_times)
+        traidable_tickers_dfs = traidable_tickers_dfs + \
+                                [create_premarket_dataset_for_ticker(ticker=ticker,
+                                                                     all_times=all_times)]
 
-        df_merged = pd.merge(left=df,
-                             right=indicators_df_merged,
-                             on=['Date'],
-                             how='inner')
+    traidable_tickers_df_merged = reduce(lambda left, right: pd.merge(left,
+                                                                      right,
+                                                                      on=['Date'],
+                                                                      how='inner'),
+                                         traidable_tickers_dfs)
 
-        df_merged_full = pd.merge(left=sector_daily_df,
-                                  right=df_merged,
-                                  on=['Date'],
-                                  how='inner')
+    df_merged = pd.merge(left=traidable_tickers_df_merged,
+                         right=indicators_df_merged,
+                         on=['Date'],
+                         how='inner')
 
-        df_final = calculate_relationship_features(df_data=df_merged_full,
-                                                   traidable_tickers=[ticker],
-                                                   indicators=indicators,
-                                                   all_times=all_times)
+    df_merged_full = pd.merge(left=sector_daily_df,
+                              right=df_merged,
+                              on=['Date'],
+                              how='inner')
 
-        dump_ticker_data(data_df=df_final,
-                         sector=sector,
-                         ticker=ticker)
+    df_final = calculate_relationship_features(df_data=df_merged_full,
+                                               traidable_tickers=traidable_tickers,
+                                               indicators=indicators,
+                                               all_times=all_times)
+
+    dump_sector_data(data_df=df_final,
+                     sector=sector)
 
 
-def dump_ticker_data(data_df: pd.DataFrame,
-                     sector: str,
-                     ticker: str):
+def dump_sector_data(data_df: pd.DataFrame,
+                     sector: str):
     df = data_df.copy()
 
     sector_path = f'{sectors_data_path}/{sector}'
 
     datasets_path = f'{sector_path}/datasets'
 
-    df.to_csv(path_or_buf=f'{datasets_path}/data_{ticker}.csv',
+    df.to_csv(path_or_buf=f'{datasets_path}/data_{sector}.csv',
               index=0)
 
 
