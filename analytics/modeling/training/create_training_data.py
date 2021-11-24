@@ -8,7 +8,10 @@ import pickle
 from multiprocessing import Pool
 import traceback
 import time
+from tqdm import tqdm
+import warnings
 from polygon import RESTClient
+warnings.filterwarnings('ignore')
 
 minute_data_path = f'analytics/modeling/training/ticker_minute_data'
 daily_data_path = f'analytics/modeling/training/ticker_daily_data'
@@ -106,7 +109,7 @@ def create_premarket_dataset_for_given_time(hour: int,
 
     # Getting nearest closest datetime or exactly needed
     starting_datetimes_dataframe = pd.DataFrame()
-    for starting_datetime_index, starting_datetime in unique_dates_index_datetimes:
+    for starting_datetime_index, starting_datetime in tqdm(unique_dates_index_datetimes):
         starting_datetime_row = minute_df[minute_df.index == starting_datetime]
         if starting_datetime_row.empty:
             # I.e. finding closest to 9:15 but less than 9:15 for given date
@@ -216,7 +219,7 @@ def create_premarket_dataset_for_ticker(ticker: str,
 
     dfs = {}
 
-    for start_hour, start_minute in all_times:
+    for start_hour, start_minute in tqdm(all_times):
         print(f'Hour: {start_hour}, minute: {start_minute}')
         data = create_premarket_dataset_for_given_time(hour=start_hour,
                                                        minute=start_minute,
@@ -254,7 +257,7 @@ def create_premarket_dataset_for_ticker(ticker: str,
 
 
 def get_all_times(start_hour: int = 9,
-                  start_minute: int = 15) -> list:
+                  start_minute: int = 25) -> list:
     now = datetime.now()
 
     # Creating now_starting_datetime simply to get hours and minutes
@@ -264,21 +267,18 @@ def get_all_times(start_hour: int = 9,
                                      day=now.day,
                                      hour=start_hour,
                                      minute=start_minute)
-    ago_5_minutes_datetime = now_starting_datetime - timedelta(minutes=5)
-    ago_10_minutes_datetime = now_starting_datetime - timedelta(minutes=10)
-    ago_15_minutes_datetime = now_starting_datetime - timedelta(minutes=15)
-    ago_30_minutes_datetime = now_starting_datetime - timedelta(minutes=30)
-    ago_45_minutes_datetime = now_starting_datetime - timedelta(minutes=45)
-    ago_60_minutes_datetime = now_starting_datetime - timedelta(minutes=60)
-    ago_75_minutes_datetime = now_starting_datetime - timedelta(minutes=75)
-    all_times = [(start_hour, start_minute),
-                 (ago_5_minutes_datetime.hour, ago_5_minutes_datetime.minute),
-                 (ago_10_minutes_datetime.hour, ago_10_minutes_datetime.minute),
-                 (ago_15_minutes_datetime.hour, ago_15_minutes_datetime.minute),
-                 (ago_30_minutes_datetime.hour, ago_30_minutes_datetime.minute),
-                 (ago_45_minutes_datetime.hour, ago_45_minutes_datetime.minute),
-                 (ago_60_minutes_datetime.hour, ago_60_minutes_datetime.minute),
-                 (ago_75_minutes_datetime.hour, ago_75_minutes_datetime.minute)]
+    all_times = []
+
+    for delta_mins in range(26):
+        ago_datetime = now_starting_datetime - timedelta(minutes=delta_mins)
+        all_times = all_times + [(ago_datetime.hour, ago_datetime.minute)]
+
+    now_starting_datetime_delta_25 = now_starting_datetime - timedelta(minutes=25)
+
+    for delta_mins in range(5, 65, 5):
+        ago_datetime = \
+            now_starting_datetime_delta_25 - timedelta(minutes=delta_mins)
+        all_times = all_times + [(ago_datetime.hour, ago_datetime.minute)]
 
     return all_times
 
@@ -296,13 +296,13 @@ def create_premarket_dataset_for_sector(sector: str):
     with open(f'{sectors_data_path}/{sector}/tickers/indicators_{sector}.pkl', 'rb') as i:
         indicators = pickle.load(i)
 
-    start_hour, start_minute = (9, 15)
+    start_hour, start_minute = (9, 25)
     all_times = get_all_times(start_hour=start_hour,
                               start_minute=start_minute)
 
     indicators_dfs = []
 
-    for ticker in indicators:
+    for ticker in tqdm(indicators):
         indicators_dfs = indicators_dfs + \
                          [create_premarket_dataset_for_ticker(ticker=ticker,
                                                               all_times=all_times)]
@@ -315,7 +315,7 @@ def create_premarket_dataset_for_sector(sector: str):
 
     traidable_tickers_dfs = []
 
-    for ticker in traidable_tickers:
+    for ticker in tqdm(traidable_tickers):
         traidable_tickers_dfs = traidable_tickers_dfs + \
                                 [create_premarket_dataset_for_ticker(ticker=ticker,
                                                                      all_times=all_times)]
@@ -364,10 +364,10 @@ def calculate_relationship_features(df_data: pd.DataFrame,
     df = df_data.copy()
     all_tickers = traidable_tickers + indicators
     # Calculate premarket deltas
-    for ticker in all_tickers:
+    for ticker in tqdm(all_tickers):
         df.rename(columns={f'%Gap_{ticker}': f'%Gap_9_30_{ticker}'},
                   inplace=True)
-        traidable_ticker_flag = ticker in traidable_tickers
+        traidable_ticker_flag = ticker in tqdm(traidable_tickers)
         df = calculate_delta_features(data_df=df,
                                       ticker=ticker,
                                       all_times=all_times,
@@ -382,7 +382,7 @@ def calculate_delta_features(data_df: pd.DataFrame,
                              traidable_ticker_flag: bool) -> pd.DataFrame:
     df = data_df.copy()
     all_times = all_times + [(9, 30)]
-    for start_hour, start_minute in all_times:
+    for start_hour, start_minute in tqdm(all_times):
         if not (start_hour == 9 and start_minute == 30):
             df[f'%Gap_{start_hour}_{start_minute}_{ticker}'] = \
                 (df[f'Open_{start_hour}_{start_minute}_{ticker}'] - df[f'YesterdaysClose_{ticker}']) / df[
@@ -398,11 +398,12 @@ def calculate_delta_features(data_df: pd.DataFrame,
                      f'YesterdaysVolume_{ticker}'],
             inplace=True)
 
-    for start_hour, start_minute in all_times:
+    for start_hour, start_minute in tqdm(all_times):
         all_less_times = get_less_times(start_hour=start_hour,
                                         start_minute=start_minute,
                                         all_times=all_times)
-        for less_hour, less_minute in all_less_times:
+
+        for less_hour, less_minute in tqdm(all_less_times):
 
             df[f'%Delta_{start_hour}_{start_minute}_{less_hour}_{less_minute}_{ticker}'] = \
                 df[f'%Gap_{start_hour}_{start_minute}_{ticker}'] - df[f'%Gap_{less_hour}_{less_minute}_{ticker}']
@@ -419,13 +420,6 @@ def calculate_delta_features(data_df: pd.DataFrame,
                 df[f'Avg_delta_{start_hour}_{start_minute}_{less_hour}_{less_minute}_{ticker}'] = \
                     df[f'%Delta_{start_hour}_{start_minute}_{less_hour}_{less_minute}_{ticker}'].expanding().mean()
 
-            if (start_hour == 9 and start_minute == 30) and not (
-                    less_hour == 9 and less_minute == 15 and traidable_ticker_flag):
-                df.drop(columns=[f'%Delta_{start_hour}_{start_minute}_{less_hour}_{less_minute}_{ticker}'],
-                        inplace=True)
-
-        if start_hour == 9 and start_minute == 30 and not traidable_ticker_flag:
-            df.drop(columns=[f'%Gap_{start_hour}_{start_minute}_{ticker}'], inplace=True)
     return df
 
 
