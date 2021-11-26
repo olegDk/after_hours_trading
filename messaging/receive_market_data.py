@@ -24,15 +24,27 @@ def insert_market_data(market_data_list: list, r: redis.Redis):
         if not l1_dict:
             l1_dict = {}
         for symbol_dict in market_data_list:
+            stock_dict = l1_dict.get(symbol_dict[SYMBOL])
             result_dict = {key: symbol_dict[key] for key in L1_KEYS}
-            stock_dict = {L1_DATA: result_dict,
-                          STOCK_SNAPSHOT: {
-                              f'{now_dt.hour}_{now_dt.minute}_{now_dt.second}': {
-                                  PCT_BID_NET: result_dict[PCT_BID_NET],
-                                  PCT_ASK_NET: result_dict[PCT_ASK_NET]
-                              }
-                          }}
-            l1_dict[symbol_dict[SYMBOL]] = json.dumps(stock_dict)
+            if not stock_dict:
+                result_dict = {key: symbol_dict[key] for key in L1_KEYS}
+                stock_dict = {L1_DATA: result_dict,
+                              STOCK_SNAPSHOT: {
+                                  f'{now_dt.hour}_{now_dt.minute}_{now_dt.second}': {
+                                      PCT_BID_NET: result_dict[PCT_BID_NET],
+                                      PCT_ASK_NET: result_dict[PCT_ASK_NET]
+                                  }
+                              }}
+                l1_dict[symbol_dict[SYMBOL]] = json.dumps(stock_dict)
+            else:
+                stock_dict = json.loads(stock_dict)
+                stock_dict[L1_DATA] = result_dict
+                stock_dict[STOCK_SNAPSHOT][f'{now_dt.hour}_{now_dt.minute}_{now_dt.second}'] = {
+                    PCT_BID_NET: result_dict[PCT_BID_NET],
+                    PCT_ASK_NET: result_dict[PCT_ASK_NET]
+                }
+                l1_dict[symbol_dict[SYMBOL]] = json.dumps(stock_dict)
+
         r.hmset(L1, l1_dict)
         print(f'Market data inserted')
 
