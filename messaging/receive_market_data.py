@@ -38,6 +38,7 @@ def insert_market_data(market_data_list: list, r: redis.Redis):
                 l1_dict[symbol_dict[SYMBOL]] = json.dumps(stock_dict)
             else:
                 stock_dict = json.loads(stock_dict)
+                print(stock_dict)
                 stock_dict[L1_DATA] = result_dict
                 stock_dict[STOCK_SNAPSHOT][f'{now_dt.hour}_{now_dt.minute}_{now_dt.second}'] = {
                     PCT_BID_NET: result_dict[PCT_BID_NET],
