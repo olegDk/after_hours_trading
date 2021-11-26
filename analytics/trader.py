@@ -284,15 +284,13 @@ def adjust_limit_price(side,
                        prem_low,
                        prem_high,
                        vwap,
-                       prediction_main_etf,
                        std_err_main_etf,
                        close) -> float:
-    prediction_main_etf_price = float(close + float(prediction_main_etf / 100) * close)
     if vwap:  # and (prem_low <= vwap <= prem_high):  # if there were another trades
 
         # short logic
         if side == SELL:
-            short_bound = prediction_main_etf_price + std_err_main_etf / 3
+            short_bound = target + close * (2 * std_err_main_etf / 3)
             if prem_low <= l1_price <= prem_high:
                 if l1_price >= vwap:
                     return max([l1_price, short_bound])
@@ -307,7 +305,7 @@ def adjust_limit_price(side,
 
         # long logic
         elif side == BUY:
-            long_bound = prediction_main_etf_price - std_err_main_etf / 3
+            long_bound = target - close * (2 * std_err_main_etf / 3)
             if prem_low <= l1_price <= prem_high:
                 if l1_price <= vwap:
                     return min([l1_price, long_bound])
@@ -914,7 +912,6 @@ class Trader:
                                                            prem_low=prem_low,
                                                            prem_high=prem_high,
                                                            vwap=vwap,
-                                                           prediction_main_etf=prediction_main_etf,
                                                            std_err_main_etf=std_err_main_etf,
                                                            close=close
                                                            )

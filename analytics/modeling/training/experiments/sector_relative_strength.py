@@ -17,9 +17,9 @@ def load_datasets(sectors: list,
 
     for sector_name in sectors:
         result_dict[sector_name] = {
-            # 'data': pd.read_csv(f'{sectors_data_path}/{sector_name}/datasets/data_{sector_name}.csv',
-            #                     usecols=sectors_columns[sector_name]['data_columns']),
-            'data': pd.DataFrame(),
+            'data': pd.read_csv(f'{sectors_data_path}/{sector_name}/datasets/data_{sector_name}.csv',
+                                usecols=sectors_columns[sector_name]['data_columns']),
+            # 'data': pd.DataFrame(),
             'daily_data': pd.read_csv(f'{sectors_data_path}/{sector_name}/datasets/daily_data_{sector_name}.csv',
                                       usecols=sectors_columns[sector_name]['daily_data_columns'])
         }
@@ -180,9 +180,9 @@ def run_sector_analysis(sector: str,
     #                                market_etf=market_etf)
 
     # Run daily gains analysis
-    run_daily_gains_analysis(data_df=data, daily_data_df=daily_data, main_sector_etf=main_sector_etf,
-                             secondary_etf=secondary_etf, market_etf=market_etf, traidable_tickers=traidable_tickers,
-                             indicators=indicators)
+    # run_daily_gains_analysis(data_df=data, daily_data_df=daily_data, main_sector_etf=main_sector_etf,
+    #                          secondary_etf=secondary_etf, market_etf=market_etf, traidable_tickers=traidable_tickers,
+    #                          indicators=indicators)
 
     # Run night buy analysis
     # run_night_buy_analysis(data_df=data, daily_data_df=daily_data, main_sector_etf=main_sector_etf,
@@ -190,10 +190,10 @@ def run_sector_analysis(sector: str,
     #                        indicators=indicators)
 
     # Run premarket deltas analysis
-    # run_premarket_deltas_analysis(data_df=data, daily_data_df=daily_data, main_sector_etf=main_sector_etf,
-    #                               secondary_etf=secondary_etf, market_etf=market_etf,
-    #                               traidable_tickers=traidable_tickers,
-    #                               indicators=indicators)
+    run_premarket_deltas_analysis(data_df=data, daily_data_df=daily_data, main_sector_etf=main_sector_etf,
+                                  secondary_etf=secondary_etf, market_etf=market_etf,
+                                  traidable_tickers=traidable_tickers,
+                                  indicators=indicators)
 
 
 def run_relative_strength_analysis(data_df: pd.DataFrame,
@@ -255,7 +255,7 @@ def run_daily_gains_analysis(data_df: pd.DataFrame,
     data = data_df.copy()
     daily_data = daily_data_df.copy()
 
-    stock = 'AMZN'
+    stock = 'TEAM'
 
     daily_data = remove_outliers(data_df=daily_data,
                                  target_column=stock,
@@ -272,25 +272,46 @@ def run_daily_gains_analysis(data_df: pd.DataFrame,
         daily_data[f'%5DaysGain_{stock}'] - daily_data[f'%5DaysGain_{main_sector_etf}']
     daily_data[f'%Diff_10DaysGain_{stock}_{main_sector_etf}'] = \
         daily_data[f'%10DaysGain_{stock}'] - daily_data[f'%10DaysGain_{main_sector_etf}']
+    daily_data[f'%Diff_20DaysGain_{stock}_{main_sector_etf}'] = \
+        daily_data[f'%20DaysGain_{stock}'] - daily_data[f'%20DaysGain_{main_sector_etf}']
     daily_data['Avg_Sector_%Gap'] = \
         daily_data[[f'%Gap_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
     daily_data[f'%Diff_SMA_20_YesterdaysClose_{stock}'] = \
         (daily_data[f'SMA_20_{stock}'] - daily_data[f'YesterdaysClose_{stock}']) / \
         daily_data[f'YesterdaysClose_{stock}'] * 100
+    daily_data[f'%Diff_SMA_8_YesterdaysClose_{stock}'] = \
+        (daily_data[f'SMA_8_{stock}'] - daily_data[f'YesterdaysClose_{stock}']) / \
+        daily_data[f'YesterdaysClose_{stock}'] * 100
+    daily_data[f'%Diff_SMA_20_YesterdaysClose_{main_sector_etf}'] = \
+        (daily_data[f'SMA_20_{main_sector_etf}'] - daily_data[f'YesterdaysClose_{main_sector_etf}']) / \
+        daily_data[f'YesterdaysClose_{main_sector_etf}'] * 100
+    daily_data[f'%Diff_SMA_8_YesterdaysClose_{main_sector_etf}'] = \
+        (daily_data[f'SMA_8_{main_sector_etf}'] - daily_data[f'YesterdaysClose_{main_sector_etf}']) / \
+        daily_data[f'YesterdaysClose_{main_sector_etf}'] * 100
+    daily_data[f'%Diff_Diff_SMA_20_YesterdaysClose_{stock}_Diff_SMA_20_YesterdaysClose_{main_sector_etf}'] = \
+        daily_data[f'%Diff_SMA_20_YesterdaysClose_{stock}'] - \
+        daily_data[f'%Diff_SMA_20_YesterdaysClose_{main_sector_etf}']
 
-    # daily_data.plot.scatter(x=f'%2DaysGain_{stock}',
-    #                         y=f'%Diff_Gap_9_30_{stock}_{main_sector_etf}')
-    # daily_data.plot.scatter(x=f'%Diff_2DaysGain_{stock}_{main_sector_etf}',
-    #                         y=f'%Diff_Gap_9_30_{stock}_{main_sector_etf}')
-    # daily_data.plot.scatter(x=f'%Diff_5DaysGain_{stock}_{main_sector_etf}',
-    #                         y=f'%Diff_Gap_9_30_{stock}_{main_sector_etf}')
-    # daily_data.plot.scatter(x=f'%Diff_10DaysGain_{stock}_{main_sector_etf}',
-    #                         y=f'%Diff_Gap_9_30_{stock}_{main_sector_etf}')
+    # bull_start = datetime(year=2021,
+    #                       month=3,
+    #                       day=31)
+    # bull_end = datetime(year=2021,
+    #                     month=5,
+    #                     day=3)
+    # daily_data = daily_data[(pd.to_datetime(daily_data['Date']) >= bull_start) &
+    #                         (pd.to_datetime(daily_data['Date']) <= bull_end)]
 
-    daily_data.plot.scatter(x=f'%2DaysGain_{stock}',
-                            y=f'%Gap_{stock}')
-    daily_data.plot.scatter(x=f'%Diff_SMA_20_YesterdaysClose_{stock}',
-                            y=f'%Gap_{stock}')
+    daily_data[(daily_data[f'%Diff_10DaysGain_{stock}_{main_sector_etf}'] > 3) | (
+            daily_data[f'%Diff_10DaysGain_{stock}_{main_sector_etf}'] < -3)].plot.scatter(
+        x=f'%Diff_10DaysGain_{stock}_{main_sector_etf}',
+        y=f'%Diff_Gap_9_30_{stock}_{main_sector_etf}')
+
+    daily_data[(daily_data[
+                    f'%Diff_Diff_SMA_20_YesterdaysClose_{stock}_Diff_SMA_20_YesterdaysClose_{main_sector_etf}'] > 0.01) | (
+                       daily_data[
+                           f'%Diff_Diff_SMA_20_YesterdaysClose_{stock}_Diff_SMA_20_YesterdaysClose_{main_sector_etf}'] < -0.01)].plot.scatter(
+        x=f'%Diff_Diff_SMA_20_YesterdaysClose_{stock}_Diff_SMA_20_YesterdaysClose_{main_sector_etf}',
+        y=f'%Diff_Gap_9_30_{stock}_{main_sector_etf}')
 
 
 def run_night_buy_analysis(data_df: pd.DataFrame,
@@ -337,17 +358,73 @@ def run_premarket_deltas_analysis(data_df: pd.DataFrame,
 
     stock = 'FB'
 
-    data['Avg_Sector_%Delta_9_15_9_0'] =\
+    data['Avg_Sector_%Delta_9_15_8_0'] = \
+        data[[f'%Delta_9_15_8_0_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
+    data['Avg_Sector_%Delta_9_15_8_30'] = \
+        data[[f'%Delta_9_15_8_30_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
+    data['Avg_Sector_%Delta_9_15_8_45'] = \
+        data[[f'%Delta_9_15_8_45_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
+    data['Avg_Sector_%Delta_9_15_9_0'] = \
         data[[f'%Delta_9_15_9_0_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
-    data['Avg_Sector_%Delta_9_30_9_15'] =\
+    data['Avg_Sector_%Delta_9_15_9_10'] = \
+        data[[f'%Delta_9_15_9_10_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
+    data['Avg_Sector_%Delta_9_15_9_13'] = \
+        data[[f'%Delta_9_15_9_13_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
+    data['Avg_Sector_%Delta_9_15_9_14'] = \
+        data[[f'%Delta_9_15_9_14_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
+    data['Avg_Sector_%Delta_9_30_9_15'] = \
         data[[f'%Delta_9_30_9_15_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
 
-    data[(data['Avg_Sector_%Delta_9_15_9_0'] > 0.3) | (data['Avg_Sector_%Delta_9_15_9_0'] < -0.3)].plot.scatter(
+    delta = 0.25
+
+    target_45 = data[((data['Avg_Sector_%Delta_9_15_8_30'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_30'] > delta)) &
+                     (data['Avg_Sector_%Delta_9_15_8_30'] < 1.5)][
+        'Avg_Sector_%Delta_9_30_9_15']
+    target_30 = data[(data['Avg_Sector_%Delta_9_15_8_45'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_45'] > delta) &
+                     (data['Avg_Sector_%Delta_9_15_8_45'] < 1.5)][
+        'Avg_Sector_%Delta_9_30_9_15']
+    target_15 = data[(data['Avg_Sector_%Delta_9_15_9_0'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_0'] > delta) &
+                     (data['Avg_Sector_%Delta_9_15_9_0'] < 1.5)][
+        'Avg_Sector_%Delta_9_30_9_15']
+
+    feat_45 = data[(data['Avg_Sector_%Delta_9_15_8_30'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_30'] > delta) &
+                   (data['Avg_Sector_%Delta_9_15_8_30'] < 1.5)][
+        'Avg_Sector_%Delta_9_15_8_30']
+    feat_30 = data[(data['Avg_Sector_%Delta_9_15_8_45'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_45'] > delta) &
+                   (data['Avg_Sector_%Delta_9_15_8_45'] < 1.5)][
+        'Avg_Sector_%Delta_9_15_8_45']
+    feat_15 = data[(data['Avg_Sector_%Delta_9_15_9_0'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_0'] > delta) &
+                   (data['Avg_Sector_%Delta_9_15_9_0'] < 1.5)][
+        'Avg_Sector_%Delta_9_15_9_0']
+
+    print(f'Correlation with 8:30 delta {delta}: {target_45.corr(feat_45)}')
+    print(f'Correlation with 8:45 delta {delta}: {target_30.corr(feat_30)}')
+    print(f'Correlation with 9:00 delta {delta}: {target_15.corr(feat_15)}')
+
+    # data[(data['Avg_Sector_%Delta_9_15_8_0'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_0'] > delta)].plot.scatter(
+    #     x='Avg_Sector_%Delta_9_15_8_0',
+    #     y='Avg_Sector_%Delta_9_30_9_15')
+    data[(data['Avg_Sector_%Delta_9_15_8_30'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_30'] > delta)].plot.scatter(
+        x='Avg_Sector_%Delta_9_15_8_30',
+        y='Avg_Sector_%Delta_9_30_9_15')
+    data[(data['Avg_Sector_%Delta_9_15_8_45'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_45'] > delta)].plot.scatter(
+        x='Avg_Sector_%Delta_9_15_8_45',
+        y='Avg_Sector_%Delta_9_30_9_15')
+    data[(data['Avg_Sector_%Delta_9_15_9_0'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_0'] > delta)].plot.scatter(
         x='Avg_Sector_%Delta_9_15_9_0',
         y='Avg_Sector_%Delta_9_30_9_15')
+    # data[(data['Avg_Sector_%Delta_9_15_9_10'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_10'] > delta)].plot.scatter(
+    #     x='Avg_Sector_%Delta_9_15_9_10',
+    #     y='Avg_Sector_%Delta_9_30_9_15')
+    # data[(data['Avg_Sector_%Delta_9_15_9_13'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_13'] > delta)].plot.scatter(
+    #     x='Avg_Sector_%Delta_9_15_9_13',
+    #     y='Avg_Sector_%Delta_9_30_9_15')
+    # data[(data['Avg_Sector_%Delta_9_15_9_14'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_14'] > delta)].plot.scatter(
+    #     x='Avg_Sector_%Delta_9_15_9_14',
+    #     y='Avg_Sector_%Delta_9_30_9_15')
 
 
-run_sector_analysis(sector='Software',
+run_sector_analysis(sector='InternetAds',
                     main_sector_etf='QQQ',
                     secondary_etf='TLT',
                     market_etf='DIA')
