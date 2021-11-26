@@ -25,6 +25,7 @@ def insert_market_data(market_data_list: list, r: redis.Redis):
             l1_dict = {}
         for symbol_dict in market_data_list:
             stock_dict = l1_dict.get(symbol_dict[SYMBOL])
+            print(stock_dict)
             result_dict = {key: symbol_dict[key] for key in L1_KEYS}
             if not stock_dict:
                 result_dict = {key: symbol_dict[key] for key in L1_KEYS}
