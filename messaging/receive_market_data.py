@@ -19,6 +19,7 @@ L1_KEYS = [PCT_BID_NET, PCT_ASK_NET, BID, ASK,
 def insert_market_data(market_data_list: list, r: redis.Redis):
     if market_data_list:
         l1_dict = r.hgetall(L1)
+        print(l1_dict)
         now_dt = datetime.now()
         print(f'Current num symbols in redis: {len(l1_dict)}')
         if not l1_dict:
