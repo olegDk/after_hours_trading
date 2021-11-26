@@ -44,8 +44,8 @@ def process_news(news_data: dict):
                 news_data[NEWS_RELEVANCE_KEY] = relevant
                 symbol_news_data = rc.hm_get(h=NEWS_TYPE, key=symbol)[0]
                 if symbol_news_data:
-                    print(f'Got symbol_news_data for symbol {symbol}: '
-                          f'{symbol_news_data}')
+                    # print(f'Got symbol_news_data for symbol {symbol}: '
+                    #       f'{symbol_news_data}')
                     symbol_news_data = json.loads(symbol_news_data)
                     symbol_news_data[symbol][N_NEWS] += 1
                     # News type is news heading not topic
@@ -56,7 +56,7 @@ def process_news(news_data: dict):
                                  key=symbol,
                                  value=symbol_news_data_str)
                 else:
-                    print('Got news for first time!')
+                    # print('Got news for first time!')
                     symbol_news_data = {
                         symbol: {
                             N_NEWS: 1,
