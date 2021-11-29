@@ -346,10 +346,16 @@ class Trader:
 
     def init_stocks_data(self) -> dict:
         print('Inializing indicators...')
-
+        now_dt = datetime.now()
         # Update to get from subscription response or request directly
-        indicators_dict = {indicator: {PCT_BID_NET: INIT_PCT,
-                                       PCT_ASK_NET: INIT_PCT}
+        indicators_dict = {indicator: {L1_DATA: {PCT_BID_NET: INIT_PCT,
+                                                 PCT_ASK_NET: INIT_PCT},
+                                       STOCK_SNAPSHOT: {
+                                           f'{now_dt.hour}_{now_dt.minute}': {
+                                               PCT_BID_NET: INIT_PCT,
+                                               PCT_ASK_NET: INIT_PCT
+                                           }
+                                       }}
                            for indicator in self.__all_indicators}
 
         print(indicators_dict)
