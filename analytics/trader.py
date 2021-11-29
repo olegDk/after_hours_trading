@@ -76,8 +76,8 @@ def get_position_size(price: float,
 
 def current_percentage(l1_dict: dict) -> float:
     try:
-        pct_bid_net = l1_dict[PCT_BID_NET]
-        pct_ask_net = l1_dict[PCT_ASK_NET]
+        pct_bid_net = l1_dict[L1_DATA][PCT_BID_NET]
+        pct_ask_net = l1_dict[L1_DATA][PCT_ASK_NET]
         if pct_bid_net >= 0:
             return pct_bid_net
         elif pct_ask_net <= 0:
