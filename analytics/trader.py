@@ -346,7 +346,7 @@ class Trader:
 
     def init_stocks_data(self) -> dict:
         print('Inializing indicators...')
-        now_dt = datetime.now()
+        now_dt = datetime.now(tz=EST)
         # Update to get from subscription response or request directly
         indicators_dict = {indicator: {L1_DATA: {PCT_BID_NET: INIT_PCT,
                                                  PCT_ASK_NET: INIT_PCT},
@@ -526,7 +526,7 @@ class Trader:
     def __update_l1(self, symbol_dict: dict):
         try:
             symbol = symbol_dict[SYMBOL]
-            now_dt = datetime.now()
+            now_dt = datetime.now(tz=EST)
             pct_bid_net = symbol_dict[PCT_BID_NET]
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             l1_dict = self.__stocks_l1.get(symbol)
