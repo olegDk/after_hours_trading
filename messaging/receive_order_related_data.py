@@ -94,8 +94,7 @@ def connect_rabbit() -> Tuple[pika.BlockingConnection,
 
 
 def insert_orders(orders_list: list, es: Elasticsearch):
-    current_time = (datetime.now(EST) +
-                    timedelta(hours=1)).strftime(DATETIME_FORMAT)
+    current_time = (datetime.now(EST)).strftime(DATETIME_FORMAT)
     for order_dict in orders_list:
         order_dict.update({'datetime_est': current_time})
         # print(f"\n Received order {order_dict}")

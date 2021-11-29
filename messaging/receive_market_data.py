@@ -31,7 +31,7 @@ def insert_market_data(market_data_list: list, r: redis.Redis):
                 result_dict = {key: symbol_dict[key] for key in L1_KEYS}
                 stock_dict = {L1_DATA: result_dict,
                               STOCK_SNAPSHOT: {
-                                  f'{now_dt.hour}_{now_dt.minute}_{now_dt.second}': {
+                                  f'{now_dt.hour}_{now_dt.minute}': {
                                       PCT_BID_NET: result_dict[PCT_BID_NET],
                                       PCT_ASK_NET: result_dict[PCT_ASK_NET]
                                   }
@@ -41,7 +41,7 @@ def insert_market_data(market_data_list: list, r: redis.Redis):
                 stock_dict = json.loads(stock_dict)
                 print(stock_dict)
                 stock_dict[L1_DATA] = result_dict
-                stock_dict[STOCK_SNAPSHOT][f'{now_dt.hour}_{now_dt.minute}_{now_dt.second}'] = {
+                stock_dict[STOCK_SNAPSHOT][f'{now_dt.hour}_{now_dt.minute}'] = {
                     PCT_BID_NET: result_dict[PCT_BID_NET],
                     PCT_ASK_NET: result_dict[PCT_ASK_NET]
                 }

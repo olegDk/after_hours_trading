@@ -3,6 +3,7 @@ import os
 import pickle
 from typing import Tuple
 from datetime import datetime
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -401,6 +402,10 @@ def run_premarket_deltas_analysis(data_df: pd.DataFrame,
     print(f'Correlation with 8:45 delta {delta}: {target_30.corr(feat_30)}')
     print(f'Correlation with 9:00 delta {delta}: {target_15.corr(feat_15)}')
 
+    print(f'Beta with 8:30 delta {delta}: {get_beta(target_45, feat_45)}')
+    print(f'Beta with 8:45 delta {delta}: {get_beta(target_30, feat_30)}')
+    print(f'Beta with 9:00 delta {delta}: {get_beta(target_15, feat_15)}')
+
     # data[(data['Avg_Sector_%Delta_9_15_8_0'] < -delta) | (data['Avg_Sector_%Delta_9_15_8_0'] > delta)].plot.scatter(
     #     x='Avg_Sector_%Delta_9_15_8_0',
     #     y='Avg_Sector_%Delta_9_30_9_15')
@@ -422,6 +427,14 @@ def run_premarket_deltas_analysis(data_df: pd.DataFrame,
     # data[(data['Avg_Sector_%Delta_9_15_9_14'] < -delta) | (data['Avg_Sector_%Delta_9_15_9_14'] > delta)].plot.scatter(
     #     x='Avg_Sector_%Delta_9_15_9_14',
     #     y='Avg_Sector_%Delta_9_30_9_15')
+
+
+def get_beta(a: pd.Series,
+             b: pd.Series) -> float:
+    cov_matrix = np.cov(a, b)
+    beta = cov_matrix[0, 1] / cov_matrix[1, 1]
+
+    return beta
 
 
 run_sector_analysis(sector='InternetAds',
