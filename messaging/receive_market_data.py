@@ -150,12 +150,3 @@ if __name__ == '__main__':
             sys.exit(0)
         except SystemExit:
             os._exit(0)
-
-
-test_dict = {
-    'bid': 0,
-    'ask': 0,
-    'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-}
-
-json.dumps(test_dict)

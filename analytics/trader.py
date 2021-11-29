@@ -525,7 +525,7 @@ class Trader:
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             l1_dict = self.__stocks_l1.get(symbol)
             if not l1_dict:
-                self.__stocks_l1[symbol] = {
+                stock_dict = {
                     L1_DATA: {PCT_BID_NET: pct_bid_net,
                               PCT_ASK_NET: pct_ask_net},
                     STOCK_SNAPSHOT: {
@@ -535,6 +535,7 @@ class Trader:
                                   }
                     }
                 }
+                self.__stocks_l1[SYMBOL] = stock_dict
 
             else:
                 self.__stocks_l1[symbol][L1_DATA][PCT_BID_NET] = pct_bid_net
