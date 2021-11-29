@@ -765,7 +765,6 @@ class Trader:
 
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
-                    valid_tier = True if random.random() > 0.9 else False
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
@@ -907,7 +906,6 @@ class Trader:
         delta_short = prediction - pct_bid_net
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
-        trade_flag = True
         if trade_flag:
             side = BUY if np.sign(delta_long) > 0 else SELL
             position = self.__get_position(ticker=symbol)
