@@ -45,7 +45,7 @@ def get_range_data(from_: str,
                                 'Low': result['l'],
                                 'Close': result['c'],
                                 'Volume': result['v'],
-                                'VWAP': result['vw']}
+                                'VWAP': 0}  # result['vw']}
             results_processed[dt] = result_processed
 
     return pd.DataFrame.from_dict(results_processed, orient='index')
@@ -79,7 +79,6 @@ def get_range_data_wrapper(from_: str,
 
 def get_data_for_ticker(ticker: str = 'AAPL',
                         n: int = 120) -> pd.DataFrame:
-
     date_ranges = get_all_date_ranges(n=n)
     results = []
     for date_range in date_ranges:
@@ -121,14 +120,14 @@ def get_all_date_ranges(n: int = 120) -> list:
         from_str = from_.strftime('%Y-%m-%d')
 
         for i in range(n_min_inclusions):
-            to = from_ + timedelta(days=MIN_FULL_DAYS-1)
+            to = from_ + timedelta(days=MIN_FULL_DAYS - 1)
             to_str = to.strftime('%Y-%m-%d')
             date_ranges = date_ranges + [(from_str, to_str)]
             from_ = to + timedelta(days=1)
             from_str = from_.strftime('%Y-%m-%d')
 
         if rest > 0:
-            to = from_ + timedelta(days=rest-1)
+            to = from_ + timedelta(days=rest - 1)
             to_str = to.strftime('%Y-%m-%d')
             date_ranges = date_ranges + [(from_str, to_str)]
 

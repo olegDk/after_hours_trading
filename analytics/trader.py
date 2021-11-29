@@ -520,17 +520,29 @@ class Trader:
     def __update_l1(self, symbol_dict: dict):
         try:
             symbol = symbol_dict[SYMBOL]
+            now_dt = datetime.now()
             pct_bid_net = symbol_dict[PCT_BID_NET]
             pct_ask_net = symbol_dict[PCT_ASK_NET]
             l1_dict = self.__stocks_l1.get(symbol)
             if not l1_dict:
                 self.__stocks_l1[symbol] = {
+                    L1_DATA: {PCT_BID_NET: pct_bid_net,
+                              PCT_ASK_NET: pct_ask_net},
+                    STOCK_SNAPSHOT: {
+                        f'{now_dt.hour}_{now_dt.minute}': {
+                                      PCT_BID_NET: pct_bid_net,
+                                      PCT_ASK_NET: pct_ask_net
+                                  }
+                    }
+                }
+
+            else:
+                self.__stocks_l1[symbol][L1_DATA][PCT_BID_NET] = pct_bid_net
+                self.__stocks_l1[symbol][L1_DATA][PCT_ASK_NET] = pct_ask_net
+                self.__stocks_l1[symbol][STOCK_SNAPSHOT][f'{now_dt.hour}_{now_dt.minute}'] = {
                     PCT_BID_NET: pct_bid_net,
                     PCT_ASK_NET: pct_ask_net
                 }
-            else:
-                self.__stocks_l1[symbol][PCT_BID_NET] = pct_bid_net
-                self.__stocks_l1[symbol][PCT_ASK_NET] = pct_ask_net
         except KeyError as e:
             message = f'Update l1 KeyError: ' \
                       f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
@@ -714,7 +726,7 @@ class Trader:
         print(all_invalid_flag)
         if not all_invalid_flag:
             if not num_orders_sent:
-                    return True
+                return True
             if num_orders_sent < MAX_ORDERS:
                 if cur_time_hour < 9 and \
                         num_orders_sent < BEFORE_9_N_ORDERS:
