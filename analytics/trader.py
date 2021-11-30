@@ -292,11 +292,12 @@ def adjust_limit_price(side,
                        std_err_main_etf,
                        premarket_delta,
                        close) -> float:
-    l1_price = l1_price + premarket_delta
     if vwap:  # and (prem_low <= vwap <= prem_high):  # if there were another trades
 
         # short logic
         if side == SELL:
+            if premarket_delta < 0:
+                l1_price = l1_price + premarket_delta
             short_bound = target + close * 2 * std_err_main_etf / 3 / 100
             if prem_low <= l1_price <= prem_high:
                 if l1_price >= vwap:
@@ -312,6 +313,8 @@ def adjust_limit_price(side,
 
         # long logic
         elif side == BUY:
+            if premarket_delta > 0:
+                l1_price = l1_price + premarket_delta
             long_bound = target - close * 2 * std_err_main_etf / 3 / 100
             if prem_low <= l1_price <= prem_high:
                 if l1_price <= vwap:
@@ -335,10 +338,10 @@ def get_nearest_significant_delta(stock_snapshots: dict,
     minutes_ago = list(range(1, 31))
     dts = [now_dt - timedelta(minutes=minutes) for minutes in minutes_ago]
     dts_keys = [f'{dt.hour}_{dt.minute}' for dt in dts]
-    stock_snapshots_deltas = [np.abs(current_percentage(stock_snapshots.get(dt_key),
-                                                        return_missing=True) - current_stock_percentage)
+    stock_snapshots_deltas = [current_percentage(stock_snapshots.get(dt_key),
+                                                 return_missing=True) - current_stock_percentage
                               for dt_key in dts_keys]
-    nearest_delta_list = [v for v in stock_snapshots_deltas if significant_delta < v < 900]
+    nearest_delta_list = [v for v in stock_snapshots_deltas if significant_delta < np.abs(v) < 900]
     if nearest_delta_list:
         return nearest_delta_list[0]
 
@@ -347,8 +350,8 @@ def get_nearest_significant_delta(stock_snapshots: dict,
 
 class Trader:
     def __init__(self):
-        # self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
-        # self.__redis_connector = RedisConnector(REDIS_HOST, REDIS_PORT)
+        self.__rabbit_sender = RabbitSender(RABBIT_MQ_HOST, RABBIT_MQ_PORT)
+        self.__redis_connector = RedisConnector(REDIS_HOST, REDIS_PORT)
         self.__reports = \
             get_reports()
         self.__factors, \
@@ -984,7 +987,6 @@ class Trader:
             order_data[ORDER_DATA] = order
 
         return order_data
-
 
 # test_snapshots_dict = {
 #     "6_2": {
