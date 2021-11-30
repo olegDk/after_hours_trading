@@ -333,7 +333,7 @@ def adjust_limit_price(side,
 
 def get_nearest_significant_delta(stock_snapshots: dict,
                                   current_stock_percentage: float) -> float:
-    significant_delta = 0.1
+    significant_delta = 0.3
     now_dt = datetime.now(tz=EST)
     minutes_ago = list(range(1, 31))
     dts = [now_dt - timedelta(minutes=minutes) for minutes in minutes_ago]
@@ -964,6 +964,7 @@ class Trader:
             price = order_params[PRICE]
             # Get premarket deltas
             premarket_delta = self.get_premarket_delta(symbol=symbol)
+            order_related_data_dict.update({PREMARKET_DELTA: premarket_delta})
             order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
                                                            l1_price=price,
                                                            target=target,

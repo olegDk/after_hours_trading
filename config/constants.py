@@ -31,6 +31,7 @@ CLOSE = 'close'
 L1 = 'l1'
 L1_DATA = 'l1_data'
 STOCK_SNAPSHOT = 'stock_snapshot'
+PREMARKET_DELTA = 'premarket_delta'
 POLICY = 'policy'
 INIT_PCT = -1e3
 STOCK_TO_TIER_PROPORTION = 'stock_to_tier_proportion'
