@@ -75,17 +75,19 @@ def get_position_size(price: float,
 
 
 def current_percentage(l1_dict: dict) -> float:
+    if not l1_dict:
+        return 0
     try:
-        pct_bid_net = l1_dict[L1_DATA][PCT_BID_NET]
-        pct_ask_net = l1_dict[L1_DATA][PCT_ASK_NET]
+        pct_bid_net = l1_dict[PCT_BID_NET]
+        pct_ask_net = l1_dict[PCT_ASK_NET]
         if pct_bid_net >= 0:
             return pct_bid_net
         elif pct_ask_net <= 0:
             return pct_ask_net
         else:
             return 0
-    except TypeError:
-        pass
+    except KeyError:
+        return 0
 
 
 def invert_dict(d: dict) -> dict:
@@ -320,6 +322,20 @@ def adjust_limit_price(side,
                 return min([adjusted_price, l1_price, long_bound])
 
     return l1_price
+
+
+def get_nearest_significant_delta(stock_snapshots: dict) -> float:
+    significant_delta = 0.3
+    now_dt = datetime.now(tz=EST)
+    minutes_ago = [1, 2, 5, 15, 30]
+    dts = [now_dt - timedelta(minutes=minutes) for minutes in minutes_ago]
+    dts_keys = [f'{dt.hour}_{dt.minute}' for dt in dts]
+    stock_snapshots_pcts = [current_percentage(stock_snapshots.get(dt_key)) for dt_key in dts_keys]
+    nearest_delta_list = [v for v in stock_snapshots_pcts if v > significant_delta]
+    if nearest_delta_list:
+        return nearest_delta_list[0]
+
+    return 0.0
 
 
 class Trader:
@@ -761,8 +777,8 @@ class Trader:
                 main_etf = self.__main_etfs[symbol]
                 factors_l1 = list(
                     map(lambda x: current_percentage(
-                        self.__stocks_l1.get(x)), indicators))
-                main_etf = [current_percentage(self.__stocks_l1.get(main_etf))]
+                        self.__stocks_l1.get(x).get(L1_DATA)), indicators))
+                main_etf = [current_percentage(self.__stocks_l1.get(main_etf).get(L1_DATA))]
 
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
@@ -858,6 +874,16 @@ class Trader:
 
         return {}
 
+    def get_premarket_delta(self,
+                            symbol: str) -> float:
+        symbol_l1_data = self.__stocks_l1.get(symbol)
+        if symbol_l1_data:
+            stock_snapshots = symbol_l1_data.get(STOCK_SNAPSHOT)
+            delta = get_nearest_significant_delta(stock_snapshots=stock_snapshots)
+            return delta
+        else:
+            return 0.0
+
     def get_order(self,
                   prediction,
                   prediction_main_etf,
@@ -924,6 +950,8 @@ class Trader:
             order = messages.order_request()
             order[ORDER][DATA][SYMBOL] = symbol
             price = order_params[PRICE]
+            # Get premarket deltas
+            premarket_delta = self.get_premarket_delta(symbol=symbol)
             order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
                                                            l1_price=price,
                                                            target=target,
