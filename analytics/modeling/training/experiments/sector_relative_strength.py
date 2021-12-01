@@ -153,20 +153,23 @@ def run_sector_analysis(sector: str,
                                                      [f'%2DaysGain_{ticker}' for ticker in traidable_tickers] +
                                                      [f'%2DaysGain_{indicator}' for indicator in indicators] +
                                                      [f'%5DaysGain_{ticker}' for ticker in traidable_tickers] +
-                                                     [f'%5DaysGain_{indicator}' for indicator in indicators] +
-                                                     [f'%10DaysGain_{ticker}' for ticker in traidable_tickers] +
-                                                     [f'%10DaysGain_{indicator}' for indicator in indicators] +
-                                                     [f'%20DaysGain_{ticker}' for ticker in traidable_tickers] +
-                                                     [f'%20DaysGain_{indicator}' for indicator in indicators] +
-                                                     [f'YesterdaysClose_{ticker}' for ticker in traidable_tickers] +
-                                                     [f'YesterdaysClose_{indicator}' for indicator in indicators] +
-                                                     [f'SMA_20_{ticker}' for ticker in traidable_tickers] +
-                                                     [f'SMA_20_{indicator}' for indicator in indicators] +
-                                                     [f'SMA_8_{ticker}' for ticker in traidable_tickers] +
-                                                     [f'SMA_8_{indicator}' for indicator in indicators],
+                                                     [f'%5DaysGain_{indicator}' for indicator in indicators],
                                'traidable_tickers': traidable_tickers,
                                'indicators': indicators
                                }}
+
+    if not sector == 'Crypto':
+        sector_columns[sector]['daily_data_columns'] = sector_columns[sector]['daily_data_columns'] + \
+                                                       [f'%10DaysGain_{ticker}' for ticker in traidable_tickers] + \
+                                                       [f'%10DaysGain_{indicator}' for indicator in indicators] + \
+                                                       [f'%20DaysGain_{ticker}' for ticker in traidable_tickers] + \
+                                                       [f'%20DaysGain_{indicator}' for indicator in indicators] + \
+                                                       [f'YesterdaysClose_{ticker}' for ticker in traidable_tickers] + \
+                                                       [f'YesterdaysClose_{indicator}' for indicator in indicators] + \
+                                                       [f'SMA_20_{ticker}' for ticker in traidable_tickers] + \
+                                                       [f'SMA_20_{indicator}' for indicator in indicators] + \
+                                                       [f'SMA_8_{ticker}' for ticker in traidable_tickers] + \
+                                                       [f'SMA_8_{indicator}' for indicator in indicators]
 
     datasets = load_datasets(sectors=[sector],
                              sectors_columns=sector_columns)[sector]
@@ -359,6 +362,21 @@ def run_premarket_deltas_analysis(data_df: pd.DataFrame,
 
     stock = 'FB'
 
+    stocks_aggregates = {}
+
+    for ticker in traidable_tickers:
+        stocks_aggregates[ticker] = {
+            'mean_%Delta_9_30_9_15': data[f'%Delta_9_30_9_15_{ticker}'].mean(),
+            'std_%Delta_9_30_9_15': data[f'%Delta_9_30_9_15_{ticker}'].std(),
+            'mean_%Delta_9_15_9_14': data[f'%Delta_9_15_9_14_{ticker}'].mean(),
+            'std_%Delta_9_15_9_14': data[f'%Delta_9_15_9_14_{ticker}'].std(),
+            'mean_%Delta_9_15_9_13': data[f'%Delta_9_15_9_13_{ticker}'].mean(),
+            'std_%Delta_9_15_9_13': data[f'%Delta_9_15_9_13_{ticker}'].std(),
+            'mean_%Delta_9_15_9_10': data[f'%Delta_9_15_9_10_{ticker}'].mean(),
+            'std_%Delta_9_15_9_10': data[f'%Delta_9_15_9_10_{ticker}'].std(),
+            'mean_%Delta_9_15_9_0': data[f'%Delta_9_15_9_0_{ticker}'].mean(),
+            'std_%Delta_9_15_9_0': data[f'%Delta_9_15_9_0_{ticker}'].std(),
+        }
     data['Avg_Sector_%Delta_9_15_8_0'] = \
         data[[f'%Delta_9_15_8_0_{ticker}' for ticker in traidable_tickers]].mean(axis=1)
     data['Avg_Sector_%Delta_9_15_8_30'] = \
@@ -437,7 +455,8 @@ def get_beta(a: pd.Series,
     return beta
 
 
-run_sector_analysis(sector='InternetAds',
-                    main_sector_etf='QQQ',
+run_sector_analysis(sector='Banks',
+                    main_sector_etf='XLF',
                     secondary_etf='TLT',
-                    market_etf='DIA')
+                    market_etf='SPY',
+                    stocks_to_load=['C', 'JPM', 'GS'])
