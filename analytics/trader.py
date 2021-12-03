@@ -989,10 +989,12 @@ class Trader:
                      delta_short <= -std_err * delta_short_coef
         # trade_flag = True
         if trade_flag:
+            print('Trade flag!!!=================================================================================')
             side = BUY if np.sign(delta_long) > 0 else SELL
             if (side == BUY and sector_side == LONG_ONLY) or \
                     (side == SELL and sector_side == SHORT_ONLY) or \
                     sector_side == BOTH:
+                print('Trade flag!!!=================================================================================')
                 position = self.__get_position(ticker=symbol)
                 order_params = side_params[side]
                 order_related_data_dict = dict(zip(indicators, factors_l1))
