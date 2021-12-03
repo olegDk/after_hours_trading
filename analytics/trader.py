@@ -1008,7 +1008,9 @@ class Trader:
                 price = order_params[PRICE]
                 # Get premarket deltas
                 premarket_delta = self.get_premarket_delta(symbol=symbol)
-                order_related_data_dict.update({PREMARKET_DELTA: premarket_delta})
+                order_related_data_dict.update({PREMARKET_DELTA: premarket_delta,
+                                                SECTOR_SIDE_POLICY: sector_side,
+                                                SECTOR_PROPORTION: sector_prop})
                 order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
                                                                l1_price=price,
                                                                target=target,
@@ -1031,6 +1033,7 @@ class Trader:
                 order[ORDER][DATA][TARGET] = target
                 order[ORDER][CID] = generate_cid()
                 order_data[ORDER_DATA] = order
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
         return order_data
 
