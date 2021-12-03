@@ -765,7 +765,7 @@ class Trader:
         return prop
 
     def get_sector_side_policy(self, sector: str) -> str:
-        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0]
+        policy = self.__redis_connector.hm_get(h=SECTOR_SIDE_POLICY, key=sector)[0]
         if not policy:
             return BOTH
         return policy
