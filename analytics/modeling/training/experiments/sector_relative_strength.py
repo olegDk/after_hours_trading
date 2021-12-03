@@ -460,3 +460,15 @@ run_sector_analysis(sector='Banks',
                     secondary_etf='TLT',
                     market_etf='SPY',
                     stocks_to_load=['C', 'JPM', 'GS'])
+
+# bloomberg = pd.read_csv(f'/home/oleh/takion_trader/analytics/modeling/training/bloomberg_sectors_filtered.csv')
+# all_stocks = []
+# for i, row in bloomberg.iterrows():
+#     print()
+#     sector = row['Sector']
+#     stocks = row['Stocks']
+#     etfs = row['Indicators']
+#     all_stocks = all_stocks + stocks.split(',') + etfs.split(',')
+#
+# pd.DataFrame(all_stocks).to_csv('/home/oleh/takion_trader/analytics/modeling/training/all_sectors_stocks.csv')
+# print()

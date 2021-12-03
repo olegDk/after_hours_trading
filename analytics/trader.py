@@ -54,10 +54,11 @@ def get_position_size(price: float,
                       bp: float,
                       bp_usage_pct: float,
                       prop: float,
+                      sector_prop: float,
                       order_side: str,
                       position: dict
                       ) -> int:
-    size = int((bp * bp_usage_pct * 0.1 * 0.125 * prop) / (price + 1e-7))
+    size = int((bp * bp_usage_pct * 0.1 * 0.125 * prop * sector_prop) / (price + 1e-7))
     if size < 5:
         size = 5
     elif 95 <= size < 100:
@@ -297,7 +298,7 @@ def adjust_limit_price(side,
         # short logic
         if side == SELL:
             if premarket_delta < 0:
-                l1_price = l1_price + premarket_delta
+                l1_price = l1_price - premarket_delta
             short_bound = target + close * 2 * std_err_main_etf / 3 / 100
             if prem_low <= l1_price <= prem_high:
                 if l1_price >= vwap:
@@ -314,7 +315,7 @@ def adjust_limit_price(side,
         # long logic
         elif side == BUY:
             if premarket_delta > 0:
-                l1_price = l1_price + premarket_delta
+                l1_price = l1_price - premarket_delta
             long_bound = target - close * 2 * std_err_main_etf / 3 / 100
             if prem_low <= l1_price <= prem_high:
                 if l1_price <= vwap:
@@ -335,11 +336,18 @@ def get_nearest_significant_delta(stock_snapshots: dict,
                                   current_stock_percentage: float) -> float:
     significant_delta = 0.3
     now_dt = datetime.now(tz=EST)
+    # For testing
+    # now_dt = datetime(year=2021,
+    #                   month=12,
+    #                   day=2,
+    #                   hour=9,
+    #                   minute=3,
+    #                   second=22)
     minutes_ago = list(range(1, 31))
     dts = [now_dt - timedelta(minutes=minutes) for minutes in minutes_ago]
     dts_keys = [f'{dt.hour}_{dt.minute}' for dt in dts]
-    stock_snapshots_deltas = [current_percentage(stock_snapshots.get(dt_key),
-                                                 return_missing=True) - current_stock_percentage
+    stock_snapshots_deltas = [current_stock_percentage - current_percentage(stock_snapshots.get(dt_key),
+                                                                            return_missing=True)
                               for dt_key in dts_keys]
     nearest_delta_list = [v for v in stock_snapshots_deltas if significant_delta < np.abs(v) < 900]
     if nearest_delta_list:
@@ -674,7 +682,9 @@ class Trader:
         traidable_stocks = list(self.__stock_to_sector.keys())
         black_list = []  # Add untraidable stocks here
 
-        policy_dict = {sector: NEUTRAL for sector in list(self.__sector_to_indicators.keys())}
+        sectors = list(self.__sector_to_indicators.keys())
+
+        policy_dict = {sector: NEUTRAL for sector in sectors}
 
         delta_dict = {NEUTRAL: {LONG_COEF: 1,
                                 SHORT_COEF: 1},
@@ -685,7 +695,14 @@ class Trader:
                       AGG_BULL: {LONG_COEF: 1 / 2,
                                  SHORT_COEF: 2},
                       AGG_BEAR: {LONG_COEF: 2,
-                                 SHORT_COEF: 1 / 2}}
+                                 SHORT_COEF: 1 / 2},
+                      DELTA_FREE_BULL: {LONG_COEF: 0,
+                                        SHORT_COEF: 4},
+                      DELTA_FREE_BEAR: {LONG_COEF: 4,
+                                        SHORT_COEF: 0}
+                      }
+        sector_proportion_dict = {sector: 0.0 for sector in sectors}
+        sector_side_policy = {sector: BOTH for sector in sectors}
         acc_info_dict = {BP_KEY: INIT_BP,
                          BP_USAGE_PCT_KEY: BP_USAGE_PCT}
         stock_to_tier_proportion = {}
@@ -701,6 +718,10 @@ class Trader:
             delta_dict[key] = json.dumps(delta_dict[key])
         self.__redis_connector.set_dict(name=POLICY, d=policy_dict)
         self.__redis_connector.set_dict(name=DELTA_COEF, d=delta_dict)
+        self.__redis_connector.set_dict(name=SECTOR_PROPORTION,
+                                        d=sector_proportion_dict)
+        self.__redis_connector.set_dict(name=SECTOR_SIDE_POLICY,
+                                        d=sector_side_policy)
         self.__redis_connector.set_dict(name=STOCK_TO_TIER_PROPORTION,
                                         d=stock_to_tier_proportion)
         self.__redis_connector.set_dict(name=ACCOUNT_INFORMATION,
@@ -733,6 +754,21 @@ class Trader:
         else:
             prop = 0.0
         return prop
+
+    def get_sector_prop(self, sector: str) -> float:
+        prop = self.__redis_connector.hm_get(h=SECTOR_PROPORTION,
+                                             key=sector)[0]
+        if prop:
+            prop = float(prop)
+        else:
+            prop = 0.0
+        return prop
+
+    def get_sector_side_policy(self, sector: str) -> str:
+        policy = self.__redis_connector.hm_get(h=POLICY, key=sector)[0]
+        if not policy:
+            return BOTH
+        return policy
 
     def __get_acc_info(self) -> dict:
         acc_info = self.__redis_connector.h_getall(h=ACCOUNT_INFORMATION)
@@ -778,8 +814,10 @@ class Trader:
         symbol = symbol_dict[SYMBOL]
         print(f'Start processing symbol: {symbol}')
         symbol_prop = self.get_tier_prop(symbol=symbol)
+        symbol_sector = self.__stock_to_sector[symbol]
+        sector_prop = self.get_sector_prop(sector=symbol_sector)
         # If the tier proportion is not 0 (stock is in black list)
-        if float(symbol_prop):
+        if float(symbol_prop) and float(sector_prop):
             # Make trade decision
             try:
                 # Get indicators
@@ -823,7 +861,7 @@ class Trader:
                         upper_two_sigma = model_dict[UPPER_TWO_SIGMA]
 
                         # Check for trade opportunity
-                        symbol_sector = self.__stock_to_sector[symbol]
+                        sector_side = self.get_sector_side_policy(sector=symbol_sector)
                         symbol_policy = self.__get_policy(sector=symbol_sector)
                         delta_long_coef, delta_short_coef = self.__get_deltas(policy=symbol_policy)
                         acc_info = self.__get_acc_info()
@@ -845,7 +883,8 @@ class Trader:
                                                         policy=symbol_policy, prop=symbol_prop,
                                                         delta_long_coef=delta_long_coef,
                                                         delta_short_coef=delta_short_coef,
-                                                        bp=bp, bp_usage_pct=bp_usage_pct)
+                                                        bp=bp, bp_usage_pct=bp_usage_pct,
+                                                        sector_prop=sector_prop, sector_side=sector_side)
                             if order_data:
                                 if self.__sent_orders_by_ticker.get(symbol):
                                     self.__sent_orders_by_ticker[symbol] += 1
@@ -926,7 +965,9 @@ class Trader:
                   delta_long_coef,
                   delta_short_coef,
                   bp,
-                  bp_usage_pct) -> dict:
+                  bp_usage_pct,
+                  sector_prop,
+                  sector_side) -> dict:
         side_params = {
             # Long params
             BUY: {
@@ -949,431 +990,165 @@ class Trader:
         # trade_flag = True
         if trade_flag:
             side = BUY if np.sign(delta_long) > 0 else SELL
-            position = self.__get_position(ticker=symbol)
-            order_params = side_params[side]
-            order_related_data_dict = dict(zip(indicators, factors_l1))
-            order_related_data_dict.update({POLICY: policy,
-                                            LONG_COEF: delta_long_coef,
-                                            SHORT_COEF: delta_short_coef,
-                                            PREDICTION_KEY: prediction})
-            order_data[ORDER_RELATED_DATA] = order_related_data_dict
-            target_pct = (prediction_main_etf + main_etf_l1) / 2
-            target = float(close + float(target_pct / 100) * close)
-            order = messages.order_request()
-            order[ORDER][DATA][SYMBOL] = symbol
-            price = order_params[PRICE]
-            # Get premarket deltas
-            premarket_delta = self.get_premarket_delta(symbol=symbol)
-            order_related_data_dict.update({PREMARKET_DELTA: premarket_delta})
-            order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
-                                                           l1_price=price,
-                                                           target=target,
-                                                           prem_low=prem_low,
-                                                           prem_high=prem_high,
-                                                           vwap=vwap,
-                                                           std_err_main_etf=std_err_main_etf,
-                                                           premarket_delta=premarket_delta,
-                                                           close=close)
-            order[ORDER][DATA][SIDE] = side
-            position_size = get_position_size(price=order_params[PRICE],
-                                              bp=bp,
-                                              bp_usage_pct=bp_usage_pct,
-                                              prop=prop,
-                                              order_side=side,
-                                              position=position)
-            order[ORDER][DATA][SIZE] = position_size
-            order[ORDER][DATA][VENUE] = order_params[VENUE]
-            order[ORDER][DATA][TARGET] = target
-            order[ORDER][CID] = generate_cid()
-            order_data[ORDER_DATA] = order
+            if (side == BUY and sector_side == LONG_ONLY) or \
+                    (side == SELL and sector_side == SHORT_ONLY) or \
+                    sector_side == BOTH:
+                position = self.__get_position(ticker=symbol)
+                order_params = side_params[side]
+                order_related_data_dict = dict(zip(indicators, factors_l1))
+                order_related_data_dict.update({POLICY: policy,
+                                                LONG_COEF: delta_long_coef,
+                                                SHORT_COEF: delta_short_coef,
+                                                PREDICTION_KEY: prediction})
+                order_data[ORDER_RELATED_DATA] = order_related_data_dict
+                target_pct = (prediction_main_etf + main_etf_l1) / 2
+                target = float(close + float(target_pct / 100) * close)
+                order = messages.order_request()
+                order[ORDER][DATA][SYMBOL] = symbol
+                price = order_params[PRICE]
+                # Get premarket deltas
+                premarket_delta = self.get_premarket_delta(symbol=symbol)
+                order_related_data_dict.update({PREMARKET_DELTA: premarket_delta})
+                order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
+                                                               l1_price=price,
+                                                               target=target,
+                                                               prem_low=prem_low,
+                                                               prem_high=prem_high,
+                                                               vwap=vwap,
+                                                               std_err_main_etf=std_err_main_etf,
+                                                               premarket_delta=premarket_delta,
+                                                               close=close)
+                order[ORDER][DATA][SIDE] = side
+                position_size = get_position_size(price=order_params[PRICE],
+                                                  bp=bp,
+                                                  bp_usage_pct=bp_usage_pct,
+                                                  prop=prop,
+                                                  sector_prop=sector_prop,
+                                                  order_side=side,
+                                                  position=position)
+                order[ORDER][DATA][SIZE] = position_size
+                order[ORDER][DATA][VENUE] = order_params[VENUE]
+                order[ORDER][DATA][TARGET] = target
+                order[ORDER][CID] = generate_cid()
+                order_data[ORDER_DATA] = order
 
         return order_data
 
+
 # test_snapshots_dict = {
-#     "6_2": {
-#       "pctBidNet": -0.5281822983475497,
-#       "pctAskNet": -0.5180695621557736
-#     },
-#     "6_3": {
-#       "pctBidNet": -0.5560028177518315,
-#       "pctAskNet": -0.5484138763804701
-#     },
-#     "6_4": {
-#       "pctBidNet": -0.5939647144690845,
-#       "pctAskNet": -0.5838387397136153
-#     },
-#     "6_5": {
-#       "pctBidNet": -0.5863700422790377,
-#       "pctAskNet": -0.5737148033516954
-#     },
-#     "6_6": {
-#       "pctBidNet": -0.6091574999370746,
-#       "pctAskNet": -0.6015605336018087
-#     },
-#     "6_7": {
-#       "pctBidNet": -0.596496526729086,
-#       "pctAskNet": -0.5863700422790377
-#     },
-#     "6_8": {
-#       "pctBidNet": -0.6091574999370746,
-#       "pctAskNet": -0.596496526729086
-#     },
-#     "6_9": {
-#       "pctBidNet": -0.6015605336018087,
-#       "pctAskNet": -0.5889014722536743
-#     },
-#     "6_10": {
-#       "pctBidNet": -0.6040927282337781,
-#       "pctAskNet": -0.5939647144690845
-#     },
-#     "6_11": {
-#       "pctBidNet": -0.5332394295344227,
-#       "pctAskNet": -0.5231256759135796
-#     },
-#     "6_12": {
-#       "pctBidNet": -0.530710800342073,
-#       "pctAskNet": -0.5180695621557736
-#     },
-#     "6_13": {
-#       "pctBidNet": -0.5332394295344227,
-#       "pctAskNet": -0.530710800342073
-#     },
-#     "6_14": {
-#       "pctBidNet": -0.5686535993759885,
-#       "pctAskNet": -0.5585327194505171
-#     },
-#     "6_15": {
-#       "pctBidNet": -0.5838387397136153,
-#       "pctAskNet": -0.5711841376880836
-#     },
-#     "6_16": {
-#       "pctBidNet": -0.5560028177518315,
-#       "pctAskNet": -0.5433552184740837
-#     },
-#     "6_17": {
-#       "pctBidNet": -0.54082608039442,
-#       "pctAskNet": -0.5281822983475497
-#     },
-#     "6_18": {
-#       "pctBidNet": -0.5813075645477885,
-#       "pctAskNet": -0.5686535993759885
-#     },
-#     "6_19": {
-#       "pctBidNet": -0.5560028177518315,
-#       "pctAskNet": -0.5433552184740837
-#     },
-#     "6_20": {
-#       "pctBidNet": -0.5762455963764521,
-#       "pctAskNet": -0.5661231884057971
-#     },
-#     "6_21": {
-#       "pctBidNet": -0.5686535993759885,
-#       "pctAskNet": -0.5585327194505171
-#     },
-#     "6_22": {
-#       "pctBidNet": -0.54082608039442,
-#       "pctAskNet": -0.5281822983475497
-#     },
-#     "6_23": {
-#       "pctBidNet": -0.5509433962264145,
-#       "pctAskNet": -0.5357681859341975
-#     },
-#     "6_24": {
-#       "pctBidNet": -0.5433552184740837,
-#       "pctAskNet": -0.5332394295344227
-#     },
-#     "6_25": {
-#       "pctBidNet": -0.5458844837995613,
-#       "pctAskNet": -0.5357681859341975
-#     },
-#     "6_26": {
-#       "pctBidNet": -0.5231256759135796,
-#       "pctAskNet": -0.5104863451189389
-#     },
-#     "6_27": {
-#       "pctBidNet": -0.5029042721717921,
-#       "pctAskNet": -0.49279662082316633
-#     },
-#     "6_28": {
-#       "pctBidNet": -0.530710800342073,
-#       "pctAskNet": -0.5180695621557736
-#     },
-#     "6_29": {
-#       "pctBidNet": -0.5231256759135796,
-#       "pctAskNet": -0.5104863451189389
-#     },
-#     "6_30": {
-#       "pctBidNet": -0.5180695621557736,
-#       "pctAskNet": -0.5029042721717921
-#     },
-#     "6_31": {
-#       "pctBidNet": -0.5180695621557736,
-#       "pctAskNet": -0.5054315027157491
-#     },
-#     "6_32": {
-#       "pctBidNet": -0.5560028177518315,
-#       "pctAskNet": -0.5458844837995613
-#     },
-#     "6_33": {
-#       "pctBidNet": -0.5231256759135796,
-#       "pctAskNet": -0.5130139569973647
-#     },
-#     "6_34": {
-#       "pctBidNet": -0.5180695621557736,
-#       "pctAskNet": -0.5079588603616018
-#     },
-#     "6_35": {
-#       "pctBidNet": -0.4953233430554084,
-#       "pctAskNet": -0.4852172164119084
-#     },
-#     "6_36": {
-#       "pctBidNet": -0.5686535993759885,
-#       "pctAskNet": -0.5585327194505171
-#     },
-#     "6_37": {
-#       "pctBidNet": -0.5560028177518315,
-#       "pctAskNet": -0.5458844837995613
-#     },
-#     "6_38": {
-#       "pctBidNet": -0.5484138763804701,
-#       "pctAskNet": -0.5382970695509964
-#     },
-#     "6_39": {
-#       "pctBidNet": -0.5180695621557736,
-#       "pctAskNet": -0.5054315027157491
-#     },
-#     "6_40": {
-#       "pctBidNet": -0.5130139569973647,
-#       "pctAskNet": -0.5054315027157491
-#     },
-#     "6_41": {
-#       "pctBidNet": -0.49279662082316633,
-#       "pctAskNet": -0.4826910023380386
-#     },
-#     "6_42": {
-#       "pctBidNet": -0.470061837011715,
-#       "pctAskNet": -0.4650110597225072
-#     },
-#     "6_43": {
-#       "pctBidNet": -0.4826910023380386,
-#       "pctAskNet": -0.4725874161031636
-#     },
-#     "6_44": {
-#       "pctBidNet": -0.4751131221719423,
-#       "pctAskNet": -0.4624858615055862
-#     },
-#     "6_45": {
-#       "pctBidNet": -0.4725874161031636,
-#       "pctAskNet": -0.4650110597225072
-#     },
-#     "6_46": {
-#       "pctBidNet": -0.4498617743151597,
-#       "pctAskNet": -0.4448130277442656
-#     },
-#     "6_47": {
-#       "pctBidNet": -0.500377168720143,
-#       "pctAskNet": -0.49027002564489075
-#     },
-#     "6_48": {
-#       "pctBidNet": -0.4953233430554084,
-#       "pctAskNet": -0.4852172164119084
-#     },
-#     "6_49": {
-#       "pctBidNet": -0.500377168720143,
-#       "pctAskNet": -0.49279662082316633
-#     },
-#     "6_50": {
-#       "pctBidNet": -0.48016491527980926,
-#       "pctAskNet": -0.470061837011715
-#     },
-#     "6_51": {
-#       "pctBidNet": -0.4978501923512153,
-#       "pctAskNet": -0.4852172164119084
-#     },
-#     "6_52": {
-#       "pctBidNet": -0.5357681859341975,
-#       "pctAskNet": -0.5281822983475497
-#     },
-#     "6_53": {
-#       "pctBidNet": -0.6268882175226609,
-#       "pctAskNet": -0.616755613734767
-#     },
-#     "6_54": {
-#       "pctBidNet": -0.596496526729086,
-#       "pctAskNet": -0.5863700422790377
-#     },
-#     "6_55": {
-#       "pctBidNet": -0.6699745611162947,
-#       "pctAskNet": -0.6674390489623154
-#     },
-#     "6_56": {
-#       "pctBidNet": -0.6268882175226609,
-#       "pctAskNet": -0.6192885733705861
-#     },
-#     "6_57": {
-#       "pctBidNet": -0.6674390489623154,
-#       "pctAskNet": -0.6598332787669692
-#     },
-#     "6_58": {
-#       "pctBidNet": -0.616755613734767,
-#       "pctAskNet": -0.6066250503423342
-#     },
-#     "6_59": {
-#       "pctBidNet": -0.6496940394349133,
-#       "pctAskNet": -0.6395568425028378
-#     },
-#     "7_0": {
-#       "pctBidNet": -0.6192885733705861,
-#       "pctAskNet": -0.6066250503423342
-#     },
-#     "7_1": {
-#       "pctBidNet": -0.5686535993759885,
-#       "pctAskNet": -0.5610627484526791
-#     },
-#     "7_2": {
-#       "pctBidNet": -0.5914330296471594,
-#       "pctAskNet": -0.5813075645477885
-#     },
-#     "7_3": {
-#       "pctBidNet": -0.5458844837995613,
-#       "pctAskNet": -0.5357681859341975
-#     },
-#     "7_4": {
-#       "pctBidNet": -0.54082608039442,
-#       "pctAskNet": -0.530710800342073
-#     },
-#     "7_5": {
-#       "pctBidNet": -0.5585327194505171,
-#       "pctAskNet": -0.5509433962264145
-#     },
-#     "7_6": {
-#       "pctBidNet": -0.5458844837995613,
-#       "pctAskNet": -0.5357681859341975
-#     },
-#     "7_7": {
-#       "pctBidNet": -0.5509433962264145,
-#       "pctAskNet": -0.54082608039442
-#     },
-#     "7_8": {
-#       "pctBidNet": -0.5382970695509964,
-#       "pctAskNet": -0.5281822983475497
-#     },
-#     "7_9": {
-#       "pctBidNet": -0.5205975554549552,
-#       "pctAskNet": -0.5130139569973647
-#     },
-#     "7_10": {
-#       "pctBidNet": -0.5054315027157491,
-#       "pctAskNet": -0.4953233430554084
-#     },
-#     "7_11": {
-#       "pctBidNet": -0.500377168720143,
-#       "pctAskNet": -0.4978501923512153
-#     },
-#     "7_12": {
-#       "pctBidNet": -0.5256539235412412,
-#       "pctAskNet": -0.5155416960064408
-#     },
-#     "7_13": {
-#       "pctBidNet": -0.5433552184740837,
-#       "pctAskNet": -0.5332394295344227
-#     },
-#     "7_14": {
-#       "pctBidNet": -0.5433552184740837,
-#       "pctAskNet": -0.5332394295344227
-#     },
-#     "7_15": {
-#       "pctBidNet": -0.5332394295344227,
-#       "pctAskNet": -0.5256539235412412
-#     },
-#     "7_16": {
-#       "pctBidNet": -0.5484138763804701,
-#       "pctAskNet": -0.5433552184740837
-#     },
-#     "7_17": {
-#       "pctBidNet": -0.5180695621557736,
-#       "pctAskNet": -0.5079588603616018
-#     },
-#     "7_18": {
-#       "pctBidNet": -0.5256539235412412,
-#       "pctAskNet": -0.5180695621557736
-#     },
-#     "7_19": {
-#       "pctBidNet": -0.5382970695509964,
-#       "pctAskNet": -0.5332394295344227
-#     },
-#     "7_20": {
-#       "pctBidNet": -0.5079588603616018,
-#       "pctAskNet": -0.5029042721717921
-#     },
-#     "7_21": {
-#       "pctBidNet": -0.49027002564489075,
-#       "pctAskNet": -0.4826910023380386
-#     },
-#     "7_22": {
-#       "pctBidNet": -0.4725874161031636,
-#       "pctAskNet": -0.470061837011715
-#     },
-#     "7_23": {
-#       "pctBidNet": -0.4498617743151597,
-#       "pctAskNet": -0.43976478866160723
-#     },
-#     "7_24": {
-#       "pctBidNet": -0.42714641071383413,
-#       "pctAskNet": -0.4220999472375083
-#     },
-#     "7_25": {
-#       "pctBidNet": -0.4044413183279777,
-#       "pctAskNet": -0.3968752354876753
-#     },
-#     "7_26": {
-#       "pctBidNet": -0.39939713639788366,
-#       "pctAskNet": -0.3893102928618103
-#     },
-#     "7_27": {
-#       "pctBidNet": -0.3767045882618851,
-#       "pctAskNet": -0.37166319278772963
-#     },
-#     "7_28": {
-#       "pctBidNet": -0.3943534612679577,
-#       "pctAskNet": -0.3893102928618103
-#     },
-#     "7_29": {
-#       "pctBidNet": -0.3943534612679577,
-#       "pctAskNet": -0.3893102928618103
-#     },
-#     "7_30": {
-#       "pctBidNet": -0.4220999472375083,
-#       "pctAskNet": -0.412008541640494
-#     },
-#     "7_31": {
-#       "pctBidNet": -0.42714641071383413,
-#       "pctAskNet": -0.4195769056831355
-#     },
-#     "7_32": {
-#       "pctBidNet": -0.44228884477169117,
-#       "pctAskNet": -0.43724085940445007
-#     },
-#     "7_33": {
-#       "pctBidNet": -0.4498617743151597,
-#       "pctAskNet": -0.4448130277442656
-#     },
-#     "7_34": {
-#       "pctBidNet": -0.470061837011715,
-#       "pctAskNet": -0.4650110597225072
-#     },
-#     "7_35": {
-#       "pctBidNet": -0.4877435575109988,
-#       "pctAskNet": -0.48016491527980926
-#     },
-#     "7_36": {
-#       "pctBidNet": -0.4877435575109988,
-#       "pctAskNet": -0.4826910023380386
+#     "8_35": {
+#         "pctBidNet": 3.4602076124567507,
+#         "pctAskNet": 3.6269430051813467
+#     },
+#     "8_37": {
+#         "pctBidNet": 3.4602076124567507,
+#         "pctAskNet": 3.6269430051813467
+#     },
+#     "8_39": {
+#         "pctBidNet": 3.2928942807625567,
+#         "pctAskNet": 3.4602076124567507
+#     },
+#     "8_40": {
+#         "pctBidNet": 3.124999999999995,
+#         "pctAskNet": 3.2928942807625567
+#     },
+#     "8_45": {
+#         "pctBidNet": 2.9565217391304333,
+#         "pctAskNet": 3.124999999999995
+#     },
+#     "8_49": {
+#         "pctBidNet": 2.9565217391304333,
+#         "pctAskNet": 2.9565217391304333
+#     },
+#     "8_50": {
+#         "pctBidNet": 2.7874564459930338,
+#         "pctAskNet": 2.9565217391304333
+#     },
+#     "8_51": {
+#         "pctBidNet": 2.617801047120425,
+#         "pctAskNet": 2.7874564459930338
+#     },
+#     "8_54": {
+#         "pctBidNet": 2.7874564459930338,
+#         "pctAskNet": 2.9565217391304333
+#     },
+#     "8_59": {
+#         "pctBidNet": 2.447552447552442,
+#         "pctAskNet": 2.617801047120425
+#     },
+#     "9_1": {
+#         "pctBidNet": 2.2767075306479843,
+#         "pctAskNet": 2.447552447552442
+#     },
+#     "9_3": {
+#         "pctBidNet": 1.5873015873015848,
+#         "pctAskNet": 1.760563380281684
+#     },
+#     "9_4": {
+#         "pctBidNet": 1.5873015873015848,
+#         "pctAskNet": 1.9332161687170377
+#     },
+#     "9_5": {
+#         "pctBidNet": 1.413427561837457,
+#         "pctAskNet": 1.760563380281684
+#     },
+#     "9_6": {
+#         "pctBidNet": 1.413427561837457,
+#         "pctAskNet": 1.5873015873015848
+#     },
+#     "9_7": {
+#         "pctBidNet": 1.5873015873015848,
+#         "pctAskNet": 1.9332161687170377
+#     },
+#     "9_9": {
+#         "pctBidNet": 1.9332161687170377,
+#         "pctAskNet": 2.1052631578947385
+#     },
+#     "9_10": {
+#         "pctBidNet": 1.9332161687170377,
+#         "pctAskNet": 2.1052631578947385
+#     },
+#     "9_12": {
+#         "pctBidNet": 1.9332161687170377,
+#         "pctAskNet": 2.1052631578947385
+#     },
+#     "9_13": {
+#         "pctBidNet": 2.1052631578947385,
+#         "pctAskNet": 2.2767075306479843
+#     },
+#     "9_14": {
+#         "pctBidNet": 2.2767075306479843,
+#         "pctAskNet": 2.447552447552442
+#     },
+#     "9_15": {
+#         "pctBidNet": 2.447552447552442,
+#         "pctAskNet": 2.617801047120425
+#     },
+#     "9_16": {
+#         "pctBidNet": 2.2767075306479843,
+#         "pctAskNet": 2.447552447552442
+#     },
+#     "9_17": {
+#         "pctBidNet": 2.2767075306479843,
+#         "pctAskNet": 2.617801047120425
+#     },
+#     "9_18": {
+#         "pctBidNet": 2.2767075306479843,
+#         "pctAskNet": 2.617801047120425
+#     },
+#     "9_21": {
+#         "pctBidNet": 2.447552447552442,
+#         "pctAskNet": 2.7874564459930338
+#     },
+#     "9_24": {
+#         "pctBidNet": 2.617801047120425,
+#         "pctAskNet": 2.7874564459930338
 #     }
 # }
 #
 # delta = get_nearest_significant_delta(stock_snapshots=test_snapshots_dict,
-#                                       current_stock_percentage=-0.51)
+#                                       current_stock_percentage=2.5)
+
 # trader = Trader()
 # print(trader.get_subscription_list())
 # import pandas as pdT
