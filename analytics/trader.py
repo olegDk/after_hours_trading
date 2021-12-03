@@ -790,8 +790,6 @@ class Trader:
         cur_time_hour = cur_time.hour
         cur_time_minute = cur_time.minute
         all_invalid_flag = cur_time > final_dt
-        print(cur_time)
-        print(all_invalid_flag)
         if not all_invalid_flag:
             if not num_orders_sent:
                 return True
@@ -807,7 +805,6 @@ class Trader:
                         cur_time_minute < 27 and \
                         num_orders_sent < BEFORE_OPEN_N_ORDERS:
                     return True
-        print('Here!!!')
         return False
 
     def process_symbol_dict(self, symbol_dict: dict) -> dict:
@@ -868,7 +865,6 @@ class Trader:
                         bp = float(acc_info[BP_KEY])
                         bp_usage_pct = float(acc_info[BP_USAGE_PCT_KEY])
                         if bp_usage_pct:
-                            print('=====start_getting_order======')
                             order_data = self.get_order(prediction=prediction, prediction_main_etf=prediction_main_etf,
                                                         pct_bid_net=pct_bid_net, pct_ask_net=pct_ask_net,
                                                         indicators=indicators, factors_l1=factors_l1,
@@ -991,9 +987,11 @@ class Trader:
         if trade_flag:
             print('Trade flag!!!=================================================================================')
             side = BUY if np.sign(delta_long) > 0 else SELL
-            if (side == BUY and sector_side == LONG_ONLY) or \
-                    (side == SELL and sector_side == SHORT_ONLY) or \
-                    sector_side == BOTH:
+            side_match = (side == BUY and sector_side == LONG_ONLY) or \
+                         (side == SELL and sector_side == SHORT_ONLY) or \
+                         sector_side == BOTH
+            print(f'Side match: {side_match}')
+            if side_match:
                 print('Side flag!!!=================================================================================')
                 position = self.__get_position(ticker=symbol)
                 order_params = side_params[side]
@@ -1038,7 +1036,6 @@ class Trader:
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
         return order_data
-
 
 # test_snapshots_dict = {
 #     "8_35": {
