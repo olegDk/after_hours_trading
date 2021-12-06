@@ -340,6 +340,8 @@ def adjust_limit_price(side,
 
 def get_nearest_significant_delta(stock_snapshots: dict,
                                   current_stock_percentage: float) -> float:
+    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    print(current_stock_percentage)
     significant_delta = 0.0001
     now_dt = datetime.now(tz=EST)
     # For testing
