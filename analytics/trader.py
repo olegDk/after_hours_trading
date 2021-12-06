@@ -930,6 +930,7 @@ class Trader:
     def get_premarket_delta(self,
                             symbol: str) -> float:
         symbol_l1_data = self.__stocks_l1.get(symbol)
+        print(self.__stocks_l1)
         print('In get_premarket_delta')
         if symbol_l1_data:
             print('Got l1 data in premarket delta')
