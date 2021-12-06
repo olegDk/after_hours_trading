@@ -930,7 +930,9 @@ class Trader:
     def get_premarket_delta(self,
                             symbol: str) -> float:
         symbol_l1_data = self.__stocks_l1.get(symbol)
+        print('In get_premarket_delta')
         if symbol_l1_data:
+            print('Got l1 data in premarket delta')
             stock_snapshots = symbol_l1_data.get(STOCK_SNAPSHOT)
             current_stock_percentage = current_percentage(symbol_l1_data.get(L1_DATA))
             delta = get_nearest_significant_delta(stock_snapshots=stock_snapshots,
