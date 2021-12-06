@@ -123,12 +123,18 @@ def get_reports() -> list:
     # https://hosting.briefing.com/cschwab/
     # Calendars/EarningsCalendar5Weeks.htm
     reports_path = 'analytics/modeling/reports'
+    previous_day_reports_path = 'analytics/modeling/previous_day_reports'
     if sys.gettrace():
         reports_path = '/home/oleh/takion_trader/analytics/modeling/reports'
+        previous_day_reports_path = 'analytics/modeling/previous_day_reports'
 
     with open(reports_path) as i:
         reports = i.read().splitlines()
         print(f'Reports: {reports}')
+
+    with open(previous_day_reports_path) as i:
+        previous_day_reports = i.read().splitlines()
+        reports = reports + previous_day_reports
 
     return reports
 
@@ -680,7 +686,12 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = []  # Add untraidable stocks here
+        black_list = ['DOCU',
+                      'ASAN',
+                      'DOMO',
+                      'GWRE',
+                      'MRVL',
+                      ]  # Add untraidable stocks here
 
         sectors = list(self.__sector_to_indicators.keys())
 
@@ -701,7 +712,7 @@ class Trader:
                       DELTA_FREE_BEAR: {LONG_COEF: 4,
                                         SHORT_COEF: 0}
                       }
-        sector_proportion_dict = {sector: 0.0 for sector in sectors}
+        sector_proportion_dict = {sector: 0 for sector in sectors}
         sector_side_policy = {sector: BOTH for sector in sectors}
         acc_info_dict = {BP_KEY: INIT_BP,
                          BP_USAGE_PCT_KEY: BP_USAGE_PCT}
@@ -827,7 +838,7 @@ class Trader:
 
                 if INIT_PCT not in factors_l1:
                     valid_tier = self.validate_tier(symbol=symbol)
-                    valid_tier = True if random.random() > 0.9 else False
+                    # valid_tier = True if random.random() > 0.9 else False
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
@@ -983,7 +994,7 @@ class Trader:
         delta_short = prediction - pct_bid_net
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
-        trade_flag = True
+        # trade_flag = True
         if trade_flag:
             print('Trade flag!!!=================================================================================')
             side = BUY if np.sign(delta_long) > 0 else SELL
@@ -1028,11 +1039,14 @@ class Trader:
                                                   sector_prop=sector_prop,
                                                   order_side=side,
                                                   position=position)
+                if not position_size:
+                    return {}
                 order[ORDER][DATA][SIZE] = position_size
                 order[ORDER][DATA][VENUE] = order_params[VENUE]
                 order[ORDER][DATA][TARGET] = target
                 order[ORDER][CID] = generate_cid()
                 order_data[ORDER_DATA] = order
+                print(order_data)
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
         return order_data
