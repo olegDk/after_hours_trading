@@ -582,7 +582,7 @@ class Trader:
                         }
                     }
                 }
-                self.__stocks_l1[SYMBOL] = stock_dict
+                self.__stocks_l1[symbol] = stock_dict
 
             else:
                 self.__stocks_l1[symbol][L1_DATA][PCT_BID_NET] = pct_bid_net
