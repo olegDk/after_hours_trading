@@ -340,15 +340,15 @@ def adjust_limit_price(side,
 
 def get_nearest_significant_delta(stock_snapshots: dict,
                                   current_stock_percentage: float) -> float:
-    significant_delta = 0.3
+    significant_delta = 0.0001
     now_dt = datetime.now(tz=EST)
     # For testing
     # now_dt = datetime(year=2021,
     #                   month=12,
-    #                   day=2,
+    #                   day=6,
     #                   hour=9,
-    #                   minute=3,
-    #                   second=22)
+    #                   minute=20,
+    #                   second=33)
     minutes_ago = list(range(1, 31))
     dts = [now_dt - timedelta(minutes=minutes) for minutes in minutes_ago]
     dts_keys = [f'{dt.hour}_{dt.minute}' for dt in dts]
@@ -832,8 +832,8 @@ class Trader:
                 main_etf = [current_percentage(self.__stocks_l1.get(main_etf).get(L1_DATA))]
 
                 if INIT_PCT not in factors_l1:
-                    valid_tier = self.validate_tier(symbol=symbol)
-                    # valid_tier = True if random.random() > 0.9 else False
+                    # valid_tier = self.validate_tier(symbol=symbol)
+                    valid_tier = True if random.random() > 0.9 else False
                     if valid_tier:
                         model_dict = self.__models[symbol]
                         model = model_dict[MODEL]
@@ -989,7 +989,7 @@ class Trader:
         delta_short = prediction - pct_bid_net
         trade_flag = delta_long >= std_err * delta_long_coef or \
                      delta_short <= -std_err * delta_short_coef
-        # trade_flag = True
+        trade_flag = True
         if trade_flag:
             print('Trade flag!!!=================================================================================')
             side = BUY if np.sign(delta_long) > 0 else SELL
@@ -1046,119 +1046,190 @@ class Trader:
 
         return order_data
 
-# test_snapshots_dict = {
-#     "8_35": {
-#         "pctBidNet": 3.4602076124567507,
-#         "pctAskNet": 3.6269430051813467
-#     },
-#     "8_37": {
-#         "pctBidNet": 3.4602076124567507,
-#         "pctAskNet": 3.6269430051813467
-#     },
-#     "8_39": {
-#         "pctBidNet": 3.2928942807625567,
-#         "pctAskNet": 3.4602076124567507
-#     },
-#     "8_40": {
-#         "pctBidNet": 3.124999999999995,
-#         "pctAskNet": 3.2928942807625567
-#     },
-#     "8_45": {
-#         "pctBidNet": 2.9565217391304333,
-#         "pctAskNet": 3.124999999999995
-#     },
-#     "8_49": {
-#         "pctBidNet": 2.9565217391304333,
-#         "pctAskNet": 2.9565217391304333
-#     },
-#     "8_50": {
-#         "pctBidNet": 2.7874564459930338,
-#         "pctAskNet": 2.9565217391304333
-#     },
-#     "8_51": {
-#         "pctBidNet": 2.617801047120425,
-#         "pctAskNet": 2.7874564459930338
-#     },
-#     "8_54": {
-#         "pctBidNet": 2.7874564459930338,
-#         "pctAskNet": 2.9565217391304333
-#     },
-#     "8_59": {
-#         "pctBidNet": 2.447552447552442,
-#         "pctAskNet": 2.617801047120425
-#     },
-#     "9_1": {
-#         "pctBidNet": 2.2767075306479843,
-#         "pctAskNet": 2.447552447552442
-#     },
-#     "9_3": {
-#         "pctBidNet": 1.5873015873015848,
-#         "pctAskNet": 1.760563380281684
-#     },
-#     "9_4": {
-#         "pctBidNet": 1.5873015873015848,
-#         "pctAskNet": 1.9332161687170377
-#     },
-#     "9_5": {
-#         "pctBidNet": 1.413427561837457,
-#         "pctAskNet": 1.760563380281684
-#     },
-#     "9_6": {
-#         "pctBidNet": 1.413427561837457,
-#         "pctAskNet": 1.5873015873015848
-#     },
-#     "9_7": {
-#         "pctBidNet": 1.5873015873015848,
-#         "pctAskNet": 1.9332161687170377
-#     },
-#     "9_9": {
-#         "pctBidNet": 1.9332161687170377,
-#         "pctAskNet": 2.1052631578947385
-#     },
-#     "9_10": {
-#         "pctBidNet": 1.9332161687170377,
-#         "pctAskNet": 2.1052631578947385
-#     },
-#     "9_12": {
-#         "pctBidNet": 1.9332161687170377,
-#         "pctAskNet": 2.1052631578947385
-#     },
-#     "9_13": {
-#         "pctBidNet": 2.1052631578947385,
-#         "pctAskNet": 2.2767075306479843
-#     },
-#     "9_14": {
-#         "pctBidNet": 2.2767075306479843,
-#         "pctAskNet": 2.447552447552442
-#     },
-#     "9_15": {
-#         "pctBidNet": 2.447552447552442,
-#         "pctAskNet": 2.617801047120425
-#     },
-#     "9_16": {
-#         "pctBidNet": 2.2767075306479843,
-#         "pctAskNet": 2.447552447552442
-#     },
-#     "9_17": {
-#         "pctBidNet": 2.2767075306479843,
-#         "pctAskNet": 2.617801047120425
-#     },
-#     "9_18": {
-#         "pctBidNet": 2.2767075306479843,
-#         "pctAskNet": 2.617801047120425
-#     },
-#     "9_21": {
-#         "pctBidNet": 2.447552447552442,
-#         "pctAskNet": 2.7874564459930338
-#     },
-#     "9_24": {
-#         "pctBidNet": 2.617801047120425,
-#         "pctAskNet": 2.7874564459930338
-#     }
-# }
-#
-# delta = get_nearest_significant_delta(stock_snapshots=test_snapshots_dict,
-#                                       current_stock_percentage=2.5)
+
+stock_snapshot = {
+    "8_42": {
+        "pctBidNet": -3.162812584027973,
+        "pctAskNet": -2.996644295302016
+    },
+    "8_43": {
+        "pctBidNet": -2.8999597693442523,
+        "pctAskNet": -2.7552728490123934
+    },
+    "8_44": {
+        "pctBidNet": -3.169747899159666,
+        "pctAskNet": -3.048514352862173
+    },
+    "8_45": {
+        "pctBidNet": -3.6050632911392424,
+        "pctAskNet": -3.3469140375096798
+    },
+    "8_46": {
+        "pctBidNet": -3.5351661325687367,
+        "pctAskNet": -3.3434343434343456
+    },
+    "8_47": {
+        "pctBidNet": -3.3434343434343456,
+        "pctAskNet": -3.169747899159666
+    },
+    "8_48": {
+        "pctBidNet": -3.503743171241649,
+        "pctAskNet": -3.2738896366083505
+    },
+    "8_49": {
+        "pctBidNet": -3.3503939659236273,
+        "pctAskNet": -3.2565180824222058
+    },
+    "8_50": {
+        "pctBidNet": -3.2738896366083505,
+        "pctAskNet": -3.1974984869880942
+    },
+    "8_51": {
+        "pctBidNet": -3.169747899159666,
+        "pctAskNet": -3.0381361622129757
+    },
+    "8_52": {
+        "pctBidNet": -3.1177557534016564,
+        "pctAskNet": -3.0450547236956935
+    },
+    "8_53": {
+        "pctBidNet": -3.169747899159666,
+        "pctAskNet": -3.0831234256926976
+    },
+    "8_54": {
+        "pctBidNet": -3.20443846671151,
+        "pctAskNet": -3.0831234256926976
+    },
+    "8_55": {
+        "pctBidNet": -3.0831234256926976,
+        "pctAskNet": -3.0001006745192784
+    },
+    "8_56": {
+        "pctBidNet": -2.996644295302016,
+        "pctAskNet": -2.927565392354131
+    },
+    "8_57": {
+        "pctBidNet": -2.996644295302016,
+        "pctAskNet": -2.8241206030150776
+    },
+    "8_58": {
+        "pctBidNet": -2.8241206030150776,
+        "pctAskNet": -2.7655941339940373
+    },
+    "8_59": {
+        "pctBidNet": -2.841346959289669,
+        "pctAskNet": -2.7552728490123934
+    },
+    "9_0": {
+        "pctBidNet": -3.065815983881798,
+        "pctAskNet": -3.017386050882731
+    },
+    "9_1": {
+        "pctBidNet": -3.2391523713420773,
+        "pctAskNet": -3.1732159064170213
+    },
+    "9_2": {
+        "pctBidNet": -3.3434343434343456,
+        "pctAskNet": -3.2738896366083505
+    },
+    "9_3": {
+        "pctBidNet": -3.2217925004203742,
+        "pctAskNet": -3.0831234256926976
+    },
+    "9_4": {
+        "pctBidNet": -3.2183212267958003,
+        "pctAskNet": -3.0831234256926976
+    },
+    "9_5": {
+        "pctBidNet": -3.065815983881798,
+        "pctAskNet": -3.017386050882731
+    },
+    "9_6": {
+        "pctBidNet": -3.1905594405594435,
+        "pctAskNet": -3.017386050882731
+    },
+    "9_7": {
+        "pctBidNet": -3.169747899159666,
+        "pctAskNet": -3.100436681222714
+    },
+    "9_8": {
+        "pctBidNet": -3.169747899159666,
+        "pctAskNet": -3.065815983881798
+    },
+    "9_9": {
+        "pctBidNet": -2.9620932572962038,
+        "pctAskNet": -2.8241206030150776
+    },
+    "9_10": {
+        "pctBidNet": -2.6521739130434803,
+        "pctAskNet": -2.4944900821478755
+    },
+    "9_11": {
+        "pctBidNet": -2.5698436037962833,
+        "pctAskNet": -2.378252168112073
+    },
+    "9_12": {
+        "pctBidNet": -2.241838774150572,
+        "pctAskNet": -2.183973099843527
+    },
+    "9_13": {
+        "pctBidNet": -2.204388798241818,
+        "pctAskNet": -2.1227749126601214
+    },
+    "9_14": {
+        "pctBidNet": -2.432919503404092,
+        "pctAskNet": -2.3475274267231385
+    },
+    "9_15": {
+        "pctBidNet": -2.6109922439154865,
+        "pctAskNet": -2.4808013355592675
+    },
+    "9_16": {
+        "pctBidNet": -2.4705371749073666,
+        "pctAskNet": -2.378252168112073
+    },
+    "9_17": {
+        "pctBidNet": -2.4671162449088553,
+        "pctAskNet": -2.395329441201003
+    },
+    "9_18": {
+        "pctBidNet": -2.422664931424564,
+        "pctAskNet": -2.241838774150572
+    },
+    "9_19": {
+        "pctBidNet": -2.3100000000000023,
+        "pctAskNet": -2.2248126561199024
+    },
+    "9_20": {
+        "pctBidNet": -2.3100000000000023,
+        "pctAskNet": -2.2316224228091754
+    },
+    "9_21": {
+        "pctBidNet": -2.460275070102819,
+        "pctAskNet": -2.3100000000000023
+    },
+    "9_22": {
+        "pctBidNet": -2.235027646392638,
+        "pctAskNet": -2.160165091199577
+    },
+    "9_23": {
+        "pctBidNet": -2.3065897803406608,
+        "pctAskNet": -2.160165091199577
+    },
+    "9_24": {
+        "pctBidNet": -2.269092363054779,
+        "pctAskNet": -2.207792207792206
+    },
+    "9_25": {
+        "pctBidNet": -2.772476142641899,
+        "pctAskNet": -2.1941799294133424
+    }
+}
+
+
+delta = get_nearest_significant_delta(stock_snapshots=stock_snapshot,
+                                      current_stock_percentage=-2.23)
+print()
 
 # trader = Trader()
 # print(trader.get_subscription_list())
