@@ -686,12 +686,7 @@ class Trader:
 
     def __init_policy(self):
         traidable_stocks = list(self.__stock_to_sector.keys())
-        black_list = ['DOCU',
-                      'ASAN',
-                      'DOMO',
-                      'GWRE',
-                      'MRVL',
-                      ]  # Add untraidable stocks here
+        black_list = []  # Add untraidable stocks here
 
         sectors = list(self.__sector_to_indicators.keys())
 
