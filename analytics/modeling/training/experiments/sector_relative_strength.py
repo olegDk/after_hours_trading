@@ -455,20 +455,25 @@ def get_beta(a: pd.Series,
     return beta
 
 
-run_sector_analysis(sector='Banks',
-                    main_sector_etf='XLF',
-                    secondary_etf='TLT',
-                    market_etf='SPY',
-                    stocks_to_load=['C', 'JPM', 'GS'])
+# run_sector_analysis(sector='Banks',
+#                     main_sector_etf='XLF',
+#                     secondary_etf='TLT',
+#                     market_etf='SPY',
+#                     stocks_to_load=['C', 'JPM', 'GS'])
 
 # bloomberg = pd.read_csv(f'/home/oleh/takion_trader/analytics/modeling/training/bloomberg_sectors_filtered.csv')
 # all_stocks = []
+# traidable_tickers = []
+# indicators = []
 # for i, row in bloomberg.iterrows():
 #     print()
 #     sector = row['Sector']
 #     stocks = row['Stocks']
 #     etfs = row['Indicators']
+#     indicators = indicators + etfs.split(',')
 #     all_stocks = all_stocks + stocks.split(',') + etfs.split(',')
 #
+# indicators = list(set(indicators))
+# pd.DataFrame(indicators).to_csv('/home/oleh/takion_trader/analytics/modeling/training/all_indicators.csv')
 # pd.DataFrame(all_stocks).to_csv('/home/oleh/takion_trader/analytics/modeling/training/all_sectors_stocks.csv')
 # print()
