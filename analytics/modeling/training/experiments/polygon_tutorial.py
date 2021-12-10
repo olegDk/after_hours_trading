@@ -26,7 +26,15 @@ def ts_to_datetime(ts: int) -> str:
 #         print(f"{dt}\n\tO: {result['o']}\n\tH: {result['h']}\n\tL: {result['l']}\n\tC: {result['c']} ")
 #
 
+# with RESTClient(key) as client:
+#     resp = client.stocks_equities_daily_open_close(symbol='TSLA',
+#                                                    date='2021-11-10')
+# resp.__getattribute__('close')
+
 with RESTClient(key) as client:
-    resp = client.stocks_equities_daily_open_close(symbol='TSLA',
-                                                   date='2021-11-10')
-resp.__getattribute__('close')
+    resp = client.reference_tickers_v3(active=True,
+                                       market='stocks',
+                                       type='CS',
+                                       limit=1000)
+
+resp.results[-1]
