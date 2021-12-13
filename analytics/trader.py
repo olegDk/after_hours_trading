@@ -712,7 +712,9 @@ class Trader:
         acc_info_dict = {BP_KEY: INIT_BP,
                          BP_USAGE_PCT_KEY: BP_USAGE_PCT}
         stock_to_tier_proportion = {}
+        stock_target = {}
         for traidable_stock in traidable_stocks:
+            stock_target[traidable_stock] = 0
             if traidable_stock not in black_list:
                 print(f'Setting default risk for symbol {traidable_stock}')
                 stock_to_tier_proportion[traidable_stock] = 1
@@ -730,6 +732,8 @@ class Trader:
                                         d=sector_side_policy)
         self.__redis_connector.set_dict(name=STOCK_TO_TIER_PROPORTION,
                                         d=stock_to_tier_proportion)
+        self.__redis_connector.set_dict(name=STOCK_TARGET,
+                                        d=stock_target)
         self.__redis_connector.set_dict(name=ACCOUNT_INFORMATION,
                                         d=acc_info_dict)
         print(f'Policy inserted')
@@ -760,6 +764,38 @@ class Trader:
         else:
             prop = 0.0
         return prop
+
+    def get_target_from_redis(self, symbol: str) -> float:
+        target = self.__redis_connector.hm_get(h=STOCK_TARGET,
+                                               key=symbol)[0]
+        if target:
+            target = float(target)
+        else:
+            target = 0.0
+        return target
+
+    def get_target(self,
+                   symbol: str,
+                   side: str,
+                   price: float,
+                   prediction_main_etf: float,
+                   main_etf_l1: float,
+                   close: float) -> float:
+        target = self.get_target_from_redis(symbol=symbol)
+        if not target:
+            target_pct = (prediction_main_etf + main_etf_l1) / 2
+            target = float(close + float(target_pct / 100) * close)
+        else:
+            if side == SELL:
+                if target >= price:
+                    target_pct = (prediction_main_etf + main_etf_l1) / 2
+                    target = float(close + float(target_pct / 100) * close)
+            elif side == BUY:
+                if target <= price:
+                    target_pct = (prediction_main_etf + main_etf_l1) / 2
+                    target = float(close + float(target_pct / 100) * close)
+
+        return target
 
     def get_sector_prop(self, sector: str) -> float:
         prop = self.__redis_connector.hm_get(h=SECTOR_PROPORTION,
@@ -1004,8 +1040,6 @@ class Trader:
                                                 SHORT_COEF: delta_short_coef,
                                                 PREDICTION_KEY: prediction})
                 order_data[ORDER_RELATED_DATA] = order_related_data_dict
-                target_pct = (prediction_main_etf + main_etf_l1) / 2
-                target = float(close + float(target_pct / 100) * close)
                 order = messages.order_request()
                 order[ORDER][DATA][SYMBOL] = symbol
                 price = order_params[PRICE]
@@ -1014,6 +1048,12 @@ class Trader:
                 order_related_data_dict.update({PREMARKET_DELTA: premarket_delta,
                                                 SECTOR_SIDE_POLICY: sector_side,
                                                 SECTOR_PROPORTION: sector_prop})
+                target = self.get_target(symbol=symbol,
+                                         side=side,
+                                         price=price,
+                                         prediction_main_etf=prediction_main_etf,
+                                         main_etf_l1=main_etf_l1,
+                                         close=close)
                 order[ORDER][DATA][LIMIT] = adjust_limit_price(side=side,
                                                                l1_price=price,
                                                                target=target,
@@ -1041,7 +1081,6 @@ class Trader:
                 print(order_data)
 
         return order_data
-
 
 # stock_snapshot = {
 #     "8_42": {

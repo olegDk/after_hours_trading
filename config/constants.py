@@ -35,6 +35,7 @@ PREMARKET_DELTA = 'premarket_delta'
 POLICY = 'policy'
 INIT_PCT = -1e3
 STOCK_TO_TIER_PROPORTION = 'stock_to_tier_proportion'
+STOCK_TARGET = 'stock_target'
 CONTENT = 'content'
 RELEVANCE = 'relevance'
 AMC_KEY = 'isYesterdaysAMC'
