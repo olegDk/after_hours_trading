@@ -89,7 +89,14 @@ def get_tickers_to_update(sector_to_stocks: dict,
         with open(f'{cwd}/../all_indicators.pkl', 'wb') as o:
             pickle.dump(ETFs, o)
 
-    tickers_to_update = list(set(tickers_to_update + ETFs))
+    if not sys.gettrace():
+        stocks_path = f'{cwd}/analytics/modeling/training/all_stocks.csv'
+    else:
+        stocks_path = f'../training/all_stocks.csv'
+
+    stocks_list = list(pd.read_csv(stocks_path)['Symbol'])
+
+    tickers_to_update = list(set(tickers_to_update + ETFs + stocks_list))
 
     return tickers_to_update
 

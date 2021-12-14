@@ -168,7 +168,14 @@ def get_tickers() -> list:
             print(f'Failed to init factors')
             continue
 
-    all_tickers = list(set(all_tickers))
+    if not sys.gettrace():
+        stocks_path = f'{cwd}/analytics/modeling/training/all_stocks.csv'
+    else:
+        stocks_path = f'../training/all_stocks.csv'
+
+    stocks_list = list(pd.read_csv(stocks_path)['Symbol'])
+
+    all_tickers = list(set(all_tickers + stocks_list))
 
     return all_tickers
 
