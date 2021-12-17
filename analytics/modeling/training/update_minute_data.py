@@ -7,19 +7,19 @@ import time
 import sys
 import os
 import pickle
+from multiprocessing import Pool
 
-EST = timezone('EST')
+EST = timezone('US/Eastern')
 DATETIME_FORMAT = '%Y-%m-%d %H:%M'
 MIN_FULL_DAYS = 5
 cwd = os.getcwd()
 
 
 def ts_to_datetime(ts: int) -> str:
-    return (datetime.fromtimestamp(ts / 1000.0, tz=EST) +
-            timedelta(hours=1)).strftime('%Y-%m-%d %H:%M')
+    return (datetime.fromtimestamp(ts / 1000.0, tz=EST)).strftime('%Y-%m-%d %H:%M')
 
 
-key = 'EuMC51EF6YZypR2x5kS__K72C6FKdwhF'
+key = '80wSvxFpuxhxY3qX_JkWSwT6srzUdsyg'
 
 
 def get_range_data(from_: str,
@@ -45,7 +45,8 @@ def get_range_data(from_: str,
                                 'Low': result['l'],
                                 'Close': result['c'],
                                 'Volume': result['v'],
-                                'VWAP': 0}  # result['vw']}
+                                'VWAP': 0,
+                                'time': result['t']}  # result['vw']}
             results_processed[dt] = result_processed
 
     return pd.DataFrame.from_dict(results_processed, orient='index')
@@ -55,8 +56,7 @@ def get_range_data_wrapper(from_: str,
                            to: str,
                            ticker: str = 'AAPL',
                            level: int = 1,
-                           n_retries: int = 2,
-                           sleep_seconds: int = 70) -> pd.DataFrame:
+                           n_retries: int = 2) -> pd.DataFrame:
     for _ in range(n_retries):
         try:
             result = get_range_data(from_=from_,
@@ -71,14 +71,12 @@ def get_range_data_wrapper(from_: str,
             print(traceback.format_exc())
             print(f'Failed to get data for ticker {ticker} in'
                   f' date range {from_} to {to}')
-            print(f'Sleeping for {sleep_seconds} seconds')
-            time.sleep(sleep_seconds)
 
     return pd.DataFrame()
 
 
-def get_data_for_ticker(ticker: str = 'AAPL',
-                        n: int = 120) -> pd.DataFrame:
+def download_data_for_ticker(ticker: str = 'AAPL',
+                             n: int = 90) -> pd.DataFrame:
     date_ranges = get_all_date_ranges(n=n)
     results = []
     for date_range in date_ranges:
@@ -181,7 +179,7 @@ def get_tickers() -> list:
 
 
 def get_data_for_tickers(tickers: list,
-                         n: int = 120):
+                         n: int = 90):
     if not sys.gettrace():
         training_path = f'{cwd}/analytics/modeling/training'
     else:
@@ -192,35 +190,46 @@ def get_data_for_tickers(tickers: list,
 
     ticker_minute_data_path = f'{training_path}/ticker_minute_data'
 
-    for ticker in tickers:
-        saved_data = pd.DataFrame()
-        try:
-            saved_data = \
-                pd.read_csv(f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv',
-                            index_col=0)
-            last_date = datetime.strptime(saved_data.index.max(),
-                                          DATETIME_FORMAT).date()
-            today = datetime.now().date()
-            n = (today - last_date).days
-            if n <= 2:
-                print()
-        except FileNotFoundError:
-            print(f'Premarket data for ticker {ticker} missing on the drive, downloading data '
-                  f'for {n} days')
+    params_list = [(ticker,
+                    ticker_minute_data_path,
+                    n) for ticker in tickers]
 
-        ticker_data = get_data_for_ticker(ticker=ticker, n=n)
+    with Pool() as p:
+        p.starmap(func=get_data_for_ticker,
+                  iterable=params_list)
 
-        if not ticker_data.empty:
-            if not saved_data.empty:
-                saved_data = saved_data.append(ticker_data)
-                saved_data = saved_data[~saved_data.index.duplicated(keep='first')]
-                saved_data.to_csv(f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv')
-            else:
-                ticker_data = ticker_data[~ticker_data.index.duplicated(keep='first')]
-                ticker_data.to_csv(f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv')
+
+def get_data_for_ticker(ticker: str,
+                        ticker_minute_data_path: str,
+                        n: int = 90):
+    saved_data = pd.DataFrame()
+    try:
+        saved_data = \
+            pd.read_csv(f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv',
+                        index_col=0)
+        last_date = datetime.strptime(saved_data.index.max(),
+                                      DATETIME_FORMAT).date()
+        today = datetime.now().date()
+        n = (today - last_date).days
+        if n <= 2:
+            print()
+    except FileNotFoundError:
+        print(f'Premarket data for ticker {ticker} missing on the drive, downloading data '
+              f'for {n} days')
+
+    ticker_data = download_data_for_ticker(ticker=ticker, n=n)
+
+    if not ticker_data.empty:
+        if not saved_data.empty:
+            saved_data = saved_data.append(ticker_data)
+            saved_data = saved_data[~saved_data.index.duplicated(keep='first')]
+            saved_data.to_csv(f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv')
         else:
-            print(f'Failed to download premarket data for ticker {ticker} '
-                  f'for last {n} days')
+            ticker_data = ticker_data[~ticker_data.index.duplicated(keep='first')]
+            ticker_data.to_csv(f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv')
+    else:
+        print(f'Failed to download premarket data for ticker {ticker} '
+              f'for last {n} days')
 
 
 def rename_data_for_tickers():

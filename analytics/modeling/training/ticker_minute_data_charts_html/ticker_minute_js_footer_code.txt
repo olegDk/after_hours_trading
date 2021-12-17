@@ -1,0 +1,35 @@
+document.body.style.position = 'relative';
+
+var legend = document.createElement('div');
+legend.classList.add('legend');
+document.body.appendChild(legend);
+
+var firstRow = document.createElement('div');
+firstRow.innerText = 'AAPL';
+firstRow.style.color = 'purple';
+legend.appendChild(firstRow);
+
+var secondRow = document.createElement('div');
+secondRow.innerText = 'Correlations: SPY: ' + '0.91;' + ' QQQ: ' + '0.94;' + ' DIA: ' + '0.89;' + ' IWM: ' + '0.89';
+secondRow.style.color = 'purple';
+legend.appendChild(secondRow);
+
+function pad(n) {
+  var s = ('0' + n);
+  return s.substr(s.length - 2);
+}
+
+chart.subscribeCrosshairMove((param) => {
+if (param.time) {
+    const price = param.seriesPrices.get(candleSeries);
+    const volume = param.seriesPrices.get(volumeSeries);
+    const pctChg = param.seriesPrices.get(pctChgSeries);
+    firstRow.innerText = 'AAPL' + '  o:' + price.open + ' h:' + price.high + ' l:' + price.low + ' c:' + price.close + ' v: ' + volume.toFixed(2) + ' %net: ' + pctChg.toFixed(2);
+  }
+    else {
+      firstRow.innerText = 'AAPL';
+    }
+});
+};
+
+        </script></body></html>

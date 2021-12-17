@@ -2,28 +2,24 @@ import sys
 import os
 import pandas as pd
 from datetime import datetime, timedelta
+from functools import reduce
 from typing import Tuple
 from multiprocessing import Pool
 import pickle
 import traceback
 import time
 import numpy as np
+import json
 import yfinance
+from pytz import timezone
+from typing import Tuple
+from tqdm import tqdm
+
+EST = timezone('EST')
 
 cwd = os.getcwd()
 
 all_etfs = ['SPY', 'QQQ', 'DIA', 'IWM', 'TLT']
-
-
-def get_all_traidable_tickers() -> list:
-    if not sys.gettrace():
-        stocks_path = f'{cwd}/analytics/modeling/training/all_stocks.csv'
-    else:
-        stocks_path = f'../training/all_stocks.csv'
-
-    stocks_list = list(pd.read_csv(stocks_path)['Symbol'])
-
-    return stocks_list
 
 
 def get_market_cap_data_for_stock(stock: str,
@@ -48,7 +44,7 @@ def get_market_cap_data_for_stock(stock: str,
 
 
 def create_market_cap_data():
-    stocks = get_all_traidable_tickers()
+    stocks = get_tickers()
 
     with Pool() as p:
         result_map = p.map(func=get_market_cap_data_for_stock,
@@ -79,6 +75,26 @@ def get_market_cap_data() -> dict:
     return market_cap_data
 
 
+def get_stocks_etfs_cor() -> dict:
+    stocks_etfs_cor_path = f'analytics/modeling/ClassicPremarket/stocks_etfs_cor.pkl'
+    if sys.gettrace():
+        stocks_etfs_cor_path = f'/home/oleh/takion_trader/analytics/' \
+                               f'modeling/ClassicPremarket/stocks_etfs_cor.pkl'
+    with open(stocks_etfs_cor_path, 'rb') as i:
+        stocks_etfs_cor_data = pickle.load(i)
+    return stocks_etfs_cor_data
+
+
+def get_stocks_etfs_beta() -> dict:
+    stocks_etfs_beta_path = f'analytics/modeling/ClassicPremarket/stocks_etfs_beta.pkl'
+    if sys.gettrace():
+        stocks_etfs_beta_path = f'/home/oleh/takion_trader/analytics/' \
+                                f'modeling/ClassicPremarket/stocks_etfs_beta.pkl'
+    with open(stocks_etfs_beta_path, 'rb') as i:
+        stocks_etfs_beta_data = pickle.load(i)
+    return stocks_etfs_beta_data
+
+
 def valid_by_market_cap(ticker: str,
                         market_cap_data: dict) -> bool:
     market_cap = market_cap_data.get(ticker)
@@ -91,6 +107,10 @@ def valid_by_market_cap(ticker: str,
             print(message)
             print(traceback.format_exc())
             return False
+
+    if not market_cap:
+        return False
+
     if market_cap < 2e9 and not ticker == 'CENX':
         return False
 
@@ -124,9 +144,7 @@ def get_stock_dividends(ticker: str,
 
 
 def calculate_gaps_and_gains(ticker: str,
-                             data_df: pd.DataFrame,
-                             calculate_10_days_gain: bool = True,
-                             calculate_20_days_gain: bool = True) -> pd.DataFrame:
+                             data_df: pd.DataFrame) -> pd.DataFrame:
     data = data_df.copy()
     stock_dividends = get_stock_dividends(ticker=ticker)
 
@@ -142,79 +160,8 @@ def calculate_gaps_and_gains(ticker: str,
     data['Dividends'].fillna(0, inplace=True)
     data['Adj Close'] = data['Close'] - data['Dividends']
     data['YesterdaysClose'] = data['Adj Close'].shift(1)
-    data['YesterdaysVolume'] = data['Volume'].shift(1)
-    data['2DaysAgoClose'] = data['Adj Close'].shift(2)
-    data['5DaysAgoClose'] = data['Adj Close'].shift(5)
-
-    data['%YesterdaysGain'] = (data['YesterdaysClose'] - data['2DaysAgoClose']) / data['2DaysAgoClose'] * 100
-    data['%2DaysGain'] = \
-        (data['YesterdaysClose'] - data['2DaysAgoClose'].shift(1)) / data['2DaysAgoClose'].shift(1) * 100
-    data['%5DaysGain'] = \
-        (data['YesterdaysClose'] - data['5DaysAgoClose'].shift(1)) / data['5DaysAgoClose'].shift(1) * 100
 
     data['%Gap'] = (data['Open'] - data['YesterdaysClose']) / data['YesterdaysClose'] * 100
-
-    if calculate_10_days_gain:
-        data['10DaysAgoClose'] = data['Adj Close'].shift(10)
-        data['%10DaysGain'] = \
-            (data['YesterdaysClose'] - data['10DaysAgoClose'].shift(1)) / data['10DaysAgoClose'].shift(1) * 100
-
-    if calculate_20_days_gain:
-        data['20DaysAgoClose'] = data['Adj Close'].shift(20)
-        data['%20DaysGain'] = \
-            (data['YesterdaysClose'] - data['20DaysAgoClose'].shift(1)) / data['20DaysAgoClose'].shift(1) * 100
-
-    return data
-
-
-def calculate_bollinger_features(data_df: pd.DataFrame) -> pd.DataFrame:
-    data = data_df.copy()
-    data['SMA_20'] = data['Adj Close'].rolling(window=20).mean()
-    data['SMA_20'] = data['SMA_20'].shift(1)
-    data['SMA_8'] = data['Adj Close'].rolling(window=8).mean()
-    data['SMA_8'] = data['SMA_8'].shift(1)
-    rolling_std_20 = data['Adj Close'].rolling(window=20).std().shift(1)
-    rolling_std_8 = data['Adj Close'].rolling(window=8).std().shift(1)
-    data['SMA_20_upper_sigma'] = data['SMA_20'] + rolling_std_20
-    data['SMA_20_lower_sigma'] = data['SMA_20'] - rolling_std_20
-    data['SMA_8_upper_sigma'] = data['SMA_8'] + rolling_std_8
-    data['SMA_8_lower_sigma'] = data['SMA_8'] - rolling_std_8
-    data['SMA_20_upper_two_sigma'] = data['SMA_20'] + 2 * rolling_std_20
-    data['SMA_20_lower_two_sigma'] = data['SMA_20'] - 2 * rolling_std_20
-    data['SMA_8_upper_two_sigma'] = data['SMA_8'] + 2 * rolling_std_8
-    data['SMA_8_lower_two_sigma'] = data['SMA_8'] - 2 * rolling_std_8
-
-    # gap_mean = data['%Gap'].mean()
-    # gap_std = data['%Gap'].std()
-    # data['NearSigmaFlag'] = \
-    #     data.apply(lambda r:
-    #                get_sigma_flag(r['%Gap'],
-    #                               gap_mean,
-    #                               gap_std), axis=1)
-    #
-    data['%SMA_20_upper_sigma_from_yesterdays_close'] = \
-        ((data['SMA_20_upper_sigma'] - data['YesterdaysClose']) / data['YesterdaysClose'] * 100)
-    data['%SMA_20_lower_sigma_from_yesterdays_close'] = \
-        ((data['SMA_20_lower_sigma'] - data['YesterdaysClose']) / data['YesterdaysClose'] * 100)
-    data['%SMA_20_upper_two_sigma_from_yesterdays_close'] = \
-        ((data['SMA_20_upper_two_sigma'] - data['YesterdaysClose']) / data['YesterdaysClose'] * 100)
-    data['%SMA_20_lower_two_sigma_from_yesterdays_close'] = \
-        ((data['SMA_20_lower_two_sigma'] - data['YesterdaysClose']) / data['YesterdaysClose'] * 100)
-
-    data['%SMA_20_sigma_interval'] = data['%SMA_20_upper_sigma_from_yesterdays_close'] - \
-                                     data['%SMA_20_lower_sigma_from_yesterdays_close']
-    data['%SMA_20_two_sigma_interval'] = data['%SMA_20_upper_two_sigma_from_yesterdays_close'] - \
-                                         data['%SMA_20_lower_two_sigma_from_yesterdays_close']
-    #
-    # data['NearBollingerBandsFlag'] = \
-    #     data.apply(lambda r:
-    #                get_bollinger_flag(r['%Gap'],
-    #                                   r['%SMA_20_upper_sigma_from_close'],
-    #                                   r['%SMA_20_lower_sigma_from_close'],
-    #                                   r['%SMA_20_upper_two_sigma_from_close'],
-    #                                   r['%SMA_20_lower_two_sigma_from_close'],
-    #                                   r['%SMA_20_sigma_interval'],
-    #                                   r['%SMA_20_two_sigma_interval']), axis=1)
 
     return data
 
@@ -247,8 +194,6 @@ def get_data_for_ticker(ticker: str,
                         last_possible_date: datetime,
                         file_prefix: str = 'ticker_',
                         calculate_gaps: bool = True,
-                        calculate_bollinger: bool = True,
-                        calculate_liquidity: bool = True,
                         filter_by_close_price: bool = True,
                         filter_by_avg_vol: bool = True,
                         filter_by_market_cap: bool = True,
@@ -284,23 +229,12 @@ def get_data_for_ticker(ticker: str,
     if calculate_gaps:
         if ticker == 'BITO':
             data = calculate_gaps_and_gains(ticker=ticker,
-                                            data_df=data,
-                                            calculate_10_days_gain=False,
-                                            calculate_20_days_gain=False)
+                                            data_df=data)
         else:
             data = calculate_gaps_and_gains(ticker=ticker,
                                             data_df=data)
         if data.empty:
             return {ticker: pd.DataFrame()}
-
-    if ticker == 'BITO':
-        calculate_bollinger = False
-
-    if calculate_bollinger:
-        data = calculate_bollinger_features(data_df=data)
-
-    if calculate_liquidity:
-        data['Liquidity'] = np.log((data['Volume'] * data['Adj Close']) / (data['High'] - data['Low']))
 
     data.dropna(inplace=True)
 
@@ -322,8 +256,6 @@ def get_data_for_tickers(tickers: list,
                          market_cap_data: dict,
                          file_prefix: str = 'ticker_',
                          calculate_gaps: bool = True,
-                         calculate_bollinger: bool = True,
-                         calculate_liquidity: bool = True,
                          filter_by_close_price: bool = True,
                          filter_by_avg_vol: bool = True,
                          filter_by_market_cap: bool = True,
@@ -343,8 +275,6 @@ def get_data_for_tickers(tickers: list,
                     last_possible_date,
                     file_prefix,
                     calculate_gaps,
-                    calculate_bollinger,
-                    calculate_liquidity,
                     filter_by_close_price,
                     filter_by_avg_vol,
                     filter_by_market_cap,
@@ -360,3 +290,422 @@ def get_data_for_tickers(tickers: list,
             result_dict[ticker] = data
 
     return result_dict
+
+
+def calculate_corr_beta(data_df: pd.DataFrame,
+                        dependent: str,
+                        independent: str,
+                        exclude_outliers: bool = True) -> Tuple[float, float]:
+    df = data_df.copy()
+
+    if exclude_outliers:
+        # Remove IQR outliers by gap and volume from Y
+        # We keep outliers in Y if there are corresponding
+        # outliers in X
+        df = remove_outliers(data_df=df,
+                             target_column=dependent)
+
+    Y_gap = df[dependent]
+    X_gap = df[independent]
+
+    # Calculating correlation
+    gap_corr_matrix = np.corrcoef(Y_gap, X_gap)
+    gap_corr = gap_corr_matrix[0, 1]
+
+    # Calculating beta
+    gap_cov_matrix = np.cov(Y_gap, X_gap)
+    gap_beta = gap_cov_matrix[0, 1] / gap_cov_matrix[1, 1]
+
+    return gap_corr, gap_beta
+
+
+def run_correlation_modeling(traidable_tickers: list,
+                             indicators: list,
+                             data_df: pd.DataFrame):
+
+    df = data_df.copy()
+    df = df.sample(frac=1)
+
+    traidable_tickers_filtered = [traidable_ticker for traidable_ticker in traidable_tickers
+                                  if f'%Gap_{traidable_ticker}' in list(df.columns)]
+
+    indicators_filtered = [indicator for indicator in indicators
+                           if f'%Gap_{indicator}' in list(df.columns)]
+
+    stocks_cor = {ticker: {} for ticker in traidable_tickers_filtered}
+
+    stocks_beta = {ticker: {} for ticker in traidable_tickers_filtered}
+
+    stocks_etfs_cor = {ticker: {} for ticker in traidable_tickers_filtered}
+
+    stocks_etfs_beta = {ticker: {} for ticker in traidable_tickers_filtered}
+
+    for ticker_dependent in tqdm(traidable_tickers_filtered):
+        ticker_dependent_name = f'%Gap_{ticker_dependent}'
+        for ticker_independent in traidable_tickers_filtered:
+            if ticker_dependent == ticker_independent:
+                stocks_cor[ticker_dependent][ticker_independent] = 1
+                stocks_beta[ticker_dependent][ticker_independent] = 1
+                continue
+
+            try:
+                ticker_independent_name = f'%Gap_{ticker_independent}'
+                columns_to_select = [ticker_dependent_name, ticker_independent_name]
+                cor, beta = calculate_corr_beta(data_df=df[columns_to_select],
+                                                dependent=ticker_dependent_name,
+                                                independent=ticker_independent_name)
+                stocks_cor[ticker_dependent][ticker_independent] = cor
+                stocks_beta[ticker_dependent][ticker_independent] = beta
+            except Exception as e:
+                message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to calculate cor and beta for {ticker_dependent} with '
+                      f'{ticker_independent}')
+
+        for indicator in indicators_filtered:
+            if ticker_dependent == indicator:
+                stocks_etfs_cor[ticker_dependent][indicator] = 1
+                stocks_beta[ticker_dependent][indicator] = 1
+                continue
+
+            try:
+                indicator_name = f'%Gap_{indicator}'
+                columns_to_select = [ticker_dependent_name, indicator_name]
+                cor, beta = calculate_corr_beta(data_df=df[columns_to_select],
+                                                dependent=ticker_dependent_name,
+                                                independent=indicator_name)
+                stocks_etfs_cor[ticker_dependent][indicator] = cor
+                stocks_etfs_beta[ticker_dependent][indicator] = beta
+
+            except Exception as e:
+                message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+                print(message)
+                print(traceback.format_exc())
+                print(f'Failed to calculate cor and beta for {ticker_dependent} with '
+                      f'{indicator}')
+
+    dump_correlation_statistics_data(stocks_cor=stocks_cor,
+                                     stocks_beta=stocks_beta,
+                                     stocks_etfs_cor=stocks_etfs_cor,
+                                     stocks_etfs_beta=stocks_etfs_beta)
+
+
+def dump_correlation_statistics_data(stocks_cor: dict,
+                                     stocks_beta: dict,
+                                     stocks_etfs_cor: dict,
+                                     stocks_etfs_beta: dict):
+    try:
+        if not sys.gettrace():
+            modeling_path = f'{cwd}/analytics/modeling'
+        else:
+            modeling_path = f'..'
+
+        cp_path = f'{modeling_path}/ClassicPremarket'
+
+        if 'ClassicPremarket' not in os.listdir(modeling_path):
+            os.mkdir(cp_path)
+
+        with open(f'{cp_path}/stocks_cor.pkl', 'wb') as o:
+            pickle.dump(stocks_cor, o)
+
+        with open(f'{cp_path}/stocks_beta.pkl', 'wb') as o:
+            pickle.dump(stocks_beta, o)
+
+        with open(f'{cp_path}/stocks_etfs_cor.pkl', 'wb') as o:
+            pickle.dump(stocks_etfs_cor, o)
+
+        with open(f'{cp_path}/stocks_etfs_beta.pkl', 'wb') as o:
+            pickle.dump(stocks_etfs_beta, o)
+
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+
+
+def get_code_for_minute_charts() -> Tuple[str, str]:
+    if sys.gettrace():
+        ticker_minute_data_path = f'ticker_minute_data_charts_html'
+    else:
+        ticker_minute_data_path = f'{cwd}/analytics/modeling/training/ticker_minute_data_charts_html'
+
+    with open(f'{ticker_minute_data_path}/ticker_minute_js_header_code.txt', 'r') as txt_file:
+        header = txt_file.read()
+
+    with open(f'{ticker_minute_data_path}/ticker_minute_js_footer_code.txt', 'r') as txt_file:
+        footer = txt_file.read()
+
+    return header, footer
+
+
+def get_tickers() -> list:
+    if not sys.gettrace():
+        sectors_path = f'{cwd}/analytics/modeling/sectors/'
+    else:
+        sectors_path = f'../sectors/'
+
+    sectors_dirs = \
+        [f.path for f in os.scandir(sectors_path) if f.is_dir()]
+
+    all_tickers = []
+
+    for sector_dir in sectors_dirs:
+        sector = sector_dir.split('/')[-1]
+        if 'tickers' not in os.listdir(sector_dir):
+            print(f'tickers dir missing '
+                  f'for sector: {sector}')
+            continue
+
+        tickers_files = os.listdir(f'{sector_dir}/tickers')
+
+        try:
+            for f in tickers_files:
+                with open(f'{sector_dir}/tickers/{f}', 'rb') as inp:
+                    tickers = pickle.load(inp)
+                    all_tickers = all_tickers + tickers
+
+        except Exception as e:
+            message = f'Get tickers error: ' \
+                      f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+            print(message)
+            print(traceback.format_exc())
+            print(f'Failed to init factors')
+            continue
+
+    if not sys.gettrace():
+        stocks_path = f'{cwd}/analytics/modeling/training/all_stocks.csv'
+    else:
+        stocks_path = f'../training/all_stocks.csv'
+
+    stocks_list = list(pd.read_csv(stocks_path)['Symbol'])
+
+    all_tickers = list(set(all_tickers + stocks_list))
+
+    return all_tickers
+
+
+def dict_to_str(d: dict) -> str:
+    data_dict_str = json.dumps(d)
+    data_dict_str = data_dict_str.replace('"', '')
+    data_dict_c_list = list(data_dict_str)
+    data_dict_c_list[-1] = ','
+    data_dict_str = ''.join(data_dict_c_list)
+
+    return data_dict_str
+
+
+def create_js_script_for_minute_chart(ticker: str,
+                                      header_code: str,
+                                      footer_code: str,
+                                      stock_etfs_cor: dict,
+                                      stock_etfs_beta: dict):
+    if sys.gettrace():
+        ticker_minute_data_path = f'ticker_minute_data'
+        ticker_minute_data_html_path = f'ticker_minute_data_charts_html'
+        ticker_daily_data_path = f'ticker_daily_data'
+    else:
+        ticker_minute_data_path = f'{cwd}/analytics/modeling/training/ticker_minute_data'
+        ticker_minute_data_html_path = f'{cwd}/analytics/modeling/training/ticker_minute_data_charts_html'
+        ticker_daily_data_path = f'{cwd}/analytics/modeling/training/ticker_daily_data'
+
+    file_path = f'{ticker_minute_data_path}/ticker_minute_{ticker}.csv'
+    daily_file_path = f'{ticker_daily_data_path}/ticker_{ticker}.csv'
+
+    try:
+        ticker_minute_data = pd.read_csv(file_path)
+        ticker_daily_data = pd.read_csv(daily_file_path)
+        ticker_minute_data.rename(columns={'Unnamed: 0': 'datetime',
+                                           'Open': 'open',
+                                           'High': 'high',
+                                           'Low': 'low',
+                                           'Close': 'close',
+                                           'Volume': 'value'}, inplace=True)
+        if 'Date' not in ticker_daily_data.columns:
+            ticker_daily_data.rename(columns={'Unnamed: 0': 'Date'}, inplace=True)
+        ticker_minute_data = append_pct_chg_column(data_df=ticker_minute_data,
+                                                   daily_data_df=ticker_daily_data)
+
+        candle_data_dict = ticker_minute_data[['time', 'open', 'high', 'low', 'close']].to_dict(orient='row')
+        volume_data_dict = ticker_minute_data[['time', 'value']].to_dict(orient='row')
+        pct_chg_frame = ticker_minute_data[['time', 'pctNet']]
+        pct_chg_frame.rename(columns={'pctNet': 'value'}, inplace=True)
+        pct_chg_data_dict = pct_chg_frame[['time', 'value']].to_dict(orient='row')
+
+        candle_data_dict_str = dict_to_str(d=candle_data_dict)
+        volume_data_dict_str = dict_to_str(d=volume_data_dict)
+        pct_chg_data_dict_str = dict_to_str(d=pct_chg_data_dict)
+
+        ticker_minute_data_dict_str = header_code + \
+                                      'candleSeries.setData(' + \
+                                      candle_data_dict_str + \
+                                      ']);' + \
+                                      'volumeSeries.setData(' + \
+                                      volume_data_dict_str + \
+                                      ']);' + \
+                                      'pctChgSeries.setData(' + \
+                                      pct_chg_data_dict_str + \
+                                      ']);' + \
+                                      footer_code
+        with open(f'{ticker_minute_data_html_path}/minute_chart_{ticker}.html', 'w') as txt_file:
+            txt_file.write(ticker_minute_data_dict_str)
+    except Exception as e:
+        message = f'Create chart for ticker {ticker} error: ' \
+                  f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+
+
+def create_charts_for_all_stocks():
+    tickers = get_tickers()
+    stocks_etfs_cor = get_stocks_etfs_cor()
+    stocks_etfs_beta = get_stocks_etfs_beta()
+    header_code, footer_code = get_code_for_minute_charts()
+    if not sys.gettrace():
+        training_path = f'{cwd}/analytics/modeling/training'
+    else:
+        training_path = f'../training'
+
+    if 'ticker_minute_data_charts_html' not in os.listdir(training_path):
+        os.mkdir(f'{training_path}/ticker_minute_data_charts_html')
+
+    params_list = [(ticker,
+                    header_code,
+                    footer_code,
+                    stocks_etfs_cor[ticker],
+                    stocks_etfs_beta[ticker]) for ticker in tickers]
+
+    with Pool() as p:
+        p.starmap(func=create_js_script_for_minute_chart,
+                  iterable=params_list)
+
+
+def append_pct_chg_column(data_df: pd.DataFrame,
+                          daily_data_df: pd.DataFrame) -> pd.DataFrame:
+    data = data_df.copy()
+    daily_data = daily_data_df.copy()
+
+    data['pctNet'] = 0
+    all_dates = pd.to_datetime(data['datetime']).dt.strftime('%Y-%m-%d')
+    data['date'] = all_dates
+    unique_dates_str = list(sorted(set(all_dates)))
+    date_to_prev_date = dict(zip(unique_dates_str[1:], unique_dates_str))
+
+    for cur_date in tqdm(date_to_prev_date.keys()):
+        prev_date = date_to_prev_date.get(cur_date)
+        if not prev_date:
+            continue
+        prev_day_row = daily_data[daily_data['Date'] == prev_date]
+        if prev_day_row.empty:
+            continue
+        prev_close = prev_day_row['Adj Close'].values[0]
+        pctNet = (data[data['date'] == cur_date]['close'] - prev_close) / prev_close * 100
+        data.loc[data['date'] == cur_date, 'pctNet'] = pctNet
+
+    return data
+
+
+def calculate_IQR(x: pd.Series) -> Tuple[float, float, float]:
+    x_q1 = x.quantile(0.25)
+    x_q3 = x.quantile(0.75)
+    x_iqr = x_q3 - x_q1
+    return x_iqr, x_q1, x_q3
+
+
+def calculate_outlier_mask(x: pd.Series,
+                           num_iqrs: float = 1.5) -> pd.Series:
+    IQR, Q1, Q3 = calculate_IQR(x)
+    x_up = Q3 + num_iqrs * IQR
+    x_down = Q1 - num_iqrs * IQR
+    x_mask = ~((x < x_down) | (x > x_up))  # valid observations
+
+    return x_mask
+
+
+def remove_outliers(data_df: pd.DataFrame,
+                    target_column: str) -> pd.DataFrame:
+    df = data_df.copy()
+    target_mask = calculate_outlier_mask(x=df[target_column])
+    mask = pd.Series(True, index=df.index)
+    for column in list(df.columns):
+        if "%Gap" in column and column != target_column:
+            column_mask = calculate_outlier_mask(x=df[column],
+                                                 num_iqrs=1.5)
+            mask = mask & column_mask
+    mask = ~((mask == True) & (target_mask == False))
+    return df[mask]
+
+
+def leave_outliers(data_df: pd.DataFrame,
+                   target_column: str) -> pd.DataFrame:
+    df = data_df.copy()
+    target_mask = calculate_outlier_mask(x=df[target_column])
+    mask = pd.Series(True, index=df.index)
+    for column in list(df.columns):
+        if "%Gap" in column and column != target_column:
+            column_mask = calculate_outlier_mask(x=df[column],
+                                                 num_iqrs=1.5)
+            mask = mask & column_mask
+    mask = (mask == True) & (target_mask == False)
+    return df[mask]
+
+
+def get_indicators_gaps(indicators: list) -> pd.DataFrame:
+    columns = [f'%Gap_{indicator}' for indicator in indicators]
+
+
+def run_cp_training():
+    # traidable_tickers = get_tickers()
+    traidable_tickers = ['JWN', 'NET', 'AAPL']
+    indicators = ['SPY', 'QQQ', 'DIA', 'IWM', 'TLT']
+
+    df = pd.DataFrame()
+
+    market_cap_data = get_market_cap_data()
+
+    tickers_dfs = get_data_for_tickers(tickers=traidable_tickers,
+                                       filter_by_market_cap=True,
+                                       market_cap_data=market_cap_data)
+
+    indicators_dfs = get_data_for_tickers(tickers=indicators,
+                                          filter_by_market_cap=False,
+                                          market_cap_data=market_cap_data)
+
+    tickers_dfs.update(indicators_dfs)
+
+    features = ['Date', '%Gap']
+
+    dfs_list = []
+
+    for key in list(tickers_dfs.keys()):
+        df = tickers_dfs[key][features]
+        rename_columns_dict = {
+            feature: f'{feature}_{key}' for feature in features[1:]
+        }
+        df.rename(columns=rename_columns_dict, inplace=True)
+        dfs_list.append(df)
+
+    df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'], how='inner'), dfs_list)
+
+    try:
+        run_correlation_modeling(traidable_tickers=traidable_tickers,
+                                 indicators=indicators,
+                                 data_df=df_merged)
+    except Exception as e:
+        message = f'An exception of type {type(e).__name__} occurred. Arguments:{e.args}'
+        print(message)
+        print(traceback.format_exc())
+        print(f'Failed to run classic premarket training')
+
+
+# create_market_cap_data()
+# run_cp_training()
+# create_charts_for_all_stocks()
+stocks_etfs_cor = get_stocks_etfs_cor()
+stocks_etfs_beta = get_stocks_etfs_beta()
+header_code, footer_code = get_code_for_minute_charts()
+create_js_script_for_minute_chart(ticker='AAPL',
+                                  header_code=header_code,
+                                  footer_code=footer_code,
+                                  stock_etfs_cor=stocks_etfs_cor['AAPL'],
+                                  stock_etfs_beta=stocks_etfs_beta['AAPL'])

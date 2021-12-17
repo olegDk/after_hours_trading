@@ -55,7 +55,7 @@ coverage.xml
 .pytest_cache/
 ticker_*.csv
 ticker_minute_*.csv
-ticker_daily_data
+minute_chart_*.html
 ticker_minute_data
 data_*.csv
 data

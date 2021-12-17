@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <script type="text/javascript"
+            async
+            src="https://unpkg.com/lightweight-charts@3.4.0/dist/lightweight-charts.standalone.production.js"></script>
+    <meta charset="utf-8"/>
+    <title>Chart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+    <meta name="format-detection" content="telephone=no">
+</head>
+
+<body>
+<div id='chart'></div>
+
+<script>
+    window.onload = function() {
+        var chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            width: 1800,
+            height: 900,
+
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+
+            timeScale: {
+                tickMarkFormatter: (time) => {
+                    const timestampMinutes = new Date(time);
+                    return `${timestampMinutes.toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: 'numeric',
+                        hour12: true,
+                        minute: 'numeric',
+                        timeZone: "America/New_York"
+                    })}`
+                },
+            },
+
+            localization: {
+                timeFormatter: (time) => {
+                    const timestampMinutes = new Date(time);
+                    return `${timestampMinutes.toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: 'numeric',
+                        hour12: true,
+                        minute: 'numeric',
+                        timeZone: "America/New_York"
+                    })}`
+                },
+            },
+        });
+
+        var candleSeries = chart.addCandlestickSeries({});
+
+        var volumeSeries = chart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: '',
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0,
+            },
+            visible: 0,
+        });
+
+         var pctChgSeries = chart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: '',
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0,
+            },
+            visible: 0,
+        });
