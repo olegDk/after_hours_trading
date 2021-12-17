@@ -5,14 +5,27 @@ legend.classList.add('legend');
 document.body.appendChild(legend);
 
 var firstRow = document.createElement('div');
-firstRow.innerText = 'AAPL';
+firstRow.innerText = ticker;
 firstRow.style.color = 'purple';
 legend.appendChild(firstRow);
 
 var secondRow = document.createElement('div');
-secondRow.innerText = 'Correlations: SPY: ' + '0.91;' + ' QQQ: ' + '0.94;' + ' DIA: ' + '0.89;' + ' IWM: ' + '0.89';
+var spyCor = stock_cor_dict["SPY"] || 0
+var qqqCor = stock_cor_dict["QQQ"] || 0
+var diaCor = stock_cor_dict["DIA"] || 0
+var iwmCor = stock_cor_dict["IWM"] || 0
+secondRow.innerText = 'Correlations: SPY: ' + spyCor + ' QQQ: ' + qqqCor + ' DIA: ' + diaCor + ' IWM: ' + iwmCor;
 secondRow.style.color = 'purple';
 legend.appendChild(secondRow);
+
+var thirdRow = document.createElement('div');
+var spyBeta = stock_beta_dict["SPY"] || 0
+var qqqBeta = stock_beta_dict["QQQ"] || 0
+var diaBeta = stock_beta_dict["DIA"] || 0
+var iwmBeta = stock_beta_dict["IWM"] || 0
+thirdRow.innerText = 'Beta: SPY: ' + spyBeta + ' QQQ: ' + qqqBeta + ' DIA: ' + diaBeta + ' IWM: ' + iwmBeta;
+thirdRow.style.color = 'purple';
+legend.appendChild(thirdRow);
 
 function pad(n) {
   var s = ('0' + n);
@@ -23,12 +36,9 @@ chart.subscribeCrosshairMove((param) => {
 if (param.time) {
     const price = param.seriesPrices.get(candleSeries);
     const volume = param.seriesPrices.get(volumeSeries);
-    const pctChg = param.seriesPrices.get(pctChgSeries);
-    firstRow.innerText = 'AAPL' + '  o:' + price.open + ' h:' + price.high + ' l:' + price.low + ' c:' + price.close + ' v: ' + volume.toFixed(2) + ' %net: ' + pctChg.toFixed(2);
+    const pctChg = param.seriesPrices.get(pctCandleSeries);
+    firstRow.innerText = ticker + '  o:' + price.open + ' h:' + price.high + ' l:' + price.low + ' c:' + price.close + ' v: ' + volume.toFixed(2) + ' %o: ' + pctChg.open + '%h: ' + pctChg.high + ' %l: ' + pctChg.low + ' %c: ' + pctChg.close;
   }
-    else {
-      firstRow.innerText = 'AAPL';
-    }
 });
 };
 

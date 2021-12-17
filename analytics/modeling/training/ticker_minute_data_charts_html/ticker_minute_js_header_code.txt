@@ -67,15 +67,4 @@
             visible: 0,
         });
 
-         var pctChgSeries = chart.addHistogramSeries({
-            color: '#26a69a',
-            priceFormat: {
-                type: 'volume',
-            },
-            priceScaleId: '',
-            scaleMargins: {
-                top: 0.8,
-                bottom: 0,
-            },
-            visible: 0,
-        });
+        var pctCandleSeries = chart.addCandlestickSeries({visible: 0,});
