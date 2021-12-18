@@ -500,6 +500,7 @@ def dict_to_str(d: dict) -> str:
 
 
 def create_js_script_for_minute_chart(ticker: str,
+                                      market_cap_data: dict,
                                       header_code: str,
                                       footer_code: str,
                                       stock_cor: dict):
@@ -546,6 +547,7 @@ def create_js_script_for_minute_chart(ticker: str,
         etfs_cor = stock_cor.get('stock_etfs_cor', {})
         etfs_beta = stock_cor.get('stock_etfs_beta', {})
 
+        market_cap_data_str = 'var market_cap_data_dict = ' + json.dumps(market_cap_data) + ';'
         stock_etfs_cor_str = 'var stock_cor_dict = ' + json.dumps(etfs_cor) + ';'
         stock_etfs_beta_str = 'var stock_beta_dict = ' + json.dumps(etfs_beta) + ';'
 
@@ -560,6 +562,7 @@ def create_js_script_for_minute_chart(ticker: str,
                                       f'\npctCandleSeries.setData(' + \
                                       f'{pct_chg_data_dict_str}' + \
                                       f']);\n' + \
+                                      f'{market_cap_data_str}' + \
                                       f'{stock_etfs_cor_str}' + \
                                       f'{stock_etfs_beta_str}' + \
                                       f'{footer_code}'
@@ -574,6 +577,7 @@ def create_js_script_for_minute_chart(ticker: str,
 
 def create_charts_for_all_stocks():
     tickers = get_tickers()
+    market_cap_data = get_market_cap_data()
     stocks_cor = get_stocks_cor()
     header_code, footer_code = get_code_for_minute_charts()
     if not sys.gettrace():
@@ -585,6 +589,7 @@ def create_charts_for_all_stocks():
         os.mkdir(f'{training_path}/ticker_minute_data_charts_html')
 
     params_list = [(ticker,
+                    market_cap_data,
                     header_code,
                     footer_code,
                     stocks_cor.get(ticker, {})) for ticker in tickers]
@@ -720,11 +725,13 @@ def run_cp_training():
 
 # create_market_cap_data()
 # run_cp_training()
-create_charts_for_all_stocks()
-# stocks_cor = get_stocks_cor()
-# header_code, footer_code = get_code_for_minute_charts()
-# create_js_script_for_minute_chart(ticker='NET',
-#                                   header_code=header_code,
-#                                   footer_code=footer_code,
-#                                   stock_cor=stocks_cor['NET'])
+# create_charts_for_all_stocks()
+market_cap_data = get_market_cap_data()
+stocks_cor = get_stocks_cor()
+header_code, footer_code = get_code_for_minute_charts()
+create_js_script_for_minute_chart(ticker='IWM',
+                                  header_code=header_code,
+                                  footer_code=footer_code,
+                                  stock_cor=stocks_cor['IWM'],
+                                  market_cap_data=market_cap_data)
 

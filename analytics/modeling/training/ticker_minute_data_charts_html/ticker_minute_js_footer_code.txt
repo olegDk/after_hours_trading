@@ -27,6 +27,12 @@ thirdRow.innerText = 'Beta: SPY: ' + spyBeta + ' QQQ: ' + qqqBeta + ' DIA: ' + d
 thirdRow.style.color = 'purple';
 legend.appendChild(thirdRow);
 
+var fourthRow = document.createElement('div');
+market_cap = market_cap_data_dict[ticker] || 0
+fourthRow.innerText = 'Market Cap: ' + market_cap;
+fourthRow.style.color = 'purple';
+legend.appendChild(fourthRow);
+
 function pad(n) {
   var s = ('0' + n);
   return s.substr(s.length - 2);
