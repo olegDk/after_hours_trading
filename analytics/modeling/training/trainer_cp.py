@@ -725,13 +725,13 @@ def run_cp_training():
 
 # create_market_cap_data()
 # run_cp_training()
-# create_charts_for_all_stocks()
-market_cap_data = get_market_cap_data()
-stocks_cor = get_stocks_cor()
-header_code, footer_code = get_code_for_minute_charts()
-create_js_script_for_minute_chart(ticker='IWM',
-                                  header_code=header_code,
-                                  footer_code=footer_code,
-                                  stock_cor=stocks_cor['IWM'],
-                                  market_cap_data=market_cap_data)
+create_charts_for_all_stocks()
+# market_cap_data = get_market_cap_data()
+# stocks_cor = get_stocks_cor()
+# header_code, footer_code = get_code_for_minute_charts()
+# create_js_script_for_minute_chart(ticker='IWM',
+#                                   header_code=header_code,
+#                                   footer_code=footer_code,
+#                                   stock_cor=stocks_cor['IWM'],
+#                                   market_cap_data=market_cap_data)
 
