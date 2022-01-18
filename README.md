@@ -1,2 +1,2 @@
-# takion_trader
+# After hours trading
 Trading system
